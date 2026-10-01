@@ -1,0 +1,9 @@
+.panel { padding: 0; }
+.heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 16px; }
+h2 { margin: 0; font-size: 13px; text-transform: uppercase; color: #64766c; }
+.heading span { font-size: 12px; color: #64766c; }
+ol { list-style: none; display: grid; gap: 4px; margin: 0; padding: 0; }
+li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-left: 3px solid transparent; font-size: 14px; transition: background-color 250ms ease, border-color 250ms ease; }
+li.active { background: #fff; border-color: #c9363d; color: #a72932; }
+li span { color: #819489; font-size: 12px; }
+li strong { overflow-wrap: anywhere; }

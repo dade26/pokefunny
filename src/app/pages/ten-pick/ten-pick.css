@@ -1,0 +1,49 @@
+.ten-pick { min-height: calc(100vh - 72px); padding: 32px 24px; }
+.draft-navigation { max-width: 1160px; margin: 0 auto 24px; }
+.draft-navigation a { color: #52665a; text-decoration: underline; }
+.setup { max-width: 600px; margin: 0 auto; animation: reveal 300ms ease both; }
+.setup-copy { margin-bottom: 28px; }
+.complete p { color: #a72932; font-size: 12px; font-weight: 700; margin: 0 0 8px; text-transform: uppercase; }
+.setup-copy h1, .complete h1 { font-size: 30px; margin: 0; }
+.setup-panel { border-top: 2px solid #344b40; padding: 24px 0; }
+label { display: grid; gap: 8px; font-size: 14px; font-weight: 700; }
+input { width: 100%; min-height: 44px; border: 2px solid #a5b4ab; border-radius: 4px; padding: 0 12px; background: #fff; color: #293631; }
+input[type=number] { max-width: 100px; }
+.input-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+button, .actions a { min-height: 44px; border: 2px solid #a5b4ab; border-radius: 4px; padding: 10px 18px; background: #fff; color: #293631; font-weight: 700; cursor: pointer; text-decoration: none; box-shadow: 0 3px 0 #a5b4ab; }
+button:hover:not(:disabled), .actions a:hover { transform: translateY(-2px); background: #e5eee8; }
+button:active:not(:disabled), .actions a:active { transform: translateY(2px); box-shadow: none; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.start, .pick, .actions button { background: #c9363d; color: #fff; border-color: #90232c; box-shadow: 0 3px 0 #90232c; }
+.start:hover:not(:disabled), .pick:hover, .actions button:hover { background: #af2c35; }
+.start { width: 100%; margin-top: 24px; }
+.players { margin: 20px 0 24px; }
+.players > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #ccd8d0; animation: reveal 200ms ease both; }
+.players strong { overflow-wrap: anywhere; }
+.players button { font-size: 12px; min-height: 36px; padding: 6px 12px; box-shadow: none; }
+.draft-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 32px; max-width: 1160px; margin: 0 auto; }
+.sidebar { display: grid; gap: 28px; }
+.draft-layout.is-complete { grid-template-columns: minmax(0, 1fr); max-width: 860px; }
+.stage { min-width: 0; }
+.turn-card { border: 2px solid #344b40; border-radius: 4px; background: #fff; padding: 24px; text-align: center; box-shadow: 4px 4px 0 #c6d4cb; animation: reveal 280ms ease both; }
+.turn-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; text-align: left; padding-bottom: 16px; border-bottom: 1px solid #d6dfd9; }
+.turn-top h1 { margin: 0; font-size: 22px; overflow-wrap: anywhere; }
+.turn-top strong { flex-shrink: 0; font-size: 13px; color: #64766c; }
+.encounter { display: grid; justify-items: center; animation: reveal 260ms ease both; }
+.artwork { display: block; width: min(300px, 100%); aspect-ratio: 1; object-fit: contain; margin: 20px auto 8px; animation: sprite-in 400ms cubic-bezier(.2,.8,.2,1) both; }
+h2 { margin: 0; font-size: 28px; overflow-wrap: anywhere; max-width: 100%; }
+.dex { font-size: 12px; color: #65746b; margin-top: 6px; }
+.types, .turn-actions, .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 16px; }
+.types span { font-size: 11px; border-radius: 3px; padding: 5px 10px; background: #728277; color: #fff; font-weight: 700; text-transform: uppercase; }
+.turn-actions { margin-top: 24px; }
+.turn-actions button { min-width: 136px; }
+.remaining { color: #65746b; font-size: 12px; margin: 20px 0 0; }
+.final-pick { margin: 16px 0 0; display: flex; justify-content: center; gap: 10px; padding: 10px; border: 1px solid #c3a63a; background: #fff3bd; font-size: 13px; }
+.complete { animation: reveal 350ms ease both; }
+.complete app-team-list { display: block; margin-top: 28px; }
+.actions { justify-content: flex-start; margin-top: 28px; }
+.loading { display: grid; place-content: center; min-height: 420px; text-align: center; gap: 20px; }
+.loading:not(.error)::before { content: ''; width: 32px; height: 32px; justify-self: center; border: 6px solid #c9363d; border-radius: 50%; animation: pulse 1s ease infinite; }
+.error { color: #a72932; }
+@media (max-width: 860px) { .draft-layout { grid-template-columns: 240px minmax(0, 1fr); gap: 20px; } .turn-card { padding: 18px; } .turn-top { flex-wrap: wrap; } }
+@media (max-width: 640px) { .ten-pick { padding: 24px 16px; } .draft-layout { grid-template-columns: minmax(0, 1fr); } .sidebar { order: 2; } .turn-top h1 { font-size: 20px; } .artwork { width: 240px; } }

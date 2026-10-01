@@ -1,0 +1,15 @@
+<header>
+  <a class="brand" routerLink="/">Pokefunny</a>
+  <div class="header-controls">
+    <nav>
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ i18n.t('home') }}</a>
+      <a routerLink="/ten-pick" routerLinkActive="active">Ten Pick</a>
+    </nav>
+    <div class="languages" role="group" [attr.aria-label]="i18n.t('language')">
+      <button type="button" lang="en" [attr.aria-pressed]="i18n.language() === 'en'" (click)="i18n.setLanguage('en')">English</button>
+      <button type="button" lang="es" [attr.aria-pressed]="i18n.language() === 'es'" (click)="i18n.setLanguage('es')">Espa&#241;ol</button>
+    </div>
+  </div>
+</header>
+
+<router-outlet />

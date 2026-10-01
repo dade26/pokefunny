@@ -1,0 +1,15 @@
+.result { padding: 24px; background: #fff; border: 2px solid #344b40; border-radius: 4px; box-shadow: 4px 4px 0 #c6d4cb; animation: reveal 300ms ease both; }
+.eyebrow, .sub { margin: 0; font-size: 12px; color: #64766c; }
+h2 { margin: 8px 0; font-size: 28px; overflow-wrap: anywhere; }
+.options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 24px 0; }
+.option { position: relative; display: grid; grid-template-rows: auto 1fr auto; justify-items: center; gap: 10px; padding: 24px 8px 12px; background: #f0f4f0; border: 2px solid #d5dfd7; border-radius: 4px; text-align: center; animation: reveal 300ms ease both; }
+.option.picked { border-color: #43824c; background: #e4f1e6; }
+.number { position: absolute; top: 6px; left: 8px; color: #64766c; font-size: 11px; }
+img { width: 100%; max-width: 160px; aspect-ratio: 1; object-fit: contain; image-rendering: auto; }
+strong { align-self: start; font-size: 13px; width: 100%; overflow-wrap: anywhere; line-height: 1.35; }
+em { color: #52665a; font-size: 10px; font-style: normal; text-transform: uppercase; overflow-wrap: anywhere; }
+button { min-height: 44px; border: 2px solid #90232c; border-radius: 4px; padding: 10px 18px; background: #c9363d; color: #fff; font-weight: 700; cursor: pointer; box-shadow: 0 3px 0 #90232c; }
+button:hover { background: #af2c35; transform: translateY(-2px); }
+button:active { transform: translateY(2px); box-shadow: none; }
+@media (min-width: 641px) and (max-width: 1000px) { .options { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .result { padding: 16px; } .options { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

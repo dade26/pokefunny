@@ -1,0 +1,31 @@
+.panel { padding: 0; }
+h2 { margin: 0 0 16px; font-size: 13px; text-transform: uppercase; color: #64766c; }
+.teams { display: grid; gap: 20px; }
+.team { border-top: 2px solid #b9c9be; padding-top: 12px; transition: border-color 250ms ease; }
+.team.active { border-color: #c9363d; }
+.team-header { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; font-size: 14px; }
+.team-header strong { overflow-wrap: anywhere; }
+.team-header span { color: #64766c; flex-shrink: 0; }
+.slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.slot { display: grid; grid-template-rows: auto 1fr; justify-items: center; gap: 10px; min-height: 140px; padding: 12px 8px; background: #e0e9e2; border: 2px solid #ccd9ce; text-align: center; border-radius: 4px; color: #64766c; }
+.slot img { width: 100%; max-width: 160px; aspect-ratio: 1; object-fit: contain; image-rendering: auto; animation: sprite-in 300ms ease both; }
+.slot small { width: 100%; font-size: 12px; font-weight: 700; line-height: 1.35; color: #394c41; overflow-wrap: anywhere; }
+.slot > span { align-self: center; grid-row: 1 / -1; }
+:host-context(.complete) .slots:not(.six-slots) { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (min-width: 641px) and (max-width: 860px) { :host-context(.complete) .slots:not(.six-slots) { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { :host-context(.complete) .slots:not(.six-slots) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.slots.six-slots { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.six-slots .slot { min-height: 110px; padding: 10px 6px; }
+.export { margin-top: 16px; }
+.paste-editor { display: grid; gap: 10px; animation: reveal 200ms ease both; }
+.paste-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.export label { font-size: 13px; font-weight: 700; }
+.export textarea { width: 100%; min-height: 220px; resize: vertical; padding: 12px; border: 2px solid #a5b4ab; border-radius: 4px; background: #fff; color: #293631; font: 13px/1.5 Consolas, monospace; }
+.export-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.export button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 14px; border: 2px solid #344b40; border-radius: 4px; background: #fff; color: #293631; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.export button:hover:not(:disabled) { background: #e5eee8; }
+.export button:disabled { opacity: .5; cursor: not-allowed; }
+.export .close-paste { width: 44px; padding: 0; border-color: transparent; flex-shrink: 0; }
+.export svg { width: 16px; height: 16px; flex-shrink: 0; }
+.export-error { color: #a72932; font-size: 13px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

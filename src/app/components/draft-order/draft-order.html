@@ -1,0 +1,14 @@
+<section class="panel">
+  <div class="heading">
+    <h2>{{ i18n.t('draftOrder') }}</h2>
+    <span>{{ i18n.t('round', { count: state.currentRound + 1 }) }}</span>
+  </div>
+  <ol>
+    @for (playerId of turnOrder(); track playerId; let index = $index) {
+      <li [class.active]="isActive(index)">
+        <span>{{ index + 1 }}</span>
+        <strong>{{ playerName(playerId) }}</strong>
+      </li>
+    }
+  </ol>
+</section>

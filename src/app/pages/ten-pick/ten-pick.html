@@ -1,0 +1,129 @@
+<main class="ten-pick">
+  <div class="draft-navigation"><a routerLink="/ten-pick">{{ i18n.t('myDrafts') }}</a></div>
+  @if (!state()) {
+    <section class="setup">
+      <div class="setup-copy">
+        <h1>{{ i18n.t('newDraft') }}</h1>
+      </div>
+
+      <div class="setup-panel">
+        <label>
+          {{ i18n.t('trainerName') }}
+          <span class="input-row">
+            <input
+              [ngModel]="newPlayer()"
+              (ngModelChange)="newPlayer.set($event)"
+              (keydown.enter)="addPlayer()"
+            />
+            <button type="button" (click)="addPlayer()">{{ i18n.t('add') }}</button>
+          </span>
+        </label>
+
+        <div class="players">
+          @for (player of setupPlayers(); track player; let index = $index) {
+            <div>
+              <strong>{{ player }}</strong>
+              <button type="button" (click)="removePlayer(index)" [attr.aria-label]="i18n.t('removePlayer', { name: player })">{{ i18n.t('remove') }}</button>
+            </div>
+          }
+        </div>
+
+        <label>
+          {{ i18n.t('teamSize') }}
+          <input
+            type="number"
+            min="1"
+            max="12"
+            [ngModel]="teamSize()"
+            (ngModelChange)="updateTeamSize($event)"
+          />
+        </label>
+
+        <button class="start" type="button" [disabled]="setupPlayers().length < 1 || starting()" (click)="startDraft()">
+          {{ i18n.t('start') }}
+        </button>
+      </div>
+    </section>
+  } @else {
+    @let draft = state()!;
+    @let player = currentPlayer();
+    <section class="draft-layout" [class.is-complete]="draft.finished && !draft.currentTurn">
+      @if (!draft.finished || draft.currentTurn) {
+        <aside class="sidebar">
+          <app-draft-order [state]="draft" />
+          <app-team-list [state]="draft" [activePlayerId]="player?.id ?? ''" />
+        </aside>
+      }
+
+      <section class="stage">
+        @if (draft.finished && !draft.currentTurn) {
+          <div class="complete">
+            <p>{{ i18n.t('draftComplete') }}</p>
+            <h1>{{ i18n.t('finalTeams') }}</h1>
+            <app-team-list [state]="draft" [allowExport]="true" />
+            <div class="actions">
+              <a routerLink="/ten-pick/new">{{ i18n.t('newDraft') }}</a>
+              <a routerLink="/ten-pick">{{ i18n.t('myDrafts') }}</a>
+            </div>
+          </div>
+        } @else if (draft.currentTurn?.finished) {
+          <app-ten-pick-result
+            [turn]="draft.currentTurn!"
+            [playerName]="player?.name ?? i18n.t('player')"
+            [finalDraft]="draft.finished"
+            (next)="service.nextTurn()"
+          />
+        } @else if (service.loadingTurn()) {
+          <div class="loading" role="status">{{ i18n.t('loading') }}</div>
+        } @else if (service.error()) {
+          <div class="loading error">
+            {{ i18n.t('turnError') }}
+            <button type="button" (click)="service.ensureTurn()">{{ i18n.t('retry') }}</button>
+          </div>
+        } @else if (draft.currentTurn && currentPokemon(); as pokemon) {
+          <article class="turn-card">
+            <div class="turn-top">
+              <div>
+                <h1>{{ i18n.t('turnOf', { name: player?.name ?? '' }) }}</h1>
+              </div>
+              <strong>
+                {{ draft.currentTurn.currentIndex + 1 }} / {{ draft.currentTurn.options.length }}
+              </strong>
+            </div>
+
+            @if (draft.currentTurn.currentIndex === draft.currentTurn.options.length - 1) {
+              <div class="final-pick">
+                <strong>{{ i18n.t('lastEncounter') }}</strong>
+                <span>{{ i18n.t('lastChoice') }}</span>
+              </div>
+            }
+
+            @for (encounter of [pokemon]; track encounter.id) {
+              <div class="encounter" aria-live="polite">
+                <img class="artwork" [src]="encounter.artwork || encounter.sprite" [alt]="encounter.name" />
+                <h2>{{ encounter.name }}</h2>
+                <span class="dex">#{{ encounter.id }}</span>
+                <div class="types">
+                  @for (type of encounter.types; track type) {
+                    <span [class]="typeClass(type)">{{ i18n.typeName(type) }}</span>
+                  }
+                </div>
+              </div>
+            }
+
+            <div class="turn-actions">
+              <button type="button" class="pick" (click)="service.pick()">{{ i18n.t('pick') }}</button>
+              @if (draft.currentTurn.currentIndex < draft.currentTurn.options.length - 1) {
+                <button type="button" class="skip" (click)="service.skip()">{{ i18n.t('skip') }}</button>
+              }
+            </div>
+
+            <p class="remaining">
+              {{ i18n.t('remaining', { count: draft.currentTurn.options.length - draft.currentTurn.currentIndex - 1 }) }}
+            </p>
+          </article>
+        }
+      </section>
+    </section>
+  }
+</main>

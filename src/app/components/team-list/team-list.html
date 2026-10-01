@@ -1,0 +1,57 @@
+<section class="panel">
+  <h2>{{ i18n.t('teams') }}</h2>
+  <div class="teams">
+    @for (player of orderedPlayers(); track player.id) {
+      <article class="team" [class.active]="player.id === activePlayerId">
+        <div class="team-header">
+          <strong>{{ player.name }}</strong>
+          <span>{{ player.team.length }} / {{ state.teamSize }}</span>
+        </div>
+        <div class="slots" [class.six-slots]="state.teamSize === 6">
+          @for (slot of slots(); track slot) {
+            <div class="slot">
+              @if (player.team[slot]) {
+                <img [src]="player.team[slot].artwork || player.team[slot].sprite" [alt]="player.team[slot].name" />
+                <small>{{ player.team[slot].name }}</small>
+              } @else {
+                <span>???</span>
+              }
+            </div>
+          }
+        </div>
+        @if (allowExport) {
+          @let paste = pastes()[player.id];
+          <div class="export">
+            @if (!paste?.open) {
+              <button type="button" (click)="preparePaste(player)" [disabled]="paste?.loading" [attr.aria-label]="i18n.t('preparePasteFor', { name: player.name })">
+                <svg lucideFileText aria-hidden="true"></svg>
+                {{ i18n.t(paste?.loading ? 'abilitiesLoading' : paste?.ready ? 'viewPaste' : 'preparePaste') }}
+              </button>
+            } @else {
+              <div class="paste-editor">
+                <div class="paste-heading">
+                  <label [for]="'paste-' + player.id">{{ i18n.t('teamOf', { name: player.name }) }}</label>
+                  <button type="button" class="close-paste" (click)="closePaste(player.id)" [attr.aria-label]="i18n.t('closePasteFor', { name: player.name })" [title]="i18n.t('closePaste')">
+                    <svg lucideX aria-hidden="true"></svg>
+                  </button>
+                </div>
+                <textarea [id]="'paste-' + player.id" name="paste" [ngModel]="paste.text" (ngModelChange)="updateText(player.id, $event)" spellcheck="false" rows="12" required></textarea>
+                <div class="export-actions">
+                  <button type="button" (click)="copyPaste(player.id)" [disabled]="!paste.text.trim()" [title]="i18n.t('copyTeam')">
+                    <svg lucideCopy aria-hidden="true"></svg>{{ i18n.t(paste.copied ? 'copied' : 'copy') }}
+                  </button>
+                </div>
+              </div>
+            }
+            @if (paste?.error) {
+              <p class="export-error" role="alert">{{ i18n.t(paste.error || 'pasteError', { name: paste.errorName }) }}</p>
+            }
+            @if (paste?.loading) {
+              <span class="sr-only" role="status">{{ i18n.t('teamAbilitiesLoading', { name: player.name }) }}</span>
+            }
+          </div>
+        }
+      </article>
+    }
+  </div>
+</section>

@@ -1,0 +1,28 @@
+* { box-sizing: border-box; }
+html { color-scheme: light; }
+body { margin: 0; min-width: 320px; background: #edf2ee; color: #293631; font-family: 'Trebuchet MS', Arial, sans-serif; }
+button, input { font: inherit; }
+img { max-width: 100%; }
+.types .type-fire { background: #c75232; }
+.types .type-water { background: #307faf; }
+.types .type-grass { background: #43824c; }
+.types .type-electric { background: #ebc64b; color: #343422; }
+.types .type-ice { background: #a4d5d7; color: #293631; }
+.types .type-fighting { background: #a23d39; }
+.types .type-poison { background: #885389; }
+.types .type-ground { background: #ac813e; }
+.types .type-flying { background: #667db2; }
+.types .type-psychic { background: #ba5577; }
+.types .type-bug { background: #708334; }
+.types .type-rock { background: #8d8257; }
+.types .type-ghost { background: #73618f; }
+.types .type-dragon { background: #61539c; }
+.types .type-dark { background: #4a4948; }
+.types .type-steel { background: #65797c; }
+.types .type-fairy { background: #e1a6bd; color: #4d2837; }
+button, a { transition: background-color 160ms ease, transform 160ms ease, box-shadow 160ms ease; }
+:focus-visible { outline: 3px solid #187fa3; outline-offset: 4px; }
+@keyframes reveal { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes sprite-in { from { opacity: 0; transform: translateY(10px) scale(.94); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes pulse { 50% { opacity: .4; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
