@@ -3,11 +3,23 @@
   <div class="header-controls">
     <nav>
       <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ i18n.t('home') }}</a>
-      <a routerLink="/ten-pick" routerLinkActive="active">Ten Pick</a>
+      <details class="nav-dropdown" routerLinkActive="active">
+        <summary>Ten Pick</summary>
+        <div class="nav-dropdown-menu">
+          <a routerLink="/ten-pick">Ten Pick</a>
+          <a routerLink="/ten-pick-monotype">Ten Pick Monotype</a>
+          <button type="button" disabled title="Work in. Progress.">Ten Pick Festa</button>
+        </div>
+      </details>
     </nav>
-    <div class="languages" role="group" [attr.aria-label]="i18n.t('language')">
-      <button type="button" lang="en" [attr.aria-pressed]="i18n.language() === 'en'" (click)="i18n.setLanguage('en')">English</button>
-      <button type="button" lang="es" [attr.aria-pressed]="i18n.language() === 'es'" (click)="i18n.setLanguage('es')">Espa&#241;ol</button>
+    <div class="preferences">
+      <div class="languages" role="group" [attr.aria-label]="i18n.t('language')">
+        <button type="button" lang="en" [attr.aria-pressed]="i18n.language() === 'en'" (click)="i18n.setLanguage('en')">English</button>
+        <button type="button" lang="es" [attr.aria-pressed]="i18n.language() === 'es'" (click)="i18n.setLanguage('es')">Espa&#241;ol</button>
+      </div>
+      <button class="theme-toggle" type="button" (click)="toggleTheme()" [attr.aria-pressed]="darkMode()" [attr.aria-label]="i18n.t(darkMode() ? 'lightMode' : 'darkMode')" [title]="i18n.t(darkMode() ? 'lightMode' : 'darkMode')">
+        @if (darkMode()) { <svg lucideSun aria-hidden="true"></svg> } @else { <svg lucideMoon aria-hidden="true"></svg> }
+      </button>
     </div>
   </div>
 </header>

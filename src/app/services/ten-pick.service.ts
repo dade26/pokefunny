@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
-import { DraftSetup, DraftState, Player, SavedDraft, TenPickTurn } from '../models/pokemon.model';
-import { PokemonPoolService } from './pokemon-pool.service';
+import { ALL_GENERATIONS, DraftSetup, DraftState, Player, SavedDraft, TenPickTurn } from '../models/pokemon.model';
+import { assignMonotypes } from '../models/monotype';
+import { InsufficientPoolError, PokemonPoolService } from './pokemon-pool.service';
 import { StorageService } from './storage.service';
 
 @Injectable({ providedIn: 'root' })
@@ -20,10 +21,13 @@ export class TenPickService {
   }
 
   async startDraft(setup: DraftSetup): Promise<string> {
+    const assigned = setup.mode === 'monotype'
+      ? assignMonotypes(setup.playerNames.map((_, index) => setup.playerTypes?.[index])) : [];
     this.reset();
     const id = crypto.randomUUID();
     this.activeDraftId.set(id);
-    const players: Player[] = setup.playerNames.map((name) => ({
+    const players: Player[] = setup.playerNames.map((name, index) => ({
+      ...(setup.mode === 'monotype' ? { monotype: assigned[index] } : {}),
       id: crypto.randomUUID(),
       name: name.trim(),
       team: [],
@@ -31,12 +35,18 @@ export class TenPickService {
     const draftOrder = this.shuffle(players.map((player) => player.id));
 
     const initialState: DraftState = {
+      mode: setup.mode ?? 'normal',
       players,
       draftOrder,
       currentRound: 0,
       currentTurnIndex: 0,
       teamSize: setup.teamSize,
       finished: false,
+      filters: {
+        generations: [...(setup.filters?.generations ?? ALL_GENERATIONS)],
+        mega: setup.filters?.mega ?? true,
+        gigantamax: setup.filters?.gigantamax ?? true,
+      },
     };
 
     this.commit(initialState);
@@ -56,7 +66,9 @@ export class TenPickService {
     try {
       const player = this.getCurrentPlayer(state);
       const blockedIds = player.team.map((pokemon) => pokemon.id);
-      const options = await this.poolService.getRandomOptions(10, blockedIds);
+      const options = player.monotype
+        ? await this.poolService.getRandomOptions(10, blockedIds, state.filters, player.monotype)
+        : await this.poolService.getRandomOptions(10, blockedIds, state.filters);
       if (request !== this.turnRequest) return;
       const currentTurn: TenPickTurn = {
         playerId: player.id,
@@ -69,7 +81,7 @@ export class TenPickService {
       this.commit({ ...state, currentTurn });
     } catch (error) {
       if (request === this.turnRequest) {
-        this.error.set(error instanceof Error ? error.message : 'No se pudo preparar el turno.');
+        this.error.set(error instanceof InsufficientPoolError ? 'insufficientPool' : error instanceof Error ? error.message : 'Could not prepare the turn.');
       }
     } finally {
       if (request === this.turnRequest) this.loadingTurn.set(false);

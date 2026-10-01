@@ -17,7 +17,11 @@ export class PokepasteService {
     const { Dex } = await import('@pkmn/dex');
     const sets = await Promise.all(team.map(async (pokemon) => {
       const detail = await this.pokemonService.getDetail(pokemon.id);
-      let species = Dex.species.get(detail.name);
+      const aliases: Record<string, string> = {
+        'maushold-family-of-three': 'Maushold',
+        'maushold-family-of-four': 'Maushold-Four',
+      };
+      let species = Dex.species.get(aliases[detail.name] ?? this.toShowdownSpeciesName(detail.name));
       if (!species.exists && detail.is_default) {
         species = Dex.species.get(detail.species.name);
       }
@@ -32,8 +36,13 @@ export class PokepasteService {
       }
       const gender = species.gender === 'M' || species.gender === 'F' ? ` (${species.gender})` : '';
       const item = species.requiredItem ? ` @ ${species.requiredItem}` : '';
-      return `${species.name}${gender}${item}\nAbility: ${ability.name}`;
+      const shiny = pokemon.shiny ? '\nShiny: Yes' : '';
+      return `${species.name}${gender}${item}\nAbility: ${ability.name}${shiny}`;
     }));
     return sets.join('\n\n');
+  }
+
+  private toShowdownSpeciesName(name: string): string {
+    return name.replace(/-breed$/i, '');
   }
 }

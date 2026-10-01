@@ -45,6 +45,39 @@ describe('PokepasteService', () => {
     expect(getDetail).toHaveBeenCalledTimes(6);
   });
 
+  it.each([
+    ['maushold-family-of-three', 'Maushold'],
+    ['maushold-family-of-four', 'Maushold-Four'],
+  ])('exports %s using its correct Showdown form', async (name, exportedName) => {
+    getDetail.mockResolvedValue({
+      name, is_default: false, species: { name: 'maushold' },
+      abilities: [{ ability: { name: 'friend-guard' }, is_hidden: false, slot: 1 }],
+    });
+    const text = await TestBed.inject(PokepasteService).createText([team[0]]);
+    expect(text).toBe(`${exportedName}\nAbility: Friend Guard`);
+  });
+
+  it.each([
+    ['tauros-paldea-combat-breed', 'Tauros-Paldea-Combat'],
+    ['tauros-paldea-blaze-breed', 'Tauros-Paldea-Blaze'],
+    ['tauros-paldea-aqua-breed', 'Tauros-Paldea-Aqua'],
+  ])('removes Breed from %s for Showdown exports', async (name, exportedName) => {
+    getDetail.mockResolvedValue({
+      name, is_default: false, species: { name: 'tauros' },
+      abilities: [{ ability: { name: 'intimidate' }, is_hidden: false, slot: 1 }],
+    });
+    const text = await TestBed.inject(PokepasteService).createText([team[0]]);
+    expect(text).toBe(`${exportedName} (M)\nAbility: Intimidate`);
+  });
+
+  it('includes shiny status without changing normal exports', async () => {
+    const text = await TestBed.inject(PokepasteService).createText([
+      { ...team[0], shiny: true }, team[1],
+    ]);
+    expect(text.split('\n\n')[0]).toBe('Darkrai\nAbility: Bad Dreams\nShiny: Yes');
+    expect(text.split('\n\n')[1]).not.toContain('Shiny:');
+  });
+
   it('rejects unknown forms instead of silently exporting the wrong Pokemon', async () => {
     getDetail.mockResolvedValue({ name: 'unknown-form', is_default: false, abilities: [] });
     await expect(TestBed.inject(PokepasteService).createText(team.slice(0, 1)))

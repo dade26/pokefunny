@@ -1,32 +1,61 @@
 import { Injectable } from '@angular/core';
-import { Pokemon } from '../models/pokemon.model';
+import { ALL_GENERATIONS, DraftFilters, Pokemon, PokemonType } from '../models/pokemon.model';
 import { PokemonService } from './pokemon.service';
+
+export class InsufficientPoolError extends Error {
+  constructor() { super('Not enough distinct Pokemon families in the current pool.'); }
+}
 
 @Injectable({ providedIn: 'root' })
 export class PokemonPoolService {
   constructor(private readonly pokemonService: PokemonService) {}
 
-  async getRandomOptions(count: number, blockedIds: number[]): Promise<Pokemon[]> {
+  async getRandomOptions(count: number, blockedIds: number[], filters?: DraftFilters, type?: PokemonType): Promise<Pokemon[]> {
+    const typeIds = type ? await this.pokemonService.getTypeIds(type) : undefined;
+    const generations = new Set(filters?.generations ?? ALL_GENERATIONS);
+    const restrictGeneration = ALL_GENERATIONS.some((generation) => !generations.has(generation));
+    if (!generations.size) throw new Error('Select at least one generation.');
     const blocked = new Set(blockedIds);
-    const list = (await this.pokemonService.getPokemonList()).filter((pokemon) => !blocked.has(pokemon.id));
-
-    if (list.length < count) {
-      throw new Error('Not enough Pokemon in the current pool.');
+    const families = new Set(await Promise.all(
+      blockedIds.map((id) => this.pokemonService.getFamilyKey(id)),
+    ));
+    const list = (await this.pokemonService.getPokemonList()).filter((pokemon) =>
+      !blocked.has(pokemon.id) &&
+      (!typeIds || typeIds.has(pokemon.id)) &&
+      (filters?.mega !== false || !/-mega(?:-|$)/.test(pokemon.name)) &&
+      (filters?.gigantamax !== false || !pokemon.name.endsWith('-gmax')) &&
+      (!pokemon.name.startsWith('koraidon-') && !pokemon.name.startsWith('miraidon-')),
+    );
+    // Shuffle once and consume candidates so an exhausted pool cannot loop forever.
+    for (let index = list.length - 1; index > 0; index--) {
+      const other = Math.floor(Math.random() * (index + 1));
+      [list[index], list[other]] = [list[other], list[index]];
     }
-
-    const pickedIds = new Set<number>();
     const options: Pokemon[] = [];
-
-    while (options.length < count) {
-      const candidate = list[Math.floor(Math.random() * list.length)];
-      if (pickedIds.has(candidate.id)) {
-        continue;
+    // Fetch small batches so narrow generation filters do not require serial API requests.
+    for (let index = 0; index < list.length && options.length < count; index += 8) {
+      const candidates = await Promise.all(list.slice(index, index + 8).map(async (candidate) => {
+        const family = await this.pokemonService.getFamilyKey(candidate.id);
+        const generation = restrictGeneration ? await this.pokemonService.getGeneration(candidate.id) : 0;
+        return { candidate, family, generation };
+      }));
+      for (const { candidate, family, generation } of candidates) {
+        if (options.length === count) break;
+        if (families.has(family) || (restrictGeneration && !generations.has(generation))) continue;
+        families.add(family);
+        const pokemon = await this.pokemonService.getPokemon(candidate.id);
+        const shiny = Math.random() < 0.01;
+        options.push({
+          ...pokemon,
+          shiny,
+          sprite: shiny ? pokemon.shinySprite || pokemon.sprite : pokemon.sprite,
+          artwork: shiny ? pokemon.shinyArtwork || pokemon.shinySprite || pokemon.artwork : pokemon.artwork,
+        });
       }
-
-      pickedIds.add(candidate.id);
-      options.push(await this.pokemonService.getPokemon(candidate.id));
     }
-
+    if (options.length < count) {
+      throw new InsufficientPoolError();
+    }
     return options;
   }
 }

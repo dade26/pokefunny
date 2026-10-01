@@ -2,6 +2,12 @@ import { DOCUMENT } from '@angular/common';
 import { Injectable, inject, signal } from '@angular/core';
 
 const en = {
+  darkMode: 'Enable night mode', lightMode: 'Enable day mode',
+  playMonotype: 'Play Ten Pick Monotype', monotypeTagline: 'One type. Six Pokemon.',
+  random: 'Random', playerType: 'Type for {name}',
+  insufficientPool: 'Not enough eligible Pokemon families for these filters. Create a draft with more generations or a different type.',
+  mega: 'Mega', selectGeneration: 'Select at least one generation.',
+  shiny: 'Shiny',
   home: 'Home', language: 'Language', chooseGame: 'Which epic game mode do you want to play?',
   tagline: 'Ten encounters. One choice.', play: 'Play Ten Pick', playFesta: 'Play Ten Pick Festa', myDrafts: 'My drafts',
   newDraft: 'New draft', noDrafts: 'No saved drafts', completed: 'Completed', inProgress: 'In progress',
@@ -28,13 +34,19 @@ export type TranslationKey = keyof typeof en;
 export type Language = 'en' | 'es';
 
 const es: Record<TranslationKey, string> = {
+  darkMode: 'Activar modo nocturno', lightMode: 'Activar modo diurno',
+  playMonotype: 'Jugar Ten Pick Monotype', monotypeTagline: 'Un tipo. Seis Pokemon.',
+  random: 'Aleatorio', playerType: 'Tipo de {name}',
+  insufficientPool: 'No hay suficientes familias de Pokemon para estos filtros. Crea un draft con m\u00e1s generaciones u otro tipo.',
+  mega: 'Mega', selectGeneration: 'Selecciona al menos una generaci\u00f3n.',
+  shiny: 'Variocolor',
   home: 'Inicio', language: 'Idioma', chooseGame: '\u00bfQu\u00e9 \u00e9pico modo de juego quer\u00e9is?',
-  tagline: 'Diez encuentros. Una elecci\u00f3n.', play: 'Jugar Ten Pick', playFesta: 'Jugar Ten Pick Festa', myDrafts: 'Mis partidas',
-  newDraft: 'Nueva partida', noDrafts: 'No hay partidas guardadas', completed: 'Terminada', inProgress: 'En curso',
-  pokemonPicked: 'Pokemon elegidos', deleteQuestion: '\u00bfBorrar esta partida?', delete: 'Borrar', cancel: 'Cancelar',
-  viewTeams: 'Ver equipos', continue: 'Continuar', deleteDraft: 'Borrar partida', deleteDraftFor: 'Borrar partida de {name}',
+  tagline: 'Diez encuentros. Una elecci\u00f3n.', play: 'Jugar Ten Pick', playFesta: 'Jugar Ten Pick Festa', myDrafts: 'Mis drafts',
+  newDraft: 'Nuevo draft', noDrafts: 'No hay drafts guardados', completed: 'Terminado', inProgress: 'En curso',
+  pokemonPicked: 'Pokemon elegidos', deleteQuestion: '\u00bfBorrar este draft?', delete: 'Borrar', cancel: 'Cancelar',
+  viewTeams: 'Ver equipos', continue: 'Continuar', deleteDraft: 'Borrar draft', deleteDraftFor: 'Borrar draft de {name}',
   trainerName: 'Nombre del entrenador', add: 'A\u00f1adir', remove: 'Quitar', removePlayer: 'Quitar a {name}',
-  teamSize: 'Pokemon por equipo', start: 'Empezar partida', draftComplete: 'Partida terminada', finalTeams: 'Los equipos finales',
+  teamSize: 'Pokemon por equipo', start: 'Empezar draft', draftComplete: 'Draft terminado', finalTeams: 'Los equipos finales',
   player: 'Jugador', loading: 'Buscando Pokemon...', turnError: 'No se pudo preparar el turno. Intenta de nuevo.',
   retry: 'Reintentar', turnOf: 'Turno de {name}', lastEncounter: '\u00daltimo encuentro', lastChoice: 'Es tu \u00faltima opci\u00f3n',
   pick: 'Elegir', skip: 'Pasar', remaining: '{count} encuentros restantes', teams: 'Equipos',

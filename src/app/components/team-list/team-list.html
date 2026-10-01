@@ -7,12 +7,20 @@
           <strong>{{ player.name }}</strong>
           <span>{{ player.team.length }} / {{ state.teamSize }}</span>
         </div>
+        @if (state.mode === 'monotype') {
+          <div class="team-type">
+            @if (player.monotype) { <img [src]="typeIcon(player.monotype)" alt="" />{{ i18n.typeName(player.monotype).toUpperCase() }} }
+            @else { {{ i18n.t('random') }} }
+          </div>
+        }
         <div class="slots" [class.six-slots]="state.teamSize === 6">
           @for (slot of slots(); track slot) {
             <div class="slot">
               @if (player.team[slot]) {
                 <img [src]="player.team[slot].artwork || player.team[slot].sprite" [alt]="player.team[slot].name" />
-                <small>{{ player.team[slot].name }}</small>
+                <small>{{ player.team[slot].name }}
+                  @if (player.team[slot].shiny) { <span class="shiny-label">{{ i18n.t('shiny') }}</span> }
+                </small>
               } @else {
                 <span>???</span>
               }

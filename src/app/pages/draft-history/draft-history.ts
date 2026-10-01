@@ -1,6 +1,6 @@
 import { LanguageService } from '../../services/language.service';
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LucideEye, LucidePlay, LucidePlus, LucideTrash2 } from '@lucide/angular';
 import { SavedDraft } from '../../models/pokemon.model';
 import { TenPickService } from '../../services/ten-pick.service';
@@ -14,7 +14,10 @@ import { TenPickService } from '../../services/ten-pick.service';
 export class DraftHistory {
   readonly i18n = inject(LanguageService);
   readonly service = inject(TenPickService);
+  readonly monotype = inject(ActivatedRoute).snapshot.data['mode'] === 'monotype';
+  readonly routeBase = this.monotype ? '/ten-pick-monotype' : '/ten-pick';
   readonly drafts = computed(() => [...this.service.drafts()]
+    .filter((draft) => (draft.state.mode === 'monotype') === this.monotype)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
   readonly deleting = signal<string | null>(null);
 

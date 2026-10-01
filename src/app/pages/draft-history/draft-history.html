@@ -1,7 +1,7 @@
 <main class="history">
   <div class="heading">
-    <div><h1>{{ i18n.t('myDrafts') }}</h1></div>
-    <a class="new-draft" routerLink="/ten-pick/new"><svg lucidePlus aria-hidden="true"></svg>{{ i18n.t('newDraft') }}</a>
+    <div><h1>{{ monotype ? 'Ten Pick Monotype' : i18n.t('myDrafts') }}</h1></div>
+    <a class="new-draft" [routerLink]="routeBase + '/new'"><svg lucidePlus aria-hidden="true"></svg>{{ i18n.t('newDraft') }}</a>
   </div>
   @if (!drafts().length) {
     <div class="empty"><svg lucidePlay aria-hidden="true"></svg><h2>{{ i18n.t('noDrafts') }}</h2></div>
@@ -20,7 +20,7 @@
               <button class="danger" type="button" (click)="deleteDraft(draft.id)">{{ i18n.t('delete') }}</button>
               <button type="button" (click)="deleting.set(null)">{{ i18n.t('cancel') }}</button>
             } @else {
-              <a [routerLink]="['/ten-pick', draft.id]">
+              <a [routerLink]="[routeBase, draft.id]">
                 @if (draft.state.finished) { <svg lucideEye aria-hidden="true"></svg> } @else { <svg lucidePlay aria-hidden="true"></svg> }
                 {{ i18n.t(draft.state.finished ? 'viewTeams' : 'continue') }}
               </a>

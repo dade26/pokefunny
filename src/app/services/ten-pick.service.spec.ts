@@ -44,6 +44,50 @@ describe('TenPickService saved drafts', () => {
     expect(new StorageService().loadDrafts().map((draft) => draft.id)).toEqual([first]);
   });
 
+  it('stores generation and gimmick settings and passes them to every new turn', async () => {
+    const filters = { generations: [1, 9], mega: false, gigantamax: true };
+    const id = await service.startDraft({ playerNames: ['Solo'], teamSize: 6, filters });
+    filters.generations.push(2);
+    await service.ensureTurn();
+    expect(getRandomOptions).toHaveBeenLastCalledWith(10, [], { generations: [1, 9], mega: false, gigantamax: true });
+    const reloaded = new TenPickService({ getRandomOptions } as unknown as PokemonPoolService, new StorageService());
+    reloaded.openDraft(id);
+    expect(reloaded.state()?.filters).toEqual({ generations: [1, 9], mega: false, gigantamax: true });
+  });
+
+  it('enables every generation and gimmick when creating a draft with default settings', async () => {
+    await service.startDraft({ playerNames: ['Solo'], teamSize: 6 });
+    expect(service.state()?.filters).toEqual({ generations: [1,2,3,4,5,6,7,8,9], mega: true, gigantamax: true });
+  });
+
+  it('saves unique monotypes, forwards the current player type and keeps assignments after reopening', async () => {
+    const id = await service.startDraft({ playerNames: ['Electric', 'Random'], teamSize: 6, mode: 'monotype', playerTypes: ['electric', undefined] });
+    const initial = service.state()!;
+    expect(initial.mode).toBe('monotype');
+    expect(initial.players[0].monotype).toBe('electric');
+    expect(initial.players[1].monotype).not.toBe('electric');
+    expect(initial.players[1].monotype).toBeDefined();
+    await service.ensureTurn();
+    expect(getRandomOptions).toHaveBeenLastCalledWith(10, [], initial.filters, service.getCurrentPlayer(initial).monotype);
+    const reloaded = new TenPickService({ getRandomOptions } as unknown as PokemonPoolService, new StorageService());
+    reloaded.openDraft(id);
+    expect(reloaded.state()?.players.map((player) => player.monotype)).toEqual(initial.players.map((player) => player.monotype));
+  });
+
+  it('preserves shiny images and status on the team after saving and reopening', async () => {
+    const shiny = { ...options[0], shiny: true, sprite: 'shiny-sprite', artwork: 'shiny-art' };
+    getRandomOptions.mockResolvedValue([shiny, ...options.slice(1)]);
+    const id = await service.startDraft({ playerNames: ['Solo'], teamSize: 1 });
+    await service.ensureTurn();
+    service.pick();
+    await service.nextTurn();
+    const reloaded = new TenPickService(
+      { getRandomOptions } as unknown as PokemonPoolService, new StorageService(),
+    );
+    reloaded.openDraft(id);
+    expect(reloaded.state()?.players[0].team[0]).toEqual(shiny);
+  });
+
   it('does not resurrect a deleted draft when its pending Pokemon request resolves', async () => {
     let resolve!: (pokemon: Pokemon[]) => void;
     getRandomOptions.mockReturnValue(new Promise<Pokemon[]>((done) => { resolve = done; }));

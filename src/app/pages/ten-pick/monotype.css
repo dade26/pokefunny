@@ -1,0 +1,7 @@
+.mode-title { margin: 12px 0 0; font-size: 18px; color: var(--muted, #52665a); }
+.player-type { display: flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; }
+.player-type img, .player-type-badge img { width: 24px; height: 24px; object-fit: contain; flex-shrink: 0; }
+.player-type select { min-width: 0; max-width: 180px; min-height: 40px; padding: 6px 8px; border: 2px solid var(--border, #a5b4ab); border-radius: 4px; background: var(--surface, #fff); color: var(--text, #293631); font: inherit; font-size: 13px; }
+.player-type select:disabled { background: var(--surface-muted, #e0e9e2); color: var(--muted, #64766c); }
+.player-type-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; margin-top: 8px; }
+@media (max-width: 480px) { .players > div { flex-wrap: wrap; } .players strong { flex: 1 1 100%; } .player-type { margin-left: 0; flex: 1; } .player-type select { width: 100%; } }

@@ -2,14 +2,25 @@ header { display: flex; justify-content: space-between; align-items: center; gap
 a { text-decoration: none; }
 .brand { display: flex; align-items: center; gap: 10px; color: white; font-size: 24px; font-weight: 900; }
 .brand::before { content: ''; width: 24px; height: 24px; border: 5px solid #fff; border-radius: 50%; }
-nav { display: flex; gap: 8px; }
+nav { display: flex; flex-wrap: wrap; gap: 8px; }
 .header-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 20px; }
 .languages { display: flex; border: 1px solid #f1a3a7; border-radius: 4px; overflow: hidden; }
+.preferences { display: flex; align-items: center; gap: 8px; }
+.theme-toggle { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; padding: 0; border: 1px solid #f1a3a7; border-radius: 4px; background: transparent; color: white; cursor: pointer; }
+.theme-toggle:hover { background: #a82932; }
+.theme-toggle svg { width: 20px; height: 20px; }
 .languages button { min-height: 40px; padding: 8px 12px; border: 0; color: white; background: transparent; font-size: 13px; font-weight: 700; cursor: pointer; }
 .languages button + button { border-left: 1px solid #f1a3a7; }
 .languages button[aria-pressed=true] { background: white; color: #a82932; }
 .languages button:hover:not([aria-pressed=true]) { background: #a82932; }
-nav a { padding: 10px; color: #fff; font-size: 14px; font-weight: 700; border-bottom: 2px solid transparent; }
-nav a.active, nav a:hover { border-bottom-color: #fff; background: #a82932; }
-@media (max-width: 420px) { .brand { font-size: 20px; gap: 8px; } nav a { padding: 10px 8px; } }
+nav a, nav button, nav summary { padding: 10px; color: #fff; font-size: 14px; font-weight: 700; border: 0; border-bottom: 2px solid transparent; background: transparent; white-space: nowrap; }
+nav summary { display: flex; align-items: center; gap: 6px; list-style: none; cursor: pointer; }
+nav summary::-webkit-details-marker { display: none; }
+nav summary::after { content: ''; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid currentColor; }
+.nav-dropdown { position: relative; }
+.nav-dropdown-menu { position: absolute; right: 0; z-index: 10; display: grid; min-width: 190px; padding: 6px; border: 2px solid #8f232c; border-radius: 4px; background: #c9363d; box-shadow: 0 6px 0 rgba(80, 12, 18, 0.18); }
+.nav-dropdown-menu a, .nav-dropdown-menu button { width: 100%; text-align: left; }
+nav button:disabled { color: #f1b8bc; cursor: not-allowed; }
+nav a.active, nav a:hover, nav summary:hover, .nav-dropdown.active summary, .nav-dropdown[open] summary { border-bottom-color: #fff; background: #a82932; }
+@media (max-width: 420px) { .brand { font-size: 20px; gap: 8px; } nav a, nav summary { padding: 10px 8px; } }
 @media (max-width: 640px) { header { flex-wrap: wrap; } .header-controls { width: 100%; justify-content: space-between; gap: 8px; } .languages button { padding: 8px 10px; } }

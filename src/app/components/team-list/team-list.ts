@@ -2,7 +2,7 @@ import { LanguageService, TranslationKey } from '../../services/language.service
 import { Component, Input, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideCopy, LucideFileText, LucideX } from '@lucide/angular';
-import { DraftState, Player } from '../../models/pokemon.model';
+import { DraftState, Player, typeIcon } from '../../models/pokemon.model';
 import { PokepasteError, PokepasteService } from '../../services/pokepaste.service';
 
 interface PasteState {
@@ -23,6 +23,7 @@ interface PasteState {
 })
 export class TeamList {
   readonly i18n = inject(LanguageService);
+  readonly typeIcon = typeIcon;
   @Input({ required: true }) state!: DraftState;
   @Input() activePlayerId = '';
   @Input() allowExport = false;

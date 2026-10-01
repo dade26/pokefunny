@@ -1,12 +1,33 @@
 <main class="ten-pick">
-  <div class="draft-navigation"><a routerLink="/ten-pick">{{ i18n.t('myDrafts') }}</a></div>
+  <div class="draft-navigation"><a [routerLink]="routeBase()">{{ i18n.t('myDrafts') }}</a></div>
   @if (!state()) {
     <section class="setup">
       <div class="setup-copy">
         <h1>{{ i18n.t('newDraft') }}</h1>
+        @if (monotype()) { <h2 class="mode-title">Ten Pick Monotype</h2> }
       </div>
 
       <div class="setup-panel">
+        <div class="filter-menus">
+          <details class="filter-dropdown" name="draft-filters">
+            <summary><span>Gen</span><svg lucideChevronDown aria-hidden="true"></svg></summary>
+            <div class="filter-grid">
+              @for (generation of generations; track generation) {
+                <label class="filter-choice">
+                  <input type="checkbox" [checked]="selectedGenerations().includes(generation)" (change)="toggleGeneration(generation)" />
+                  <span>Gen {{ generation }}</span>
+                </label>
+              }
+            </div>
+          </details>
+          <details class="filter-dropdown" name="draft-filters">
+            <summary><span>Gimmicks</span><svg lucideChevronDown aria-hidden="true"></svg></summary>
+            <div class="filter-grid gimmicks">
+              <label class="filter-choice"><input type="checkbox" [ngModel]="mega()" (ngModelChange)="mega.set($event)" /><span>{{ i18n.t('mega') }}</span></label>
+              <label class="filter-choice"><input type="checkbox" [ngModel]="gigantamax()" (ngModelChange)="gigantamax.set($event)" /><span>Gigantamax</span></label>
+            </div>
+          </details>
+        </div>
         <label>
           {{ i18n.t('trainerName') }}
           <span class="input-row">
@@ -20,9 +41,22 @@
         </label>
 
         <div class="players">
-          @for (player of setupPlayers(); track player; let index = $index) {
+          @for (player of setupPlayers(); track $index; let index = $index) {
             <div>
               <strong>{{ player }}</strong>
+              @if (monotype()) {
+                <div class="player-type">
+                  @if (playerTypes()[index] && index < pokemonTypes.length) {
+                    <img [src]="typeIcon(playerTypes()[index]!)" [alt]="i18n.typeName(playerTypes()[index]!)" />
+                  }
+                  <select [attr.aria-label]="i18n.t('playerType', { name: player })" [ngModel]="index < pokemonTypes.length ? playerTypes()[index] ?? '' : ''" (ngModelChange)="setPlayerType(index, $event)" [disabled]="index >= pokemonTypes.length">
+                    <option value="">{{ i18n.t('random') }}</option>
+                    @for (type of pokemonTypes; track type) {
+                      <option [value]="type" [disabled]="typeTaken(type, index)">{{ i18n.typeName(type).toUpperCase() }}</option>
+                    }
+                  </select>
+                </div>
+              }
               <button type="button" (click)="removePlayer(index)" [attr.aria-label]="i18n.t('removePlayer', { name: player })">{{ i18n.t('remove') }}</button>
             </div>
           }
@@ -39,7 +73,8 @@
           />
         </label>
 
-        <button class="start" type="button" [disabled]="setupPlayers().length < 1 || starting()" (click)="startDraft()">
+        @if (!selectedGenerations().length) { <p class="filter-error" role="alert">{{ i18n.t('selectGeneration') }}</p> }
+        <button class="start" type="button" [disabled]="setupPlayers().length < 1 || !selectedGenerations().length || starting()" (click)="startDraft()">
           {{ i18n.t('start') }}
         </button>
       </div>
@@ -58,12 +93,11 @@
       <section class="stage">
         @if (draft.finished && !draft.currentTurn) {
           <div class="complete">
-            <p>{{ i18n.t('draftComplete') }}</p>
             <h1>{{ i18n.t('finalTeams') }}</h1>
             <app-team-list [state]="draft" [allowExport]="true" />
             <div class="actions">
-              <a routerLink="/ten-pick/new">{{ i18n.t('newDraft') }}</a>
-              <a routerLink="/ten-pick">{{ i18n.t('myDrafts') }}</a>
+              <a [routerLink]="routeBase() + '/new'">{{ i18n.t('newDraft') }}</a>
+              <a [routerLink]="routeBase()">{{ i18n.t('myDrafts') }}</a>
             </div>
           </div>
         } @else if (draft.currentTurn?.finished) {
@@ -77,14 +111,21 @@
           <div class="loading" role="status">{{ i18n.t('loading') }}</div>
         } @else if (service.error()) {
           <div class="loading error">
-            {{ i18n.t('turnError') }}
+            {{ i18n.t(service.error() === 'insufficientPool' ? 'insufficientPool' : 'turnError') }}
             <button type="button" (click)="service.ensureTurn()">{{ i18n.t('retry') }}</button>
+            <a [routerLink]="routeBase() + '/new'">{{ i18n.t('newDraft') }}</a>
           </div>
         } @else if (draft.currentTurn && currentPokemon(); as pokemon) {
           <article class="turn-card">
             <div class="turn-top">
               <div>
                 <h1>{{ i18n.t('turnOf', { name: player?.name ?? '' }) }}</h1>
+                @if (monotype()) {
+                  <span class="player-type-badge">
+                    @if (player?.monotype) { <img [src]="typeIcon(player!.monotype!)" alt="" />{{ i18n.typeName(player!.monotype!).toUpperCase() }} }
+                    @else { {{ i18n.t('random') }} }
+                  </span>
+                }
               </div>
               <strong>
                 {{ draft.currentTurn.currentIndex + 1 }} / {{ draft.currentTurn.options.length }}
@@ -102,6 +143,7 @@
               <div class="encounter" aria-live="polite">
                 <img class="artwork" [src]="encounter.artwork || encounter.sprite" [alt]="encounter.name" />
                 <h2>{{ encounter.name }}</h2>
+                @if (encounter.shiny) { <span class="shiny-label">{{ i18n.t('shiny') }}</span> }
                 <span class="dex">#{{ encounter.id }}</span>
                 <div class="types">
                   @for (type of encounter.types; track type) {

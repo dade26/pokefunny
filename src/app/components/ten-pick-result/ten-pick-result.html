@@ -8,7 +8,9 @@
       <article class="option" [class.picked]="pokemon.id === turn.selectedPokemon?.id" [style.animation-delay.ms]="index * 30">
         <span class="number">{{ index + 1 }}</span>
         <img [src]="pokemon.artwork || pokemon.sprite" [alt]="pokemon.name" />
-        <strong>{{ pokemon.name }}</strong>
+        <strong>{{ pokemon.name }}
+          @if (pokemon.shiny) { <span class="shiny-label">{{ i18n.t('shiny') }}</span> }
+        </strong>
         <em>{{ statusFor(pokemon, index) }}</em>
       </article>
     }

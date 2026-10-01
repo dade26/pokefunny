@@ -1,15 +1,15 @@
 .home { max-width: 1000px; margin: 0 auto; padding: 64px 24px; animation: reveal 350ms ease both; }
 h1 { font-size: 36px; margin: 0 0 36px; }
-.mode { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; background: #fff; border: 2px solid #344b40; border-radius: 4px; padding: 28px; box-shadow: 4px 4px 0 #c6d4cb; }
+.mode { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; background: var(--surface, #fff); border: 2px solid var(--border-strong, #344b40); border-radius: 4px; padding: 28px; box-shadow: 4px 4px 0 var(--shadow, #c6d4cb); }
 .mode + .mode { margin-top: 24px; }
-.mode-pending button { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 12px 20px; border: 2px solid #b9c9be; border-radius: 4px; background: #e0e9e2; color: #64766c; font-weight: 700; cursor: not-allowed; }
-.starters { display: flex; background: #e5f1e7; border-bottom: 3px solid #8ab492; padding: 12px 0; }
+.mode-pending button { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 12px 20px; border: 2px solid var(--border, #b9c9be); border-radius: 4px; background: var(--surface-muted, #e0e9e2); color: var(--muted, #64766c); font-weight: 700; cursor: not-allowed; }
+.starters { display: flex; background: var(--selected, #e5f1e7); border-bottom: 3px solid var(--success-border, #8ab492); padding: 12px 0; }
 .starters img { width: 80px; height: 80px; image-rendering: pixelated; animation: sprite-in 450ms ease both; }
 .starters img:nth-child(2) { animation-delay: 80ms; }
 .starters img:nth-child(3) { animation-delay: 160ms; }
 .mode-copy { flex: 1; }
 h2 { font-size: 28px; margin: 8px 0; }
-span { color: #65746b; font-size: 15px; }
+span { color: var(--muted, #65746b); font-size: 15px; }
 a { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 12px 20px; border: 2px solid #90232c; border-radius: 4px; background: #c9363d; color: #fff; font-weight: 700; text-decoration: none; box-shadow: 0 3px 0 #90232c; }
 a:hover { background: #b02c35; transform: translateY(-2px); }
 a:active { transform: translateY(2px); box-shadow: none; }
