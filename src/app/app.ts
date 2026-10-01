@@ -1,7 +1,9 @@
 import { DOCUMENT } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, isDevMode, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta, Title } from '@angular/platform-browser';
 import { LucideMoon, LucideSun } from '@lucide/angular';
+import { inject as injectAnalytics, pageview } from '@vercel/analytics';
 import { LanguageService } from './services/language.service';
 import {
   ActivatedRoute,
@@ -15,6 +17,11 @@ import { filter } from 'rxjs';
 
 const siteUrl = 'https://pokefunny.dade.es';
 const siteName = 'Pokefunny';
+const analyticsRoutes = [
+  /^\/$/,
+  /^\/ten-pick(?:\/(?:new|[^/?#]+))?$/,
+  /^\/ten-pick-monotype(?:\/(?:new|[^/?#]+))?$/,
+];
 
 @Component({
   selector: 'app-root',
@@ -32,11 +39,19 @@ export class App {
   readonly darkMode = signal(this.readDarkMode());
 
   constructor() {
+    this.setupAnalytics();
     this.applyTheme();
     this.updateSeo();
     this.router.events
-      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
-      .subscribe(() => this.updateSeo());
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => {
+        this.updateSeo();
+        this.trackPageView();
+      });
+    if (this.router.navigated) this.trackPageView();
   }
 
   toggleTheme(): void {
@@ -80,6 +95,46 @@ export class App {
     this.setMeta('name', 'twitter:description', description);
     this.setCanonical(canonicalUrl);
     this.setStructuredData(pageTitle, description, canonicalUrl, data['schemaType'] ?? 'WebApplication');
+  }
+
+  private setupAnalytics(): void {
+    injectAnalytics({
+      framework: 'angular',
+      mode: isDevMode() ? 'development' : 'production',
+      disableAutoTrack: true,
+      beforeSend: (event) => this.shouldTrackUrl(event.url) ? event : null,
+    });
+  }
+
+  private trackPageView(): void {
+    const path = this.router.url.split('#')[0] || '/';
+    const pathname = path.split('?')[0] || '/';
+    const route = this.analyticsRoute(pathname);
+    if (!route) return;
+
+    pageview({ route, path });
+  }
+
+  private analyticsRoute(pathname: string): string | null {
+    if (!this.shouldTrackPath(pathname)) return null;
+    if (pathname === '/') return '/';
+    if (pathname === '/ten-pick' || pathname === '/ten-pick/new') return pathname;
+    if (pathname === '/ten-pick-monotype' || pathname === '/ten-pick-monotype/new') return pathname;
+    if (pathname.startsWith('/ten-pick-monotype/')) return '/ten-pick-monotype/:draftId';
+    if (pathname.startsWith('/ten-pick/')) return '/ten-pick/:draftId';
+    return null;
+  }
+
+  private shouldTrackPath(pathname: string): boolean {
+    return analyticsRoutes.some((route) => route.test(pathname));
+  }
+
+  private shouldTrackUrl(url: string): boolean {
+    try {
+      return this.shouldTrackPath(new URL(url, siteUrl).pathname);
+    } catch {
+      return false;
+    }
   }
 
   private deepestRoute(): ActivatedRoute {

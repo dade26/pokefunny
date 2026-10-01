@@ -1,9 +1,17 @@
 import { TestBed } from '@angular/core/testing';
+import { Component } from '@angular/core';
 import { App } from './app';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
+import { inject as injectAnalytics, pageview } from '@vercel/analytics';
+
+vi.mock('@vercel/analytics', () => ({ inject: vi.fn(), pageview: vi.fn() }));
+
+@Component({ template: '' })
+class AnalyticsTestPage {}
 
 describe('App', () => {
   beforeEach(async () => {
+    vi.clearAllMocks();
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [provideRouter([])],
@@ -23,6 +31,42 @@ describe('App', () => {
     expect(compiled.querySelector('.brand')?.textContent).toContain('Pokefunny');
     expect(compiled.querySelector('.languages')?.textContent).toContain('English');
     expect(compiled.querySelector('.languages')?.textContent).toContain('Espa\u00f1ol');
+  });
+
+  it('tracks the initial visit and navigation through both modes once per page', async () => {
+    const router = TestBed.inject(Router);
+    router.resetConfig([
+      { path: '', component: AnalyticsTestPage },
+      { path: 'ten-pick', component: AnalyticsTestPage },
+      { path: 'ten-pick/new', component: AnalyticsTestPage },
+      { path: 'ten-pick/:draftId', component: AnalyticsTestPage },
+      { path: 'ten-pick-monotype', component: AnalyticsTestPage },
+      { path: 'ten-pick-monotype/new', component: AnalyticsTestPage },
+      { path: 'ten-pick-monotype/:draftId', component: AnalyticsTestPage },
+    ]);
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    await router.navigateByUrl('/');
+
+    expect(injectAnalytics).toHaveBeenCalledWith(expect.objectContaining({
+      framework: 'angular', mode: 'development', disableAutoTrack: true,
+    }));
+    expect(pageview).toHaveBeenCalledExactlyOnceWith({ route: '/', path: '/' });
+
+    const visits = [
+      ['/ten-pick', '/ten-pick'],
+      ['/ten-pick/new', '/ten-pick/new'],
+      ['/ten-pick/saved-draft', '/ten-pick/:draftId'],
+      ['/ten-pick-monotype', '/ten-pick-monotype'],
+      ['/ten-pick-monotype/new', '/ten-pick-monotype/new'],
+      ['/ten-pick-monotype/saved-draft', '/ten-pick-monotype/:draftId'],
+      ['/', '/'],
+    ];
+    for (const [path, route] of visits) {
+      await router.navigateByUrl(path);
+      expect(pageview).toHaveBeenLastCalledWith({ route, path });
+    }
+    expect(pageview).toHaveBeenCalledTimes(visits.length + 1);
   });
 
   it('should show Ten Pick modes in a navigation dropdown with disabled Festa', async () => {

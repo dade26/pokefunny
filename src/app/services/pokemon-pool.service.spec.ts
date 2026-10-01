@@ -32,7 +32,7 @@ describe('PokemonPoolService family clause and shiny rolls', () => {
     }));
     getGeneration = vi.fn(async (id: number) => [925, 10257, 1007, 1008].includes(id) ? 9 : 1);
     getTypeIds = vi.fn().mockResolvedValue(new Set([1007, 1008]));
-    pool = new PokemonPoolService({ getPokemonList, getFamilyKey, getPokemon, getGeneration, getTypeIds } as unknown as PokemonService);
+    pool = new PokemonPoolService({ getPokemonList, getFamilyKey, getPokemon, getGeneration, getTypeIds, preloadArtwork: vi.fn() } as unknown as PokemonService);
   });
 
   afterEach(() => vi.restoreAllMocks());

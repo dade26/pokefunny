@@ -62,6 +62,7 @@ export class PokemonPoolService {
     if (options.length < count) {
       throw new InsufficientPoolError();
     }
+    this.pokemonService.preloadArtwork(options);
     return options;
   }
 }

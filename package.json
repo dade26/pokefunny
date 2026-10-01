@@ -2,6 +2,7 @@
   "name": "pokefunny",
   "version": "0.0.0",
   "scripts": {
+    "update:pokemon": "node scripts/update-pokemon-catalog.mjs",
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
@@ -31,6 +32,7 @@
     "@angular/router": "^21.1.0",
     "@lucide/angular": "^1.49.0",
     "@pkmn/dex": "^0.10.11",
+    "@vercel/analytics": "^2.0.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
@@ -39,6 +41,7 @@
     "@angular/cli": "^21.1.1",
     "@angular/compiler-cli": "^21.1.0",
     "@playwright/test": "^1.63.0",
+    "csv-parse": "^7.0.3",
     "jsdom": "^27.1.0",
     "typescript": "~5.9.2",
     "vitest": "^4.0.8"

@@ -1,5 +1,5 @@
 import { LanguageService } from '../../services/language.service';
-import { Component, DestroyRef, ElementRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { LucideChevronDown } from '@lucide/angular';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -9,6 +9,7 @@ import { TeamList } from '../../components/team-list/team-list';
 import { TenPickResult } from '../../components/ten-pick-result/ten-pick-result';
 import { ALL_GENERATIONS, POKEMON_TYPES, Pokemon, PokemonType, typeIcon } from '../../models/pokemon.model';
 import { TenPickService } from '../../services/ten-pick.service';
+import { PokemonService } from '../../services/pokemon.service';
 
 @Component({
   selector: 'app-ten-pick',
@@ -20,6 +21,7 @@ import { TenPickService } from '../../services/ten-pick.service';
 export class TenPick implements OnInit {
   readonly i18n = inject(LanguageService);
   private readonly tenPickService = inject(TenPickService);
+  private readonly pokemonService = inject(PokemonService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -46,7 +48,17 @@ export class TenPick implements OnInit {
     return state ? this.tenPickService.getCurrentPlayer(state) : null;
   });
 
+  constructor() {
+    effect(() => {
+      const turn = this.state()?.currentTurn;
+      if (turn && !turn.finished) {
+        this.pokemonService.preloadArtwork(turn.options.slice(turn.currentIndex));
+      }
+    });
+  }
+
   ngOnInit(): void {
+    void this.pokemonService.getPokemonList().catch(() => undefined);
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const id = params.get('draftId');
       if (!id) {
