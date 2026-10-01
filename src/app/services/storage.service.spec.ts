@@ -35,4 +35,29 @@ describe('StorageService draft history', () => {
     expect(localStorage.getItem(legacyKey)).toBe(JSON.stringify(state));
     expect(localStorage.getItem(libraryKey)).toBeNull();
   });
+
+  it('uses local artwork when resuming old teams and locked turns, including shiny picks', () => {
+    const spriteBase = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
+    const shiny = {
+      id: 25, name: 'Pikachu', types: ['Electric'], shiny: true,
+      sprite: `${spriteBase}shiny/25.png`,
+      artwork: `${spriteBase}other/official-artwork/shiny/25.png`,
+      shinyArtwork: `${spriteBase}other/official-artwork/shiny/25.png`,
+    };
+    const normal = { ...shiny, id: 1, name: 'Bulbasaur', shiny: false, artwork: `${spriteBase}1.png` };
+    const savedState: DraftState = {
+      ...state,
+      players: [{ ...state.players[0], team: [shiny] }],
+      currentTurn: { ...state.currentTurn!, options: [normal, shiny], selectedPokemon: shiny },
+    };
+    const storage = new StorageService();
+    storage.saveDrafts([{ id: 'old', createdAt: '2026-01-01', updatedAt: '2026-01-01', state: savedState }]);
+    const resumed = storage.loadDrafts()[0].state;
+    expect(resumed.players[0].team[0].artwork).toBe('images/pokemon/v1/shiny/25.webp');
+    expect(resumed.currentTurn?.options[0].artwork).toBe('images/pokemon/v1/1.webp');
+    expect(resumed.currentTurn?.selectedPokemon?.artwork).toBe('images/pokemon/v1/shiny/25.webp');
+    expect(resumed.currentTurn?.options[1].shinyArtwork).toBe('images/pokemon/v1/shiny/25.webp');
+    expect(resumed.currentTurn?.currentIndex).toBe(savedState.currentTurn?.currentIndex);
+    expect(resumed.players[0].team[0].shiny).toBe(true);
+  });
 });

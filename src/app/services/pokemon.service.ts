@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { Pokemon, PokemonType } from '../models/pokemon.model';
+import { pokemonArtworkUrl } from '../models/pokemon-images';
 
 interface PokemonCatalogEntry {
   id: number;
@@ -73,10 +74,10 @@ export class PokemonService {
       id,
       name: this.formatName(entry.name),
       sprite,
-      artwork: image(4, 'other/official-artwork/') || sprite,
+      artwork: entry.images & 5 ? pokemonArtworkUrl(id) : '',
       types: entry.types.map((type) => this.formatName(type)),
       shinySprite: image(2, 'shiny/'),
-      shinyArtwork: image(8, 'other/official-artwork/shiny/'),
+      shinyArtwork: entry.images & 10 ? pokemonArtworkUrl(id, true) : '',
     };
 
     this.detailCache.set(id, pokemon);
@@ -116,6 +117,8 @@ export class PokemonService {
       const url = pokemon.artwork || pokemon.sprite;
       if (!url || this.preloadedImages.has(url)) continue;
       const image = new Image();
+      image.fetchPriority = 'low';
+      image.decoding = 'async';
       image.onerror = () => this.preloadedImages.delete(url);
       this.preloadedImages.set(url, image);
       image.src = url;

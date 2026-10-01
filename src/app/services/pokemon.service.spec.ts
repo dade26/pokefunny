@@ -52,10 +52,10 @@ describe('PokemonService draft catalog', () => {
     const pending = Promise.all([service.getPokemon(1007), service.getPokemon(10033)]);
     http.expectOne(catalogUrl).flush(catalog);
     const [koraidon, mega] = await pending;
-    expect(koraidon.artwork).toBe(koraidon.sprite);
+    expect(koraidon.artwork).toBe('images/pokemon/v1/1007.webp');
     expect(koraidon.shinySprite).toContain('/shiny/1007.png');
-    expect(koraidon.shinyArtwork).toBe('');
-    expect(mega.artwork).toContain('/other/official-artwork/10033.png');
+    expect(koraidon.shinyArtwork).toBe('images/pokemon/v1/shiny/1007.webp');
+    expect(mega.artwork).toBe('images/pokemon/v1/10033.webp');
     expect(mega.shinySprite).toBe('');
     expect(mega.shinyArtwork).toBe('');
   });

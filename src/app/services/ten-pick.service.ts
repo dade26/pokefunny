@@ -46,7 +46,7 @@ export class TenPickService {
       filters: {
         generations: [...(setup.filters?.generations ?? ALL_GENERATIONS)],
         mega: setup.filters?.mega ?? true,
-        gigantamax: setup.filters?.gigantamax ?? true,
+        gigantamax: setup.filters?.gigantamax ?? false,
       },
     };
 

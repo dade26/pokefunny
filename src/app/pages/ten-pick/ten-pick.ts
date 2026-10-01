@@ -40,7 +40,7 @@ export class TenPick implements OnInit {
   readonly generations = ALL_GENERATIONS;
   readonly selectedGenerations = signal([...ALL_GENERATIONS]);
   readonly mega = signal(true);
-  readonly gigantamax = signal(true);
+  readonly gigantamax = signal(false);
   readonly service = this.tenPickService;
   readonly state = this.tenPickService.state;
   readonly currentPlayer = computed(() => {

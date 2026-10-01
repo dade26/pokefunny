@@ -17,7 +17,7 @@
           @for (slot of slots(); track slot) {
             <div class="slot">
               @if (player.team[slot]) {
-                <img [src]="player.team[slot].artwork || player.team[slot].sprite" [alt]="player.team[slot].name" />
+                <img [src]="player.team[slot].artwork || player.team[slot].sprite" [alt]="player.team[slot].name" loading="lazy" decoding="async" />
                 <small>{{ player.team[slot].name }}
                   @if (player.team[slot].shiny) { <span class="shiny-label">{{ i18n.t('shiny') }}</span> }
                 </small>

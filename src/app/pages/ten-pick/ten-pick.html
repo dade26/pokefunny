@@ -141,7 +141,7 @@
 
             @for (encounter of [pokemon]; track encounter.id) {
               <div class="encounter" aria-live="polite">
-                <img class="artwork" [src]="encounter.artwork || encounter.sprite" [alt]="encounter.name" />
+                <img class="artwork" [src]="encounter.artwork || encounter.sprite" [alt]="encounter.name" fetchpriority="high" decoding="async" />
                 <h2>{{ encounter.name }}</h2>
                 @if (encounter.shiny) { <span class="shiny-label">{{ i18n.t('shiny') }}</span> }
                 <span class="dex">#{{ encounter.id }}</span>

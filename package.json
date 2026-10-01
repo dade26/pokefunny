@@ -2,7 +2,8 @@
   "name": "pokefunny",
   "version": "0.0.0",
   "scripts": {
-    "update:pokemon": "node scripts/update-pokemon-catalog.mjs",
+    "update:pokemon": "node scripts/update-pokemon-catalog.mjs && npm run update:pokemon-images",
+    "update:pokemon-images": "node scripts/update-pokemon-images.mjs",
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
@@ -43,6 +44,7 @@
     "@playwright/test": "^1.63.0",
     "csv-parse": "^7.0.3",
     "jsdom": "^27.1.0",
+    "sharp": "^0.35.5",
     "typescript": "~5.9.2",
     "vitest": "^4.0.8"
   }

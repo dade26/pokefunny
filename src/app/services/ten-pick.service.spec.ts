@@ -55,9 +55,9 @@ describe('TenPickService saved drafts', () => {
     expect(reloaded.state()?.filters).toEqual({ generations: [1, 9], mega: false, gigantamax: true });
   });
 
-  it('enables every generation and gimmick when creating a draft with default settings', async () => {
+  it('enables every generation and Mega but disables Gigantamax by default', async () => {
     await service.startDraft({ playerNames: ['Solo'], teamSize: 6 });
-    expect(service.state()?.filters).toEqual({ generations: [1,2,3,4,5,6,7,8,9], mega: true, gigantamax: true });
+    expect(service.state()?.filters).toEqual({ generations: [1,2,3,4,5,6,7,8,9], mega: true, gigantamax: false });
   });
 
   it('saves unique monotypes, forwards the current player type and keeps assignments after reopening', async () => {

@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { DraftState, SavedDraft } from '../models/pokemon.model';
+import { pokemonArtworkUrl } from '../models/pokemon-images';
 
 const TEN_PICK_STORAGE_KEY = 'pokefunny.ten-pick.state';
 const DRAFTS_STORAGE_KEY = 'pokefunny.ten-pick.drafts';
@@ -19,6 +20,23 @@ export class StorageService {
         this.saveDrafts(drafts);
       }
       localStorage.removeItem(TEN_PICK_STORAGE_KEY);
+    }
+    const externalImage = /^https:\/\/raw\.githubusercontent\.com\/PokeAPI\/sprites\/master\/sprites\/pokemon\/(?:other\/official-artwork\/)?(?:shiny\/)?\d+\.png$/;
+    for (const draft of drafts) {
+      const turn = draft.state.currentTurn;
+      const pokemon = [
+        ...draft.state.players.flatMap((player) => player.team),
+        ...(turn?.options ?? []),
+        ...(turn?.selectedPokemon ? [turn.selectedPokemon] : []),
+      ];
+      for (const entry of pokemon) {
+        if (externalImage.test(entry.artwork)) {
+          entry.artwork = pokemonArtworkUrl(entry.id, entry.shiny);
+        }
+        if (externalImage.test(entry.shinyArtwork ?? '')) {
+          entry.shinyArtwork = pokemonArtworkUrl(entry.id, true);
+        }
+      }
     }
     return drafts;
   }
