@@ -17,11 +17,7 @@ export class PokepasteService {
     const { Dex } = await import('@pkmn/dex');
     const sets = await Promise.all(team.map(async (pokemon) => {
       const detail = await this.pokemonService.getDetail(pokemon.id);
-      const aliases: Record<string, string> = {
-        'maushold-family-of-three': 'Maushold',
-        'maushold-family-of-four': 'Maushold-Four',
-      };
-      let species = Dex.species.get(aliases[detail.name] ?? this.toShowdownSpeciesName(detail.name));
+      let species = Dex.species.get(this.toShowdownSpeciesName(detail.name));
       if (!species.exists && detail.is_default) {
         species = Dex.species.get(detail.species.name);
       }
@@ -34,7 +30,10 @@ export class PokepasteService {
       if (!ability?.exists) {
         throw new PokepasteError('unknownAbility', pokemon.name);
       }
-      const gender = species.gender === 'M' || species.gender === 'F' ? ` (${species.gender})` : '';
+      const fixedGender = species.gender === 'M' || species.gender === 'F'
+        ? species.gender
+        : /-female(?:-|$)/.test(detail.name) ? 'F' : /-male(?:-|$)/.test(detail.name) ? 'M' : '';
+      const gender = fixedGender ? ` (${fixedGender})` : '';
       const item = species.requiredItem ? ` @ ${species.requiredItem}` : '';
       const shiny = pokemon.shiny ? '\nShiny: Yes' : '';
       return `${species.name}${gender}${item}\nAbility: ${ability.name}${shiny}`;
@@ -43,6 +42,28 @@ export class PokepasteService {
   }
 
   private toShowdownSpeciesName(name: string): string {
-    return name.replace(/-breed$/i, '');
+    const aliases: Record<string, string> = {
+      'maushold-family-of-three': 'Maushold',
+      'maushold-family-of-four': 'Maushold-Four',
+      'raticate-totem-alola': 'Raticate-Alola-Totem',
+      'marowak-totem': 'Marowak-Alola-Totem',
+      'mimikyu-totem-disguised': 'Mimikyu-Totem',
+      'mimikyu-totem-busted': 'Mimikyu-Busted-Totem',
+      'rockruff-own-tempo': 'Rockruff-Dusk',
+      'zygarde-10-power-construct': 'Zygarde-10%',
+      'zygarde-50-power-construct': 'Zygarde',
+      'darmanitan-galar-standard': 'Darmanitan-Galar',
+      'squawkabilly-green-plumage': 'Squawkabilly',
+    };
+    if (aliases[name]) return aliases[name];
+    if (/^minior-(red|orange|yellow|green|blue|indigo|violet)-meteor$/.test(name)) return 'Minior-Meteor';
+    if (/^koraidon-(limited|sprinting|swimming|gliding)-build$/.test(name)) return 'Koraidon';
+    if (/^miraidon-(low-power|drive|aquatic|glide)-mode$/.test(name)) return 'Miraidon';
+    if (/^(frillish|jellicent|pyroar)-(male|female)$/.test(name)) return name.replace(/-(male|female)$/, '');
+    if (/^(meowstic|indeedee|basculegion|oinkologne)-(male|female)(-mega)?$/.test(name)) {
+      // Male is the base form, except Mega Meowstic which uses an explicit M.
+      return name.replace(/-female/, '-f').replace(/-male/, name.endsWith('-mega') ? '-m' : '');
+    }
+    return name.replace(/-breed$/, '').replace(/^(pikachu-.+)-cap$/, '$1').replace(/-plumage$/, '');
   }
 }

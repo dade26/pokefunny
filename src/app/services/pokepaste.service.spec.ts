@@ -78,6 +78,57 @@ describe('PokepasteService', () => {
     expect(text.split('\n\n')[1]).not.toContain('Shiny:');
   });
 
+  it.each([
+    ['meowstic-male', 'Meowstic (M)'],
+    ['meowstic-female', 'Meowstic-F (F)'],
+    ['meowstic-male-mega', 'Meowstic-M-Mega (M) @ Meowsticite'],
+    ['meowstic-female-mega', 'Meowstic-F-Mega (F) @ Meowsticite'],
+    ['indeedee-male', 'Indeedee (M)'],
+    ['indeedee-female', 'Indeedee-F (F)'],
+    ['basculegion-male', 'Basculegion (M)'],
+    ['basculegion-female', 'Basculegion-F (F)'],
+    ['oinkologne-male', 'Oinkologne (M)'],
+    ['oinkologne-female', 'Oinkologne-F (F)'],
+    ['frillish-male', 'Frillish (M)'],
+    ['frillish-female', 'Frillish (F)'],
+    ['jellicent-male', 'Jellicent (M)'],
+    ['pyroar-female', 'Pyroar (F)'],
+    ...['original', 'hoenn', 'sinnoh', 'unova', 'kalos', 'alola', 'partner', 'world'].map(
+      (cap) => [`pikachu-${cap}-cap`, `Pikachu-${cap.charAt(0).toUpperCase()}${cap.slice(1)} (M)`],
+    ),
+    ['minior-orange-meteor', 'Minior-Meteor'],
+    ['minior-violet-meteor', 'Minior-Meteor'],
+    ['raticate-totem-alola', 'Raticate-Alola-Totem'],
+    ['marowak-totem', 'Marowak-Alola-Totem'],
+    ['mimikyu-totem-disguised', 'Mimikyu-Totem'],
+    ['mimikyu-totem-busted', 'Mimikyu-Busted-Totem'],
+    ['rockruff-own-tempo', 'Rockruff-Dusk'],
+    ['zygarde-10-power-construct', 'Zygarde-10%'],
+    ['zygarde-50-power-construct', 'Zygarde'],
+    ['darmanitan-galar-standard', 'Darmanitan-Galar'],
+    ['squawkabilly-green-plumage', 'Squawkabilly'],
+    ['squawkabilly-blue-plumage', 'Squawkabilly-Blue'],
+    ['squawkabilly-yellow-plumage', 'Squawkabilly-Yellow'],
+    ['squawkabilly-white-plumage', 'Squawkabilly-White'],
+    ['koraidon-limited-build', 'Koraidon'],
+    ['miraidon-low-power-mode', 'Miraidon'],
+  ])('preserves the Showdown equivalent of %s', async (name, exportedName) => {
+    getDetail.mockResolvedValue({
+      name, is_default: false, species: { name: name.split('-')[0] },
+      abilities: [{ ability: { name: 'synchronize' }, is_hidden: false, slot: 1 }],
+    });
+    expect(await TestBed.inject(PokepasteService).createText([team[0]]))
+      .toBe(`${exportedName}\nAbility: Synchronize`);
+  });
+
+  it('rejects an unknown alternate form even when its base species exists', async () => {
+    getDetail.mockResolvedValue({
+      name: 'pikachu-unknown-cap', is_default: false, species: { name: 'pikachu' }, abilities: [],
+    });
+    await expect(TestBed.inject(PokepasteService).createText([team[0]]))
+      .rejects.toThrow('unknownForm');
+  });
+
   it('rejects unknown forms instead of silently exporting the wrong Pokemon', async () => {
     getDetail.mockResolvedValue({ name: 'unknown-form', is_default: false, abilities: [] });
     await expect(TestBed.inject(PokepasteService).createText(team.slice(0, 1)))
