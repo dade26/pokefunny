@@ -4,12 +4,81 @@ import { TenPick } from './pages/ten-pick/ten-pick';
 import { DraftHistory } from './pages/draft-history/draft-history';
 
 export const routes: Routes = [
-  { path: '', component: Home },
-  { path: 'ten-pick', component: DraftHistory },
-  { path: 'ten-pick/new', component: TenPick },
-  { path: 'ten-pick/:draftId', component: TenPick },
-  { path: 'ten-pick-monotype', component: DraftHistory, data: { mode: 'monotype' } },
-  { path: 'ten-pick-monotype/new', component: TenPick, data: { mode: 'monotype' } },
-  { path: 'ten-pick-monotype/:draftId', component: TenPick, data: { mode: 'monotype' } },
+  {
+    path: '',
+    component: Home,
+    data: {
+      title: 'Pokefunny | Pokemon Drafts - Ten Pick & Monotype',
+      description:
+        'Play Pokemon draft games online with Pokefunny. Build teams in Ten Pick or Ten Pick Monotype, save drafts locally and export teams as Pokepaste text.',
+      canonicalPath: '/',
+      schemaType: 'WebSite',
+    },
+  },
+  {
+    path: 'ten-pick',
+    component: DraftHistory,
+    data: {
+      title: 'Ten Pick Pokemon Drafts | Pokefunny',
+      description:
+        'Start or continue Ten Pick Pokemon drafts. Add trainers, choose generations and build Pokemon teams from ten encounters per turn.',
+      canonicalPath: '/ten-pick',
+    },
+  },
+  {
+    path: 'ten-pick/new',
+    component: TenPick,
+    data: {
+      title: 'New Ten Pick Pokemon Draft | Pokefunny',
+      description:
+        'Create a new Ten Pick Pokemon draft with custom trainers, team size, generation filters, Mega Pokemon and Gigantamax options.',
+      canonicalPath: '/ten-pick/new',
+    },
+  },
+  {
+    path: 'ten-pick/:draftId',
+    component: TenPick,
+    data: {
+      title: 'Ten Pick Draft Board | Pokefunny',
+      description:
+        'Continue a saved Ten Pick Pokemon draft, make picks, review teams and export completed rosters as Pokepaste text.',
+      canonicalPath: '/ten-pick',
+      robots: 'noindex, follow',
+    },
+  },
+  {
+    path: 'ten-pick-monotype',
+    component: DraftHistory,
+    data: {
+      mode: 'monotype',
+      title: 'Ten Pick Monotype Pokemon Drafts | Pokefunny',
+      description:
+        'Play Ten Pick Monotype drafts online. Assign Pokemon types to trainers and build focused teams from filtered encounters.',
+      canonicalPath: '/ten-pick-monotype',
+    },
+  },
+  {
+    path: 'ten-pick-monotype/new',
+    component: TenPick,
+    data: {
+      mode: 'monotype',
+      title: 'New Ten Pick Monotype Draft | Pokefunny',
+      description:
+        'Create a Monotype Pokemon draft with trainer type assignments, generation filters and local draft saving.',
+      canonicalPath: '/ten-pick-monotype/new',
+    },
+  },
+  {
+    path: 'ten-pick-monotype/:draftId',
+    component: TenPick,
+    data: {
+      mode: 'monotype',
+      title: 'Ten Pick Monotype Draft Board | Pokefunny',
+      description:
+        'Continue a saved Ten Pick Monotype draft, pick Pokemon by type and export final teams as Pokepaste text.',
+      canonicalPath: '/ten-pick-monotype',
+      robots: 'noindex, follow',
+    },
+  },
   { path: '**', redirectTo: '' },
 ];

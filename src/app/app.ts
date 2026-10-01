@@ -1,8 +1,20 @@
 import { DOCUMENT } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
+import { Meta, Title } from '@angular/platform-browser';
 import { LucideMoon, LucideSun } from '@lucide/angular';
 import { LanguageService } from './services/language.service';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import {
+  ActivatedRoute,
+  NavigationEnd,
+  Router,
+  RouterLink,
+  RouterLinkActive,
+  RouterOutlet,
+} from '@angular/router';
+import { filter } from 'rxjs';
+
+const siteUrl = 'https://pokefunny.dade.es';
+const siteName = 'Pokefunny';
 
 @Component({
   selector: 'app-root',
@@ -13,10 +25,18 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 export class App {
   readonly i18n = inject(LanguageService);
   private readonly document = inject(DOCUMENT);
+  private readonly meta = inject(Meta);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly title = inject(Title);
   readonly darkMode = signal(this.readDarkMode());
 
   constructor() {
     this.applyTheme();
+    this.updateSeo();
+    this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe(() => this.updateSeo());
   }
 
   toggleTheme(): void {
@@ -36,5 +56,80 @@ export class App {
       if (saved === 'dark' || saved === 'light') return saved === 'dark';
     } catch { /* Fall back to the system preference. */ }
     return this.document.defaultView?.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+  }
+
+  private updateSeo(): void {
+    const data = this.deepestRoute().snapshot.data;
+    const pageTitle = data['title'] ?? `${siteName} | Pokemon Drafts`;
+    const description = data['description'] ?? 'Create and save Pokemon draft teams with Pokefunny.';
+    const currentPath = this.router.url.split('?')[0].split('#')[0] || '/';
+    const canonicalPath = data['canonicalPath'] ?? currentPath;
+    const canonicalUrl = `${siteUrl}${canonicalPath === '/' ? '/' : canonicalPath}`;
+    const robots = data['robots'] ?? 'index, follow';
+
+    this.title.setTitle(pageTitle);
+    this.setMeta('name', 'description', description);
+    this.setMeta('name', 'robots', robots);
+    this.setMeta('property', 'og:site_name', siteName);
+    this.setMeta('property', 'og:type', 'website');
+    this.setMeta('property', 'og:url', canonicalUrl);
+    this.setMeta('property', 'og:title', pageTitle);
+    this.setMeta('property', 'og:description', description);
+    this.setMeta('name', 'twitter:card', 'summary');
+    this.setMeta('name', 'twitter:title', pageTitle);
+    this.setMeta('name', 'twitter:description', description);
+    this.setCanonical(canonicalUrl);
+    this.setStructuredData(pageTitle, description, canonicalUrl, data['schemaType'] ?? 'WebApplication');
+  }
+
+  private deepestRoute(): ActivatedRoute {
+    let current = this.route;
+    while (current.firstChild) current = current.firstChild;
+    return current;
+  }
+
+  private setMeta(attribute: 'name' | 'property', key: string, content: string): void {
+    this.meta.updateTag({ [attribute]: key, content });
+  }
+
+  private setCanonical(url: string): void {
+    let link = this.document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!link) {
+      link = this.document.createElement('link');
+      link.rel = 'canonical';
+      this.document.head.appendChild(link);
+    }
+    link.href = url;
+  }
+
+  private setStructuredData(name: string, description: string, url: string, type: string): void {
+    const id = 'structured-data';
+    let script = this.document.getElementById(id) as HTMLScriptElement | null;
+    if (!script) {
+      script = this.document.createElement('script');
+      script.id = id;
+      script.type = 'application/ld+json';
+      this.document.head.appendChild(script);
+    }
+    const structuredData: Record<string, unknown> = {
+      '@context': 'https://schema.org',
+      '@type': type,
+      name,
+      url,
+      description,
+      inLanguage: ['en', 'es'],
+      publisher: {
+        '@type': 'Organization',
+        name: siteName,
+        url: siteUrl,
+      },
+    };
+
+    if (type === 'WebApplication') {
+      structuredData['applicationCategory'] = 'GameApplication';
+      structuredData['operatingSystem'] = 'Any';
+    }
+
+    script.text = JSON.stringify(structuredData);
   }
 }
