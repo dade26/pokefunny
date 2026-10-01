@@ -8,6 +8,8 @@ export class InsufficientPoolError extends Error {
 
 @Injectable({ providedIn: 'root' })
 export class PokemonPoolService {
+  private readonly batchSize = 16;
+
   constructor(private readonly pokemonService: PokemonService) {}
 
   async getRandomOptions(count: number, blockedIds: number[], filters?: DraftFilters, type?: PokemonType): Promise<Pokemon[]> {
@@ -32,18 +34,22 @@ export class PokemonPoolService {
       [list[index], list[other]] = [list[other], list[index]];
     }
     const options: Pokemon[] = [];
-    // Fetch small batches so narrow generation filters do not require serial API requests.
-    for (let index = 0; index < list.length && options.length < count; index += 8) {
-      const candidates = await Promise.all(list.slice(index, index + 8).map(async (candidate) => {
+    // Fetch batches so narrow generation filters do not require serial API requests.
+    for (let index = 0; index < list.length && options.length < count; index += this.batchSize) {
+      const candidates = await Promise.all(list.slice(index, index + this.batchSize).map(async (candidate) => {
         const family = await this.pokemonService.getFamilyKey(candidate.id);
         const generation = restrictGeneration ? await this.pokemonService.getGeneration(candidate.id) : 0;
         return { candidate, family, generation };
       }));
+      const accepted: { id: number; name: string }[] = [];
       for (const { candidate, family, generation } of candidates) {
-        if (options.length === count) break;
+        if (options.length + accepted.length === count) break;
         if (families.has(family) || (restrictGeneration && !generations.has(generation))) continue;
         families.add(family);
-        const pokemon = await this.pokemonService.getPokemon(candidate.id);
+        accepted.push(candidate);
+      }
+      const hydrated = await Promise.all(accepted.map((candidate) => this.pokemonService.getPokemon(candidate.id)));
+      for (const pokemon of hydrated) {
         const shiny = Math.random() < 0.01;
         options.push({
           ...pokemon,

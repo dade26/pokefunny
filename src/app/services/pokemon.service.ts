@@ -38,6 +38,7 @@ export class PokemonService {
   private readonly apiUrl = 'https://pokeapi.co/api/v2';
   private listCache?: { id: number; name: string }[];
   private detailCache = new Map<number, Pokemon>();
+  private detailRequestCache = new Map<number, Promise<PokemonDetailResponse>>();
   private responseCache = new Map<number, PokemonDetailResponse>();
   private speciesCache = new Map<string, Promise<PokemonSpeciesResponse>>();
   private typeCache = new Map<PokemonType, Promise<Set<number>>>();
@@ -99,10 +100,19 @@ export class PokemonService {
   async getDetail(id: number): Promise<PokemonDetailResponse> {
     const cached = this.responseCache.get(id);
     if (cached) return cached;
-    const detail = await firstValueFrom(
-      this.http.get<PokemonDetailResponse>(`${this.apiUrl}/pokemon/${id}`),
-    );
+    let pending = this.detailRequestCache.get(id);
+    if (!pending) {
+      pending = firstValueFrom(
+        this.http.get<PokemonDetailResponse>(`${this.apiUrl}/pokemon/${id}`),
+      ).catch((error) => {
+        this.detailRequestCache.delete(id);
+        throw error;
+      });
+      this.detailRequestCache.set(id, pending);
+    }
+    const detail = await pending;
     this.responseCache.set(id, detail);
+    this.detailRequestCache.delete(id);
     return detail;
   }
 

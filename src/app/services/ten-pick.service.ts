@@ -12,6 +12,7 @@ export class TenPickService {
   readonly drafts = signal<SavedDraft[]>([]);
   readonly activeDraftId = signal<string | null>(null);
   private turnRequest = 0;
+  private prefetchedTurn: { key: string; request: number; promise: Promise<TenPickTurn> } | null = null;
 
   constructor(
     private readonly poolService: PokemonPoolService,
@@ -59,24 +60,33 @@ export class TenPickService {
       return;
     }
 
+    const prefetched = this.prefetchedTurn;
+    const key = this.turnKey(state);
+    if (prefetched?.key === key) {
+      this.loadingTurn.set(true);
+      this.error.set(null);
+      try {
+        const currentTurn = await prefetched.promise;
+        if (prefetched.request !== this.turnRequest || this.turnKey(this.state()) !== key) return;
+        this.commit({ ...state, currentTurn });
+      } catch (error) {
+        if (prefetched.request === this.turnRequest) {
+          this.error.set(error instanceof InsufficientPoolError ? 'insufficientPool' : error instanceof Error ? error.message : 'Could not prepare the turn.');
+        }
+      } finally {
+        if (prefetched.request === this.turnRequest) this.loadingTurn.set(false);
+        if (this.prefetchedTurn === prefetched) this.prefetchedTurn = null;
+      }
+      return;
+    }
+
     this.loadingTurn.set(true);
     this.error.set(null);
     const request = ++this.turnRequest;
 
     try {
-      const player = this.getCurrentPlayer(state);
-      const blockedIds = player.team.map((pokemon) => pokemon.id);
-      const options = player.monotype
-        ? await this.poolService.getRandomOptions(10, blockedIds, state.filters, player.monotype)
-        : await this.poolService.getRandomOptions(10, blockedIds, state.filters);
+      const currentTurn = await this.createTurn(state);
       if (request !== this.turnRequest) return;
-      const currentTurn: TenPickTurn = {
-        playerId: player.id,
-        options,
-        currentIndex: 0,
-        skippedPokemonIds: [],
-        finished: false,
-      };
 
       this.commit({ ...state, currentTurn });
     } catch (error) {
@@ -132,6 +142,7 @@ export class TenPickService {
     };
 
     this.commit(this.withFinishedFlag(nextState));
+    this.prefetchNextTurn(this.withFinishedFlag(nextState));
   }
 
   async nextTurn(): Promise<void> {
@@ -159,6 +170,7 @@ export class TenPickService {
 
   reset(): void {
     this.turnRequest++;
+    this.prefetchedTurn = null;
     this.loadingTurn.set(false);
     this.activeDraftId.set(null);
     this.state.set(null);
@@ -206,6 +218,64 @@ export class TenPickService {
       ...state,
       finished: state.players.every((player) => player.team.length >= state.teamSize),
     };
+  }
+
+  private prefetchNextTurn(state: DraftState): void {
+    if (state.finished) {
+      this.prefetchedTurn = null;
+      return;
+    }
+
+    const nextPosition = this.getNextPosition(state);
+    const nextState: DraftState = {
+      ...state,
+      currentRound: nextPosition.round,
+      currentTurnIndex: nextPosition.turnIndex,
+      currentTurn: undefined,
+    };
+    const request = this.turnRequest;
+    const key = this.turnKey(nextState);
+    this.prefetchedTurn = {
+      key,
+      request,
+      promise: this.createTurn(nextState),
+    };
+    void this.prefetchedTurn.promise.catch(() => undefined);
+  }
+
+  private async createTurn(state: DraftState): Promise<TenPickTurn> {
+    const player = this.getCurrentPlayer(state);
+    const blockedIds = player.team.map((pokemon) => pokemon.id);
+    const options = player.monotype
+      ? await this.poolService.getRandomOptions(10, blockedIds, state.filters, player.monotype)
+      : await this.poolService.getRandomOptions(10, blockedIds, state.filters);
+    return {
+      playerId: player.id,
+      options,
+      currentIndex: 0,
+      skippedPokemonIds: [],
+      finished: false,
+    };
+  }
+
+  private turnKey(state: DraftState | null): string {
+    if (!state) return '';
+    const player = this.getCurrentPlayer(state);
+    const filters = state.filters
+      ? {
+        generations: [...state.filters.generations].sort((a, b) => a - b),
+        mega: state.filters.mega,
+        gigantamax: state.filters.gigantamax,
+      }
+      : undefined;
+    return JSON.stringify({
+      draftId: this.activeDraftId(),
+      round: state.currentRound,
+      turnIndex: state.currentTurnIndex,
+      playerId: player.id,
+      team: player.team.map((pokemon) => pokemon.id),
+      filters,
+    });
   }
 
   private commit(state: DraftState): void {
