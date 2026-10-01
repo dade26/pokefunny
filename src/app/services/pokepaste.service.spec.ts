@@ -78,6 +78,15 @@ describe('PokepasteService', () => {
     expect(text.split('\n\n')[1]).not.toContain('Shiny:');
   });
 
+  it('omits the ability when it is missing from Showdown data', async () => {
+    getDetail.mockResolvedValue({
+      name: 'venusaur-mega', is_default: false, species: { name: 'venusaur-mega' },
+      abilities: [{ ability: { name: 'new-mega-ability' }, is_hidden: false, slot: 1 }],
+    });
+    const text = await TestBed.inject(PokepasteService).createText([team[0]]);
+    expect(text).toBe('Venusaur-Mega @ Venusaurite');
+  });
+
   it.each([
     ['meowstic-male', 'Meowstic (M)'],
     ['meowstic-female', 'Meowstic-F (F)'],

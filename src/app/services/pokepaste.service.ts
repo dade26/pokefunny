@@ -26,17 +26,15 @@ export class PokepasteService {
       }
       const abilitySlot = [...detail.abilities]
         .sort((a, b) => Number(a.is_hidden) - Number(b.is_hidden) || a.slot - b.slot)[0];
-      const ability = abilitySlot && Dex.abilities.get(abilitySlot.ability.name);
-      if (!ability?.exists) {
-        throw new PokepasteError('unknownAbility', pokemon.name);
-      }
+      const ability = abilitySlot ? Dex.abilities.get(abilitySlot.ability.name) : null;
       const fixedGender = species.gender === 'M' || species.gender === 'F'
         ? species.gender
         : /-female(?:-|$)/.test(detail.name) ? 'F' : /-male(?:-|$)/.test(detail.name) ? 'M' : '';
       const gender = fixedGender ? ` (${fixedGender})` : '';
       const item = species.requiredItem ? ` @ ${species.requiredItem}` : '';
       const shiny = pokemon.shiny ? '\nShiny: Yes' : '';
-      return `${species.name}${gender}${item}\nAbility: ${ability.name}${shiny}`;
+      const abilityText = ability?.exists ? `\nAbility: ${ability.name}` : '';
+      return `${species.name}${gender}${item}${abilityText}${shiny}`;
     }));
     return sets.join('\n\n');
   }
