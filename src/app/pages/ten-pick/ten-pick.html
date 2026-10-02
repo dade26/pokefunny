@@ -11,7 +11,7 @@
       <div class="setup-panel">
         <div class="filter-menus">
           <details class="filter-dropdown" name="draft-filters">
-            <summary><span>Gen</span><svg lucideChevronDown aria-hidden="true"></svg></summary>
+            <summary><span>{{ i18n.t('generations') }}</span><svg lucideChevronDown aria-hidden="true"></svg></summary>
             <div class="filter-grid">
               @for (generation of generations; track generation) {
                 <label class="filter-choice">
@@ -22,10 +22,10 @@
             </div>
           </details>
           <details class="filter-dropdown" name="draft-filters">
-            <summary><span>Gimmicks</span><svg lucideChevronDown aria-hidden="true"></svg></summary>
+            <summary><span>{{ i18n.t('specialForms') }}</span><svg lucideChevronDown aria-hidden="true"></svg></summary>
             <div class="filter-grid gimmicks">
               <label class="filter-choice"><input type="checkbox" [ngModel]="mega()" (ngModelChange)="mega.set($event)" /><span>{{ i18n.t('mega') }}</span></label>
-              <label class="filter-choice"><input type="checkbox" [ngModel]="gigantamax()" (ngModelChange)="gigantamax.set($event)" /><span>Gigantamax</span></label>
+              <label class="filter-choice"><input type="checkbox" [ngModel]="gigantamax()" (ngModelChange)="gigantamax.set($event)" /><span>{{ i18n.t('gigantamax') }}</span></label>
             </div>
           </details>
         </div>
