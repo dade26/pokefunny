@@ -1,8 +1,11 @@
 * { box-sizing: border-box; }
 :root { color-scheme: light; }
 :root[data-theme=dark] { color-scheme: dark; --page: #16191c; --surface: #23282c; --text: #e7eeea; --muted: #b0beb6; --border: #4b5851; --border-strong: #788d80; --shadow: #0e1210; --surface-muted: #2b3430; --hover: #35413a; --selected: #2a4333; --success-border: #76b583; --warning: #443b20; --warning-border: #a48c38; --warning-text: #f4dfa0; --error: #ff939c; }
+html { touch-action: manipulation; }
 body { margin: 0; min-width: 320px; background: var(--page, #edf2ee); color: var(--text, #293631); font-family: 'Trebuchet MS', Arial, sans-serif; }
-button, input { font: inherit; }
+button, input, textarea, select { font: inherit; }
+button, a, summary, label, input, textarea, select { touch-action: manipulation; }
+input, textarea, select { font-size: max(16px, 1em); }
 img { max-width: 100%; }
 .shiny-label { display: inline-block; margin: 4px; padding: 3px 6px; border: 1px solid var(--warning-border, #b29b37); border-radius: 3px; background: var(--warning, #fff3bd); color: var(--warning-text, #65530e); font-size: 10px; font-weight: 700; line-height: 1.2; }
 .types .type-fire { background: #c75232; }
