@@ -444,8 +444,7 @@
 }
 
 .dex-entry.unknown img {
-  filter: brightness(0);
-  opacity: 0.9;
+  filter: brightness(0) opacity(0.42);
 }
 
 .dex-entry.unknown,
@@ -454,7 +453,7 @@
 }
 
 .dex-entry.seen img {
-  filter: brightness(0) opacity(0.42);
+  filter: brightness(0);
 }
 
 .dex-entry.owned {
