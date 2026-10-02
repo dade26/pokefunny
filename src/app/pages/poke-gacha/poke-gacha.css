@@ -554,10 +554,10 @@
   .gacha-stage { gap: 14px; }
   .machine-scene { padding-top: 96px; }
   .status-line.speech-bubble {
-    left: 50%;
-    right: auto;
-    width: min(320px, 100%);
-    transform: translateX(-50%);
+    left: auto;
+    right: 0;
+    width: min(290px, 100%);
+    transform: none;
   }
   .machine img { max-height: clamp(180px, calc(100svh - 330px), 420px); }
   .bonus-active .machine img { max-height: clamp(180px, calc(100svh - 390px), 360px); }
