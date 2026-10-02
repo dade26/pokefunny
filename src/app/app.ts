@@ -19,8 +19,9 @@ const siteUrl = 'https://pokefunny.dade.es';
 const siteName = 'Pokefunny';
 const analyticsRoutes = [
   /^\/$/,
-  /^\/ten-pick(?:\/(?:new|[^/?#]+))?$/,
+  /^\/ten-pick(?:\/(?:drafts|new|[^/?#]+))?$/,
   /^\/ten-pick-monotype(?:\/(?:new|[^/?#]+))?$/,
+  /^\/poke-gacha$/,
 ];
 
 @Component({
@@ -118,8 +119,9 @@ export class App {
   private analyticsRoute(pathname: string): string | null {
     if (!this.shouldTrackPath(pathname)) return null;
     if (pathname === '/') return '/';
-    if (pathname === '/ten-pick' || pathname === '/ten-pick/new') return pathname;
+    if (pathname === '/ten-pick' || pathname === '/ten-pick/drafts' || pathname === '/ten-pick/new') return pathname;
     if (pathname === '/ten-pick-monotype' || pathname === '/ten-pick-monotype/new') return pathname;
+    if (pathname === '/poke-gacha') return pathname;
     if (pathname.startsWith('/ten-pick-monotype/')) return '/ten-pick-monotype/:draftId';
     if (pathname.startsWith('/ten-pick/')) return '/ten-pick/:draftId';
     return null;

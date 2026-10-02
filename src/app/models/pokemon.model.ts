@@ -1,9 +1,12 @@
 export interface Pokemon {
   id: number;
   name: string;
+  rawName?: string;
   sprite: string;
   artwork: string;
   types: string[];
+  generation?: number;
+  baseStatsTotal?: number;
   shiny?: boolean;
   shinySprite?: string;
   shinyArtwork?: string;

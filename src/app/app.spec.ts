@@ -38,11 +38,13 @@ describe('App', () => {
     router.resetConfig([
       { path: '', component: AnalyticsTestPage },
       { path: 'ten-pick', component: AnalyticsTestPage },
+      { path: 'ten-pick/drafts', component: AnalyticsTestPage },
       { path: 'ten-pick/new', component: AnalyticsTestPage },
       { path: 'ten-pick/:draftId', component: AnalyticsTestPage },
       { path: 'ten-pick-monotype', component: AnalyticsTestPage },
       { path: 'ten-pick-monotype/new', component: AnalyticsTestPage },
       { path: 'ten-pick-monotype/:draftId', component: AnalyticsTestPage },
+      { path: 'poke-gacha', component: AnalyticsTestPage },
     ]);
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
@@ -55,11 +57,13 @@ describe('App', () => {
 
     const visits = [
       ['/ten-pick', '/ten-pick'],
+      ['/ten-pick/drafts', '/ten-pick/drafts'],
       ['/ten-pick/new', '/ten-pick/new'],
       ['/ten-pick/saved-draft', '/ten-pick/:draftId'],
       ['/ten-pick-monotype', '/ten-pick-monotype'],
       ['/ten-pick-monotype/new', '/ten-pick-monotype/new'],
       ['/ten-pick-monotype/saved-draft', '/ten-pick-monotype/:draftId'],
+      ['/poke-gacha', '/poke-gacha'],
       ['/', '/'],
     ];
     for (const [path, route] of visits) {
@@ -76,9 +80,11 @@ describe('App', () => {
     const dropdown = compiled.querySelector('nav details.nav-dropdown') as HTMLDetailsElement;
     expect(dropdown.querySelector('summary')?.textContent).toBe('Ten Pick');
     expect(dropdown.querySelector('a[href="/ten-pick"]')?.textContent).toBe('Ten Pick');
+    expect(dropdown.querySelector('a[href="/ten-pick/drafts"]')?.textContent).toBe('My drafts');
     expect(dropdown.querySelector('a[href="/ten-pick-monotype"]')?.textContent).toBe('Ten Pick Monotype');
     const festa = dropdown.querySelector('button') as HTMLButtonElement;
     expect(festa.textContent).toBe('Ten Pick Festa');
     expect(festa.disabled).toBe(true);
+    expect(compiled.querySelector('nav a[href="/poke-gacha"]')?.textContent).toBe('PokeGacha');
   });
 });

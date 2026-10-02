@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { Pokemon, PokemonType } from '../models/pokemon.model';
 import { pokemonArtworkUrl } from '../models/pokemon-images';
 
-interface PokemonCatalogEntry {
+export interface PokemonCatalogEntry {
   id: number;
   name: string;
   generation: number;
@@ -29,6 +29,7 @@ export interface PokemonDetailResponse {
       };
     };
   };
+  stats: { base_stat: number }[];
   types: { type: { name: string } }[];
 }
 
@@ -47,6 +48,10 @@ export class PokemonService {
   constructor(private readonly http: HttpClient) {}
 
   async getPokemonList(): Promise<{ id: number; name: string }[]> {
+    return this.getCatalog();
+  }
+
+  async getPokemonCatalog(): Promise<PokemonCatalogEntry[]> {
     return this.getCatalog();
   }
 
@@ -73,9 +78,11 @@ export class PokemonService {
     const pokemon: Pokemon = {
       id,
       name: this.formatName(entry.name),
+      rawName: entry.name,
       sprite,
       artwork: entry.images & 5 ? pokemonArtworkUrl(id) : '',
       types: entry.types.map((type) => this.formatName(type)),
+      generation: entry.generation,
       shinySprite: image(2, 'shiny/'),
       shinyArtwork: entry.images & 10 ? pokemonArtworkUrl(id, true) : '',
     };
@@ -109,6 +116,15 @@ export class PokemonService {
 
   async getGeneration(id: number): Promise<number> {
     return (await this.getCatalogEntry(id)).generation;
+  }
+
+  async getBaseStatsTotal(id: number): Promise<number> {
+    try {
+      const detail = await this.getDetail(id);
+      return detail.stats.reduce((total, stat) => total + stat.base_stat, 0);
+    } catch {
+      return 0;
+    }
   }
 
   preloadArtwork(options: Pokemon[]): void {
@@ -156,4 +172,5 @@ export class PokemonService {
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ');
   }
+
 }

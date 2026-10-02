@@ -6,25 +6,14 @@
       <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png" alt="" />
       <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png" alt="" />
     </div>
-    <div class="mode-copy"><h2>Ten Pick</h2><span>{{ i18n.t('tagline') }}</span></div>
+    <div class="mode-copy"><h2>Ten Pick</h2><span>{{ i18n.t('tenPickHubTagline') }}</span></div>
     <a routerLink="/ten-pick">{{ i18n.t('play') }}</a>
   </section>
   <section class="mode">
-    <div class="starters" aria-hidden="true">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/925.png" alt="Maushold" />
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/216.png" alt="Teddiursa" />
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png" alt="Snorlax" />
+    <div class="gacha-icon" aria-hidden="true">
+      <img src="images/gacha/pokegacha.png" alt="" />
     </div>
-    <div class="mode-copy"><h2>Ten Pick Monotype</h2><span>{{ i18n.t('monotypeTagline') }}</span></div>
-    <a routerLink="/ten-pick-monotype">{{ i18n.t('playMonotype') }}</a>
-  </section>
-  <section class="mode mode-pending">
-    <div class="starters" aria-hidden="true">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/957.png" alt="Tinkatink" />
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/944.png" alt="Shroodle" />
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/859.png" alt="Impidimp" />
-    </div>
-    <div class="mode-copy"><h2>Ten Pick Festa</h2><span>Work in. Progress.</span></div>
-    <button type="button" disabled>{{ i18n.t('playFesta') }}</button>
+    <div class="mode-copy"><h2>PokeGacha</h2><span>{{ i18n.t('pokeGachaTagline') }}</span></div>
+    <a routerLink="/poke-gacha">{{ i18n.t('playPokeGacha') }}</a>
   </section>
 </main>

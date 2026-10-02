@@ -2,6 +2,8 @@ import { Routes } from '@angular/router';
 import { Home } from './pages/home/home';
 import { TenPick } from './pages/ten-pick/ten-pick';
 import { DraftHistory } from './pages/draft-history/draft-history';
+import { TenPickHub } from './pages/ten-pick-hub/ten-pick-hub';
+import { PokeGacha } from './pages/poke-gacha/poke-gacha';
 
 export const routes: Routes = [
   {
@@ -10,13 +12,23 @@ export const routes: Routes = [
     data: {
       title: 'Pokefunny | Pokemon Drafts - Ten Pick & Monotype',
       description:
-        'Play Pokemon draft games online with Pokefunny. Build teams in Ten Pick or Ten Pick Monotype, save drafts locally and export teams as Pokepaste text.',
+        'Choose between Pokefunny games, including Ten Pick Pokemon drafts and PokeGacha.',
       canonicalPath: '/',
       schemaType: 'WebSite',
     },
   },
   {
     path: 'ten-pick',
+    component: TenPickHub,
+    data: {
+      title: 'Ten Pick Pokemon Draft Modes | Pokefunny',
+      description:
+        'Choose a Ten Pick mode in Pokefunny, including classic Pokemon drafts, Monotype and upcoming Festa drafts.',
+      canonicalPath: '/ten-pick',
+    },
+  },
+  {
+    path: 'ten-pick/drafts',
     component: DraftHistory,
     data: {
       title: 'Ten Pick Pokemon Drafts | Pokefunny',
@@ -33,6 +45,15 @@ export const routes: Routes = [
       description:
         'Create a new Ten Pick Pokemon draft with custom trainers, team size, generation filters, Mega Pokemon and Gigantamax options.',
       canonicalPath: '/ten-pick/new',
+    },
+  },
+  {
+    path: 'poke-gacha',
+    component: PokeGacha,
+    data: {
+      title: 'PokeGacha | Pokefunny',
+      description: 'PokeGacha on Pokefunny.',
+      canonicalPath: '/poke-gacha',
     },
   },
   {
