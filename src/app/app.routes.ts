@@ -101,5 +101,39 @@ export const routes: Routes = [
       robots: 'noindex, follow',
     },
   },
+  {
+    path: 'ten-pick-festa',
+    component: DraftHistory,
+    data: {
+      mode: 'festa',
+      title: 'Ten Pick Festa Pokemon Drafts | Pokefunny',
+      description:
+        'Play Ten Pick Festa drafts online with surprise Festa Cards layered over the classic Ten Pick Pokemon draft.',
+      canonicalPath: '/ten-pick-festa',
+    },
+  },
+  {
+    path: 'ten-pick-festa/new',
+    component: TenPick,
+    data: {
+      mode: 'festa',
+      title: 'New Ten Pick Festa Draft | Pokefunny',
+      description:
+        'Create a Ten Pick Festa draft with custom trainers, filters and configurable Festa Card chance.',
+      canonicalPath: '/ten-pick-festa/new',
+    },
+  },
+  {
+    path: 'ten-pick-festa/:draftId',
+    component: TenPick,
+    data: {
+      mode: 'festa',
+      title: 'Ten Pick Festa Draft Board | Pokefunny',
+      description:
+        'Continue a Ten Pick Festa draft and resolve surprise Festa Cards during the Pokemon draft.',
+      canonicalPath: '/ten-pick-festa',
+      robots: 'noindex, follow',
+    },
+  },
   { path: '**', redirectTo: '' },
 ];

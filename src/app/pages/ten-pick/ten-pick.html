@@ -5,6 +5,7 @@
       <div class="setup-copy">
         <h1>{{ i18n.t('newDraft') }}</h1>
         @if (monotype()) { <h2 class="mode-title">Ten Pick Monotype</h2> }
+        @if (festa()) { <h2 class="mode-title">Ten Pick Festa</h2> }
       </div>
 
       <div class="setup-panel">
@@ -73,6 +74,19 @@
           />
         </label>
 
+        @if (festa()) {
+          <label>
+            {{ i18n.t('festaChance') }}
+            <input
+              type="number"
+              min="0"
+              max="100"
+              [ngModel]="festaChance()"
+              (ngModelChange)="updateFestaChance($event)"
+            />
+          </label>
+        }
+
         @if (!selectedGenerations().length) { <p class="filter-error" role="alert">{{ i18n.t('selectGeneration') }}</p> }
         <button class="start" type="button" [disabled]="setupPlayers().length < 1 || !selectedGenerations().length || starting()" (click)="startDraft()">
           {{ i18n.t('start') }}
@@ -100,6 +114,123 @@
               <a [routerLink]="routeBase()">{{ i18n.t('myDrafts') }}</a>
             </div>
           </div>
+        } @else if (rerollReveal(); as reveal) {
+          <article class="reroll-stage" aria-live="polite" [attr.aria-busy]="!reveal.result">
+            <h1>{{ i18n.t('festaReroll') }}</h1>
+            @if (reveal.result; as pokemon) {
+              <div class="reroll-result">
+                <img class="artwork" [src]="pokemon.artwork || pokemon.sprite" [alt]="pokemon.name" />
+                <h2>{{ pokemon.name }}</h2>
+                @if (pokemon.shiny) { <span class="shiny-label">{{ i18n.t('shiny') }}</span> }
+                <p>{{ i18n.t('festaReplaced', { name: reveal.previous.name }) }}</p>
+              </div>
+              <button type="button" class="pick" (click)="rerollReveal.set(null)">{{ i18n.t('continue') }}</button>
+            } @else {
+              <div class="reroll-spinning">
+                <img class="artwork" [src]="reveal.previous.artwork || reveal.previous.sprite" alt="" />
+              </div>
+              <p role="status">{{ i18n.t('gachaSpinning') }}</p>
+            }
+          </article>
+        } @else if (draft.activeFestaCard && activeFestaCard(); as card) {
+          <article class="festa-stage">
+            <div class="festa-card">
+              <div class="festa-confetti" aria-hidden="true">
+                <i style="--x:8%;--d:-200ms"></i><i style="--x:16%;--d:-900ms;--t:2600ms"></i><i style="--x:25%;--d:-1300ms"></i><i style="--x:34%;--d:-600ms;--t:2400ms"></i><i style="--x:43%;--d:-1700ms"></i><i style="--x:52%;--d:-1100ms;--t:2800ms"></i><i style="--x:61%;--d:-300ms"></i><i style="--x:70%;--d:-1500ms;--t:2500ms"></i><i style="--x:78%;--d:-800ms"></i><i style="--x:86%;--d:-1900ms;--t:2700ms"></i><i style="--x:92%;--d:-500ms"></i><i style="--x:48%;--d:-2100ms;--t:2900ms"></i>
+              </div>
+              <span class="festa-badge">FESTA!</span>
+              <img class="festa-mascot" [src]="festaMascot().sprite" [alt]="festaMascot().name" />
+              <h1>{{ festaCardText(card, 'nameKey') }}</h1>
+              <p>{{ festaCardText(card, 'descriptionKey') }}</p>
+            </div>
+
+            @if (festaRivalRolling()) {
+              <div class="festa-rival-roll" [class.revealed]="festaRivalRevealed()" role="status" [attr.aria-live]="festaRivalRevealed() ? 'polite' : 'off'">
+                <span>{{ i18n.t(festaRivalRevealed() ? 'festaRivalSelected' : 'festaChoosingRival') }}</span>
+                <strong>{{ festaRivalPreview() }}</strong>
+              </div>
+            } @else if (draft.activeFestaCard.phase === 'revealed') {
+              <button class="pick" type="button" (click)="startFestaResolution()">{{ i18n.t('festaResolve') }}</button>
+            } @else if (service.loadingTurn() || festaChoicesLoading()) {
+              <div class="loading festa-loading" role="status">{{ i18n.t('loading') }}</div>
+            } @else if (festaChoicesError()) {
+              <p class="error" role="alert">{{ i18n.t('turnError') }}</p>
+              <button type="button" (click)="retryFestaChoices()">{{ i18n.t('retry') }}</button>
+            } @else {
+              @if (service.getFestaPokemonChoiceKind(card.effect)) {
+                <div class="festa-resolution">
+                  @if (service.isOpponentChoiceEffect(card.effect) && festaRival(); as rival) {
+                    <p class="festa-note">{{ i18n.t('festaRivalChoosesFor', { rival: rival.name, player: player?.name ?? i18n.t('player') }) }}</p>
+                  }
+                  <input [placeholder]="i18n.t('searchPokemon')" [ngModel]="festaQuery()" (ngModelChange)="festaQuery.set($event)" />
+                  <div class="festa-grid">
+                    @for (choice of filteredFestaChoices(); track choice.id) {
+                      <button type="button" class="festa-pokemon" [class.selected]="selectedFestaPokemonId() === choice.id" (click)="selectFestaPokemon(choice.id)">
+                        <img [src]="choice.artwork || choice.sprite" [alt]="choice.name" />
+                        <span>{{ choice.name }}</span>
+                      </button>
+                    }
+                  </div>
+                  <button class="pick" type="button" [disabled]="selectedFestaPokemonId() === null" (click)="confirmFestaPokemon()">{{ i18n.t('festaConfirm') }}</button>
+                </div>
+              } @else if (card.effect === 'forced-reroll') {
+                <div class="festa-resolution">
+                  @if (rerollError()) { <p class="error" role="alert">{{ i18n.t('turnError') }}</p> }
+                  <div class="festa-grid compact">
+                    @for (pokemon of player?.team ?? []; track pokemon.id; let index = $index) {
+                      <button type="button" class="festa-pokemon" (click)="rerollPick(index)">
+                        <img [src]="pokemon.artwork || pokemon.sprite" [alt]="pokemon.name" />
+                        <span>{{ pokemon.name }}</span>
+                      </button>
+                    }
+                  </div>
+                </div>
+              } @else if (card.effect === 'trade-any') {
+                <div class="festa-resolution">
+                  <div class="trade-columns">
+                    <div>
+                      <h2>{{ i18n.t('festaFirstPokemon') }}</h2>
+                      <div class="festa-grid compact">
+                        @for (pick of allPickedPokemon(); track pick.key) {
+                          <button type="button" class="festa-pokemon" [class.selected]="selectedTradeFirst() === pick.key" (click)="selectTrade('first', pick.key)">
+                            <img [src]="pick.pokemon.artwork || pick.pokemon.sprite" [alt]="pick.pokemon.name" />
+                            <span>{{ pick.player.name }} - {{ pick.pokemon.name }}</span>
+                          </button>
+                        }
+                      </div>
+                    </div>
+                    <div>
+                      <h2>{{ i18n.t('festaSecondPokemon') }}</h2>
+                      <div class="festa-grid compact">
+                        @for (pick of allPickedPokemon(); track pick.key) {
+                          <button type="button" class="festa-pokemon" [class.selected]="selectedTradeSecond() === pick.key" (click)="selectTrade('second', pick.key)">
+                            <img [src]="pick.pokemon.artwork || pick.pokemon.sprite" [alt]="pick.pokemon.name" />
+                            <span>{{ pick.player.name }} - {{ pick.pokemon.name }}</span>
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                  <button class="pick" type="button" [disabled]="!selectedTradeFirst() || !selectedTradeSecond() || selectedTradeFirst() === selectedTradeSecond()" (click)="confirmTrade()">{{ i18n.t('festaConfirm') }}</button>
+                </div>
+              } @else if (card.effect === 'trade-last') {
+                <div class="festa-resolution">
+                  @if (player?.team?.length) {
+                    <p class="festa-note">{{ i18n.t('festaYourLastPick') }}: <strong>{{ player!.team[service.getLastPickIndex(player!)].name }}</strong></p>
+                  }
+                  <div class="festa-grid compact">
+                    @for (pick of otherPickedPokemon(); track pick.key) {
+                      <button type="button" class="festa-pokemon" [class.selected]="selectedTradeSecond() === pick.key" (click)="selectTrade('second', pick.key)">
+                        <img [src]="pick.pokemon.artwork || pick.pokemon.sprite" [alt]="pick.pokemon.name" />
+                        <span>{{ pick.player.name }} - {{ pick.pokemon.name }}</span>
+                      </button>
+                    }
+                  </div>
+                  <button class="pick" type="button" [disabled]="!selectedTradeSecond()" (click)="confirmLastPickTrade()">{{ i18n.t('festaConfirm') }}</button>
+                </div>
+              }
+            }
+          </article>
         } @else if (draft.currentTurn?.finished) {
           <app-ten-pick-result
             [turn]="draft.currentTurn!"

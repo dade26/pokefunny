@@ -1,6 +1,6 @@
 <main class="history">
   <div class="heading">
-    <div><h1>{{ monotype ? 'Ten Pick Monotype' : i18n.t('myDrafts') }}</h1></div>
+    <div><h1>{{ monotype ? 'Ten Pick Monotype' : festa ? 'Ten Pick Festa' : i18n.t('myDrafts') }}</h1></div>
     <a class="new-draft" [routerLink]="routeBase + '/new'"><svg lucidePlus aria-hidden="true"></svg>{{ i18n.t('newDraft') }}</a>
   </div>
   @if (!drafts().length) {

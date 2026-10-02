@@ -14,10 +14,12 @@ import { TenPickService } from '../../services/ten-pick.service';
 export class DraftHistory {
   readonly i18n = inject(LanguageService);
   readonly service = inject(TenPickService);
-  readonly monotype = inject(ActivatedRoute).snapshot.data['mode'] === 'monotype';
-  readonly routeBase = this.monotype ? '/ten-pick-monotype' : '/ten-pick';
+  private readonly mode = inject(ActivatedRoute).snapshot.data['mode'];
+  readonly monotype = this.mode === 'monotype';
+  readonly festa = this.mode === 'festa';
+  readonly routeBase = this.monotype ? '/ten-pick-monotype' : this.festa ? '/ten-pick-festa' : '/ten-pick';
   readonly drafts = computed(() => [...this.service.drafts()]
-    .filter((draft) => (draft.state.mode === 'monotype') === this.monotype)
+    .filter((draft) => (draft.state.mode ?? 'normal') === (this.monotype ? 'monotype' : this.festa ? 'festa' : 'normal'))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
   readonly deleting = signal<string | null>(null);
 

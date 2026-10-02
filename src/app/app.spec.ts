@@ -82,7 +82,7 @@ describe('App', () => {
     expect(pageview).toHaveBeenCalledTimes(visits.length + 1);
   });
 
-  it('should show Ten Pick modes in a navigation dropdown with disabled Festa', async () => {
+  it('should show Ten Pick modes in a navigation dropdown with Festa enabled', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
@@ -91,9 +91,7 @@ describe('App', () => {
     expect(dropdown.querySelector('a[href="/ten-pick"]')?.textContent).toBe('Ten Pick');
     expect(dropdown.querySelector('a[href="/ten-pick/drafts"]')?.textContent).toBe('My drafts');
     expect(dropdown.querySelector('a[href="/ten-pick-monotype"]')?.textContent).toBe('Ten Pick Monotype');
-    const festa = dropdown.querySelector('button') as HTMLButtonElement;
-    expect(festa.textContent).toBe('Ten Pick Festa');
-    expect(festa.disabled).toBe(true);
+    expect(dropdown.querySelector('a[href="/ten-pick-festa"]')?.textContent).toBe('Ten Pick Festa');
     expect(compiled.querySelector('nav a[href="/poke-gacha"]')?.textContent).toBe('PokeGacha');
   });
 });

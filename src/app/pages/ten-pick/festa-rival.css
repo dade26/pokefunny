@@ -1,0 +1,6 @@
+.festa-rival-roll { width: 100%; min-height: 180px; display: grid; place-items: center; align-content: center; gap: 12px; text-align: center; }
+.festa-rival-roll span { color: var(--muted, #65746b); font-size: 13px; font-weight: 700; text-transform: uppercase; }
+.festa-rival-roll strong { box-sizing: border-box; width: min(360px, 100%); min-height: 80px; display: grid; place-items: center; padding: 18px 24px; border: 2px solid var(--border-strong, #344b40); border-radius: 4px; background: var(--surface, #fff); box-shadow: 4px 4px 0 var(--shadow, #c6d4cb); font-size: 30px; overflow-wrap: anywhere; animation: rival-roll 180ms ease-in-out infinite alternate; }
+.festa-rival-roll.revealed strong { animation: none; background: var(--selected, #e5f1e7); border-color: var(--success-border, #8ab492); }
+@keyframes rival-roll { from { transform: translateY(0) scale(1); } to { transform: translateY(-4px) scale(1.02); } }
+@media (prefers-reduced-motion: reduce) { .festa-rival-roll strong { animation: none; } }

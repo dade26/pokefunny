@@ -17,6 +17,7 @@ export interface Player {
   id: string;
   name: string;
   team: Pokemon[];
+  lastPickIndex?: number;
 }
 
 export interface TenPickTurn {
@@ -29,9 +30,45 @@ export interface TenPickTurn {
   finished: boolean;
 }
 
+export type DraftMode = 'normal' | 'monotype' | 'festa';
+export type FestaPokemonChoiceKind = 'first-stage' | 'minor-legendary' | 'fully-evolved';
+export type FestaEffectType =
+  | FestaPokemonChoiceKind
+  | 'opponent-first-stage'
+  | 'opponent-minor-legendary'
+  | 'opponent-fully-evolved'
+  | 'forced-reroll'
+  | 'trade-any'
+  | 'trade-last';
+
+export interface FestaCard {
+  id: string;
+  name: string;
+  description: string;
+  nameKey: string;
+  descriptionKey: string;
+  consumesPick: boolean;
+  effect: FestaEffectType;
+}
+
+export interface ActiveFestaCard {
+  cardId: string;
+  phase: 'revealed' | 'resolving';
+  rivalPlayerId?: string;
+}
+
+export interface DraftHistoryEvent {
+  id: string;
+  createdAt: string;
+  message: string;
+}
+
 export interface DraftState {
-  mode?: 'normal' | 'monotype';
+  mode?: DraftMode;
   filters?: DraftFilters;
+  festaChance?: number;
+  activeFestaCard?: ActiveFestaCard;
+  history?: DraftHistoryEvent[];
   players: Player[];
   draftOrder: string[];
   currentRound: number;
@@ -42,7 +79,8 @@ export interface DraftState {
 }
 
 export interface DraftSetup {
-  mode?: 'normal' | 'monotype';
+  mode?: DraftMode;
+  festaChance?: number;
   playerTypes?: (PokemonType | undefined)[];
   filters?: DraftFilters;
   playerNames: string[];

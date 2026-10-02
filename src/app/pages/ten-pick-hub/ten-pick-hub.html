@@ -18,13 +18,12 @@
     <div class="mode-copy"><h2>Ten Pick Monotype</h2><span>{{ i18n.t('monotypeTagline') }}</span></div>
     <a routerLink="/ten-pick-monotype">{{ i18n.t('playMonotype') }}</a>
   </section>
-  <section class="mode mode-pending">
-    <div class="starters" aria-hidden="true">
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/957.png" alt="Tinkatink" />
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/944.png" alt="Shroodle" />
-      <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/859.png" alt="Impidimp" />
+  <section class="mode festa-mode">
+    <div class="starters festa-duo" aria-hidden="true">
+      <img class="festa-tinkatink" src="images/pokemon/v1/957.webp" alt="" />
+      <img class="festa-impidimp" src="images/pokemon/v1/859.webp" alt="" />
     </div>
-    <div class="mode-copy"><h2>Ten Pick Festa</h2><span>Work in. Progress.</span></div>
-    <button type="button" disabled>{{ i18n.t('playFesta') }}</button>
+    <div class="mode-copy"><h2>Ten Pick Festa</h2><span>Festa cards can interrupt any encounter.</span></div>
+    <a routerLink="/ten-pick-festa">{{ i18n.t('playFesta') }}</a>
   </section>
 </main>
