@@ -2,16 +2,16 @@
   <section class="gacha-stage" aria-live="polite">
     <button class="machine" type="button" (click)="pull()" [disabled]="loading() || options().length > 0">
       <img src="images/gacha/pokegacha.png" alt="PokeGacha" />
-      <span>{{ loading() ? 'Girando...' : 'Pulsar maquina' }}</span>
+      <span>{{ loading() ? i18n.t('gachaSpinning') : i18n.t('gachaPull') }}</span>
     </button>
 
-    <div class="status-line">{{ message() }}</div>
+    <div class="status-line">{{ messageText() }}</div>
 
   </section>
 
   @if (options().length) {
-    <dialog #drawDialog class="draw-popup" aria-label="Elige un Pokemon" (cancel)="$event.preventDefault()">
-      <p class="draw-status" aria-live="polite">{{ message() }}</p>
+    <dialog #drawDialog class="draw-popup" [attr.aria-label]="i18n.t('gachaChoosePokemon')" (cancel)="$event.preventDefault()">
+      <p class="draw-status" aria-live="polite">{{ messageText() }}</p>
       <div class="capsules">
         @for (option of options(); track option.pokemon.id; let index = $index) {
           <article class="capsule-card" [class.revealed]="option.revealed" [style.--capsule-index]="index">
@@ -19,8 +19,8 @@
               <button
                 class="pokeball"
                 type="button"
-                [attr.aria-label]="'Revelar Pokemon ' + (index + 1)"
-                [class.glow]="(option.pokemon.baseStatsTotal ?? 0) > 600"
+                [attr.aria-label]="i18n.t('gachaRevealPokemon', { count: index + 1 })"
+                [class.glow]="(option.pokemon.baseStatsTotal ?? 0) >= 600"
                 (click)="reveal(index)"
               >
                 <img src="images/gacha/pokeball.png" alt="Poke Ball" />
@@ -29,7 +29,10 @@
               <div class="pokemon-reveal">
                 <img [src]="option.pokemon.artwork || option.pokemon.sprite" [alt]="option.pokemon.name" />
                 <h2>{{ option.pokemon.name }}</h2>
-                <button type="button" [disabled]="!canChoose()" (click)="choose(option)">Elegir</button>
+                <button type="button" [disabled]="!canChoose()" (click)="choose(option)">{{ i18n.t('pick') }}</button>
+                @if (dexStatus(option.pokemon.id) === 'owned') {
+                  <p class="registered-note">{{ i18n.t('alreadyRegistered') }}</p>
+                }
               </div>
             }
           </article>
@@ -38,28 +41,28 @@
     </dialog>
   }
 
-  <button class="corner-button pc-button" type="button" (click)="openPc()" aria-label="Abrir PC">
+  <button class="corner-button pc-button" type="button" (click)="openPc()" [attr.aria-label]="i18n.t('gachaOpenPc')">
     <img src="images/gacha/pc.png" alt="" />
     <span>PC</span>
   </button>
 
-  <button class="corner-button dex-button" type="button" (click)="openPokedex()" aria-label="Abrir Pokedex">
+  <button class="corner-button dex-button" type="button" (click)="openPokedex()" [attr.aria-label]="i18n.t('gachaOpenPokedex')">
     <img src="images/gacha/pokedex.png" alt="" />
-    <span>Pokedex</span>
+    <span>{{ i18n.t('gachaPokedex') }}</span>
   </button>
 
   @if (pcOpen()) {
-    <section class="modal-shell" aria-label="PC Pokemon">
+    <section class="modal-shell" [attr.aria-label]="i18n.t('gachaPcPokemon')">
       <div class="modal-panel pc-panel">
         <header>
           <h1>PC</h1>
-          <button type="button" (click)="pcOpen.set(false)">Cerrar</button>
+          <button type="button" (click)="pcOpen.set(false)">{{ i18n.t('gachaClose') }}</button>
         </header>
 
-        <div class="box-tabs" role="tablist" aria-label="Cajas">
+        <div class="box-tabs" role="tablist" [attr.aria-label]="i18n.t('gachaBoxes')">
           @for (box of boxes; track box) {
             <button type="button" [class.active]="currentBox() === box" (click)="currentBox.set(box)">
-              Caja {{ box + 1 }}
+              {{ i18n.t('gachaBox', { count: box + 1 }) }}
             </button>
           }
         </div>
@@ -74,7 +77,7 @@
                 [class.filled]="entry"
                 [class.selected]="entry?.uid === selectedPcUid()"
                 [class.move-target]="movingUid()"
-                [attr.aria-label]="entry ? (entry.nickname || entry.pokemon.name) : 'Casilla ' + (slot + 1)"
+                [attr.aria-label]="entry ? (entry.nickname || entry.pokemon.name) : i18n.t('gachaSlot', { count: slot + 1 })"
                 (click)="selectSlot(slot)"
               >
                 @if (entry) {
@@ -88,7 +91,7 @@
             @if (selectedPcPokemon(); as entry) {
               <img [src]="entry.pokemon.artwork || entry.pokemon.sprite" [alt]="entry.nickname || entry.pokemon.name" />
               <label>
-                Mote
+                {{ i18n.t('gachaNickname') }}
                 <input
                   type="text"
                   [ngModel]="entry.nickname"
@@ -98,10 +101,10 @@
                   maxlength="24"
                 />
               </label>
-              <button type="button" (click)="startMove(entry.uid)">Mover</button>
-              <button class="danger" type="button" (click)="release(entry.uid)">Liberar</button>
+              <button type="button" (click)="startMove(entry.uid)">{{ i18n.t('gachaMove') }}</button>
+              <button class="danger" type="button" (click)="release(entry.uid)">{{ i18n.t('gachaRelease') }}</button>
             } @else {
-              <p>Selecciona un Pokemon del PC.</p>
+              <p>{{ i18n.t('gachaSelectPcPokemon') }}</p>
             }
           </aside>
         </div>
@@ -110,26 +113,26 @@
   }
 
   @if (pokedexOpen()) {
-    <section class="modal-shell" aria-label="Pokedex">
+    <section class="modal-shell" [attr.aria-label]="i18n.t('gachaPokedex')">
       <div class="modal-panel dex-panel">
         <header>
-          <h1>Pokedex</h1>
-          <button type="button" (click)="pokedexOpen.set(false)">Cerrar</button>
+          <h1>{{ i18n.t('gachaPokedex') }}</h1>
+          <button type="button" (click)="pokedexOpen.set(false)">{{ i18n.t('gachaClose') }}</button>
         </header>
 
         <div class="dex-generations">
           @for (progress of generationProgress(); track progress.generation) {
             <section class="dex-generation">
               <div class="generation-heading">
-                <h2>Generacion {{ progress.generation }}</h2>
+                <h2>{{ i18n.t('gachaGeneration', { count: progress.generation }) }}</h2>
                 <span class="generation-progress">{{ progress.percent }}%</span>
-                <span class="generation-remaining">Faltan {{ progress.remaining }} de {{ progress.total }}</span>
+                <span class="generation-remaining">{{ i18n.t('gachaRemaining', { remaining: progress.remaining, total: progress.total }) }}</span>
               </div>
               <div class="dex-grid">
                 @for (pokemon of progress.entries; track pokemon.id) {
                   @let status = dexStatus(pokemon.id);
                   <figure class="dex-entry" [class.unknown]="status === 'unknown'" [class.seen]="status === 'seen'" [class.owned]="status === 'owned'">
-                    <img [src]="spriteUrl(pokemon.id)" [alt]="status === 'unknown' ? 'Pokemon desconocido' : pokemon.name" />
+                    <img [src]="spriteUrl(pokemon.id)" [alt]="status === 'unknown' ? i18n.t('gachaUnknownPokemon') : pokemon.name" />
                     <figcaption>#{{ pokemon.id }}</figcaption>
                   </figure>
                 }

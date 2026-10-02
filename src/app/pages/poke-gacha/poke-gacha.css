@@ -142,7 +142,7 @@
   width: 100%;
   min-height: 260px;
   display: grid;
-  grid-template-rows: 150px minmax(48px, auto) 42px;
+  grid-template-rows: 150px minmax(48px, auto) auto;
   justify-items: center;
   align-items: center;
   gap: 8px;
@@ -168,6 +168,15 @@
 .pokemon-reveal button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.registered-note {
+  margin: -2px 0 0;
+  min-height: 18px;
+  color: var(--muted, #65746b);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .corner-button {
@@ -435,7 +444,7 @@
 
   .pokemon-reveal {
     min-height: 220px;
-    grid-template-rows: 118px minmax(48px, auto) 42px;
+    grid-template-rows: 118px minmax(48px, auto) auto;
   }
 
   .pokemon-reveal img {
@@ -492,7 +501,7 @@
   .draw-status { margin-bottom: 16px; }
   .capsules { gap: 6px; }
   .capsule-card { min-height: 200px; }
-  .pokemon-reveal { min-height: 200px; padding: 4px; gap: 8px; grid-template-rows: 90px minmax(48px, auto) 44px; }
+  .pokemon-reveal { min-height: 200px; padding: 4px; gap: 8px; grid-template-rows: 90px minmax(48px, auto) auto; }
   .pokemon-reveal img { width: 100%; max-height: 90px; }
   .pokemon-reveal h2 { font-size: 14px; }
   .pokemon-reveal button { padding: 8px; }

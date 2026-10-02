@@ -1,7 +1,7 @@
 import { Component, ElementRef, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Pokemon } from '../../models/pokemon.model';
-import { LanguageService } from '../../services/language.service';
+import { LanguageService, TranslationKey } from '../../services/language.service';
 import { PokemonCatalogEntry, PokemonService } from '../../services/pokemon.service';
 import { PokemonPoolService } from '../../services/pokemon-pool.service';
 
@@ -23,6 +23,11 @@ interface PcPokemon {
 interface GachaSave {
   pc: PcPokemon[];
   pokedex: Record<string, DexStatus>;
+}
+
+interface GachaMessage {
+  key: TranslationKey;
+  values?: Record<string, string | number>;
 }
 
 const storageKey = 'pokefunny.pokeGacha.v1';
@@ -51,7 +56,11 @@ export class PokeGacha implements OnInit {
   readonly currentBox = signal(0);
   readonly selectedPcUid = signal<string | null>(null);
   readonly movingUid = signal<string | null>(null);
-  readonly message = signal('Pulsa la maquina para sacar tres Poke Balls.');
+  readonly message = signal<GachaMessage>({ key: 'gachaReady' });
+  readonly messageText = computed(() => {
+    const message = this.message();
+    return this.i18n.t(message.key, message.values);
+  });
 
   readonly boxes = Array.from({ length: boxCount }, (_, index) => index);
   readonly slots = Array.from({ length: boxSize }, (_, index) => index);
@@ -104,16 +113,16 @@ export class PokeGacha implements OnInit {
     this.selectedPcUid.set(null);
     this.movingUid.set(null);
     this.options.set([]);
-    this.message.set('La maquina esta preparando las capsulas...');
+    this.setMessage('gachaPreparing');
     try {
       const options = await Promise.all((await this.getDrawableOptions()).map(async (pokemon) => ({
         ...pokemon,
         baseStatsTotal: await this.pokemonService.getBaseStatsTotal(pokemon.id),
       })));
       this.options.set(options.map((pokemon) => ({ pokemon, revealed: false })));
-      this.message.set('Pulsa cada Poke Ball para revelar sus Pokemon.');
+      this.setMessage('gachaRevealAll');
     } catch {
-      this.message.set('No se pudo cargar la tirada. Prueba otra vez.');
+      this.setMessage('gachaLoadError');
     } finally {
       this.loading.set(false);
     }
@@ -127,32 +136,30 @@ export class PokeGacha implements OnInit {
       currentIndex === index ? { ...current, revealed: true } : current,
     ));
     this.markPokedex(option.pokemon.id, 'seen');
-    this.message.set(this.canChoose()
-      ? 'Elige uno de los tres. Ese Pokemon ira al PC.'
-      : 'Sigue revelando las Poke Balls.');
+    this.setMessage(this.canChoose() ? 'gachaChooseOne' : 'gachaKeepRevealing');
   }
 
   choose(option: GachaOption): void {
     if (!this.canChoose()) {
-      this.message.set('Primero revela las tres Poke Balls.');
+      this.setMessage('gachaRevealFirst');
       return;
     }
     const slot = this.nextFreeSlot();
     if (!slot) {
-      this.message.set('El PC esta lleno. Libera o mueve algun Pokemon.');
+      this.setMessage('gachaPcFull');
       return;
     }
     const pcPokemon: PcPokemon = {
       uid: `${option.pokemon.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       pokemon: option.pokemon,
-      nickname: '',
+      nickname: option.pokemon.name,
       box: slot.box,
       slot: slot.slot,
     };
     this.pc.update((pc) => [...pc, pcPokemon]);
     this.markPokedex(option.pokemon.id, 'owned');
     this.options.set([]);
-    this.message.set(`${pcPokemon.nickname || pcPokemon.pokemon.name} se ha guardado en el PC.`);
+    this.setMessage('gachaSavedToPc', { name: pcPokemon.nickname || pcPokemon.pokemon.name });
     this.save();
   }
 
@@ -181,7 +188,7 @@ export class PokeGacha implements OnInit {
 
   startMove(uid: string): void {
     this.movingUid.set(uid);
-    this.message.set('Elige una casilla del PC para moverlo.');
+    this.setMessage('gachaChoosePcSlot');
   }
 
   release(uid: string): void {
@@ -190,7 +197,7 @@ export class PokeGacha implements OnInit {
     this.selectedPcUid.set(null);
     this.movingUid.set(null);
     this.save();
-    if (pokemon) this.message.set(`${pokemon.nickname || pokemon.pokemon.name} ha sido liberado. Sigue registrado en la Pokedex.`);
+    if (pokemon) this.setMessage('gachaReleased', { name: pokemon.nickname || pokemon.pokemon.name });
   }
 
   updateNickname(entry: PcPokemon, nickname: string): void {
@@ -256,6 +263,10 @@ export class PokeGacha implements OnInit {
     this.save();
   }
 
+  private setMessage(key: TranslationKey, values?: Record<string, string | number>): void {
+    this.message.set({ key, values });
+  }
+
   private loadSave(): void {
     try {
       const raw = localStorage.getItem(storageKey);
@@ -273,7 +284,7 @@ export class PokeGacha implements OnInit {
     try {
       localStorage.setItem(storageKey, JSON.stringify({ pc: this.pc(), pokedex: this.pokedex() }));
     } catch {
-      this.message.set('No se ha podido guardar en este navegador.');
+      this.setMessage('gachaSaveError');
     }
   }
 }
