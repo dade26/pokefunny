@@ -1,0 +1,31 @@
+<dialog #dialog aria-labelledby="favorite-title" (cancel)="cancel($event)">
+  <div class="picker-heading">
+    <h2 id="favorite-title">{{ i18n.t('favoriteQuestion') }}</h2>
+    @if (favorites.favorite()) {
+      <button class="close" type="button" (click)="favorites.pickerOpen.set(false)" [attr.aria-label]="i18n.t('gachaClose')" [title]="i18n.t('gachaClose')"><svg lucideX aria-hidden="true"></svg></button>
+    }
+  </div>
+  <label class="search">
+    <svg lucideSearch aria-hidden="true"></svg>
+    <input type="search" autofocus [placeholder]="i18n.t('searchPokemon')" [attr.aria-label]="i18n.t('searchPokemon')" (input)="query.set($any($event.target).value)" />
+  </label>
+  <div class="picker-content" [attr.aria-busy]="favorites.loading()">
+    @if (favorites.loading()) {
+      <p role="status">{{ i18n.t('loading') }}</p>
+    } @else if (favorites.error()) {
+      <p role="alert">{{ i18n.t('favoriteLoadError') }}</p>
+      <button type="button" class="retry" (click)="favorites.load()">{{ i18n.t('retry') }}</button>
+    } @else {
+      <div class="pokemon-grid">
+        @for (pokemon of results(); track pokemon.key) {
+          <button type="button" class="pokemon-option" [attr.aria-pressed]="favorites.favorite()?.key === pokemon.key" (click)="favorites.choose(pokemon)">
+            <img [src]="pokemon.artwork" alt="" width="72" height="72" loading="lazy" />
+            <span>{{ pokemon.name }}</span>
+          </button>
+        } @empty {
+          <p role="status">{{ i18n.t('noPokemonFound') }}</p>
+        }
+      </div>
+    }
+  </div>
+</dialog>

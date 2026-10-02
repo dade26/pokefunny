@@ -1,7 +1,11 @@
 header { display: flex; justify-content: space-between; align-items: center; gap: 16px; min-height: 72px; padding: 12px max(16px, calc((100vw - 1160px) / 2)); background: #c9363d; border-bottom: 4px solid #8f232c; }
 a { text-decoration: none; }
 .brand { display: flex; align-items: center; gap: 10px; color: white; font-size: 24px; font-weight: 900; }
-.brand::before { content: ''; width: 24px; height: 24px; border: 5px solid #fff; border-radius: 50%; }
+.brand a { color: inherit; }
+.brand-avatar { display: grid; place-items: center; width: 64px; height: 64px; flex-shrink: 0; padding: 0; border: 0; border-radius: 4px; background: transparent; cursor: pointer; }
+.brand-avatar:hover { background: #a82932; }
+.brand-avatar img { width: 64px; height: 64px; object-fit: contain; image-rendering: pixelated; }
+.brand-circle { width: 24px; height: 24px; border: 5px solid #fff; border-radius: 50%; }
 nav { display: flex; flex-wrap: wrap; gap: 8px; }
 .header-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 20px; }
 .languages { display: flex; border: 1px solid #f1a3a7; border-radius: 4px; overflow: hidden; }

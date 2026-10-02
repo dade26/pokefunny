@@ -3,6 +3,7 @@ import { Component } from '@angular/core';
 import { App } from './app';
 import { provideRouter, Router } from '@angular/router';
 import { inject as injectAnalytics, pageview } from '@vercel/analytics';
+import { PokemonService } from './services/pokemon.service';
 
 vi.mock('@vercel/analytics', () => ({ inject: vi.fn(), pageview: vi.fn() }));
 
@@ -12,9 +13,14 @@ class AnalyticsTestPage {}
 describe('App', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    localStorage.clear();
+    localStorage.setItem('pokefunny.favoritePokemon', '25');
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), {
+        provide: PokemonService,
+        useValue: { getPokemonCatalog: async () => [{ id: 25, name: 'pikachu', images: 5 }] },
+      }],
     }).compileComponents();
   });
 
@@ -31,6 +37,9 @@ describe('App', () => {
     expect(compiled.querySelector('.brand')?.textContent).toContain('Pokefunny');
     expect(compiled.querySelector('.languages')?.textContent).toContain('English');
     expect(compiled.querySelector('.languages')?.textContent).toContain('Espa\u00f1ol');
+    expect(compiled.querySelector('.brand-avatar img')?.getAttribute('src'))
+      .toBe('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png');
+    expect(compiled.querySelector('app-favorite-picker')).toBeNull();
   });
 
   it('tracks the initial visit and navigation through both modes once per page', async () => {

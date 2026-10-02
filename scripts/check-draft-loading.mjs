@@ -44,6 +44,7 @@ try {
       { width: 390, height: 844 },
     ]) {
       const context = await browser.newContext({ viewport });
+      await context.addInitScript(() => localStorage.setItem('pokefunny.favoritePokemon', '25'));
       const page = await context.newPage();
       const requests = [];
       const errors = [];
@@ -108,6 +109,7 @@ try {
   await Promise.all(
     Array.from({ length: 6 }, async (_, index) => {
       const context = await browser.newContext();
+      await context.addInitScript(() => localStorage.setItem('pokefunny.favoritePokemon', '25'));
       try {
         const page = await context.newPage();
         const external = [];

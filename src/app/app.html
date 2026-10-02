@@ -1,5 +1,14 @@
 <header>
-  <a class="brand" routerLink="/">Pokefunny</a>
+  <div class="brand">
+    <button class="brand-avatar" type="button" (click)="favorites.pickerOpen.set(true)" [attr.aria-label]="i18n.t('changeFavorite')" [title]="i18n.t('changeFavorite')">
+      @if (favorites.favorite(); as pokemon) {
+        <img [src]="pokemon.artwork" [alt]="pokemon.name" width="64" height="64" />
+      } @else {
+        <span class="brand-circle" aria-hidden="true"></span>
+      }
+    </button>
+    <a routerLink="/">Pokefunny</a>
+  </div>
   <div class="header-controls">
     <nav>
       <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ i18n.t('home') }}</a>
@@ -27,3 +36,7 @@
 </header>
 
 <router-outlet />
+
+@if (favorites.pickerOpen()) {
+  <app-favorite-picker />
+}

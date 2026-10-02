@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Pokemon } from '../../models/pokemon.model';
 import { LanguageService, TranslationKey } from '../../services/language.service';
@@ -23,6 +23,10 @@ interface PcPokemon {
 interface GachaSave {
   pc: PcPokemon[];
   pokedex: Record<string, DexStatus>;
+  nextDrawAt?: number;
+  options?: GachaOption[];
+  bonusDraw?: boolean;
+  bonusBallPending?: boolean;
 }
 
 interface GachaMessage {
@@ -33,6 +37,12 @@ interface GachaMessage {
 const storageKey = 'pokefunny.pokeGacha.v1';
 const boxSize = 64;
 const boxCount = 4;
+const waitingMessages: TranslationKey[] = [
+  'gachaWaitSorry',
+  'gachaWaitToldYou',
+  'gachaWaitNope',
+  'gachaWaitSorryNo',
+];
 
 @Component({
   selector: 'app-poke-gacha',
@@ -50,13 +60,34 @@ export class PokeGacha implements OnInit {
   readonly pokedex = signal<Record<string, DexStatus>>({});
   readonly catalog = signal<PokemonCatalogEntry[]>([]);
   readonly loading = signal(false);
+  readonly bonusDraw = signal(false);
+  readonly bonusBallReady = signal(false);
+  readonly bonusBallRolling = signal(false);
+  readonly annoyanceOfferOpen = signal(false);
+  readonly nextDrawAt = signal(0);
+  private readonly now = signal(Date.now());
+  readonly waiting = computed(() => this.nextDrawAt() > this.now());
+  readonly countdown = computed(() => {
+    const seconds = Math.max(0, Math.ceil((this.nextDrawAt() - this.now()) / 1000));
+    return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+  });
   private readonly drawDialog = viewChild<ElementRef<HTMLDialogElement>>('drawDialog');
+  private readonly offerDialog = viewChild<ElementRef<HTMLDialogElement>>('offerDialog');
   readonly pcOpen = signal(false);
   readonly pokedexOpen = signal(false);
   readonly currentBox = signal(0);
   readonly selectedPcUid = signal<string | null>(null);
   readonly movingUid = signal<string | null>(null);
   readonly message = signal<GachaMessage>({ key: 'gachaReady' });
+  readonly waitingNotice = signal<GachaMessage | null>(null);
+  readonly noticeFading = signal(false);
+  readonly machineReady = computed(() => !this.waiting() && !this.loading() && !this.options().length
+    && !this.bonusBallRolling() && !this.bonusBallReady() && !this.annoyanceOfferOpen());
+  readonly bubbleVisible = computed(() => this.machineReady() || (this.waiting() && !!this.waitingNotice()));
+  readonly bubbleText = computed(() => {
+    const notice = this.waitingNotice();
+    return this.machineReady() || !notice ? this.i18n.t('gachaReady') : this.i18n.t(notice.key, notice.values);
+  });
   readonly messageText = computed(() => {
     const message = this.message();
     return this.i18n.t(message.key, message.values);
@@ -81,19 +112,36 @@ export class PokeGacha implements OnInit {
     });
   });
   readonly revealedCount = computed(() => this.options().filter((option) => option.revealed).length);
-  readonly canChoose = computed(() => this.options().length === 3 && this.revealedCount() === 3);
+  readonly canChoose = computed(() => this.options().length > 0 && this.revealedCount() === this.options().length);
   readonly selectedPcPokemon = computed(() => {
     const uid = this.selectedPcUid();
     return uid ? this.pc().find((pokemon) => pokemon.uid === uid) ?? null : null;
   });
 
   constructor() {
+    const timer = setInterval(() => this.now.set(Date.now()), 1000);
+    inject(DestroyRef).onDestroy(() => clearInterval(timer));
+    effect((onCleanup) => {
+      const notice = this.waitingNotice();
+      this.noticeFading.set(false);
+      if (!notice) return;
+      const fadeTimer = setTimeout(() => this.noticeFading.set(true), 3000);
+      const hideTimer = setTimeout(() => this.waitingNotice.set(null), 3350);
+      onCleanup(() => {
+        clearTimeout(fadeTimer);
+        clearTimeout(hideTimer);
+      });
+    });
     effect(() => {
       const dialog = this.drawDialog()?.nativeElement;
       if (dialog && !dialog.open) dialog.showModal();
     });
+    effect(() => {
+      const dialog = this.offerDialog()?.nativeElement;
+      if (dialog && !dialog.open) dialog.showModal();
+    });
     effect((onCleanup) => {
-      if (!this.pcOpen() && !this.pokedexOpen() && !this.options().length) return;
+      if (!this.pcOpen() && !this.pokedexOpen() && !this.options().length && !this.annoyanceOfferOpen()) return;
       const previousOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       onCleanup(() => {
@@ -108,8 +156,16 @@ export class PokeGacha implements OnInit {
   }
 
   async pull(): Promise<void> {
-    if (this.loading() || this.options().length) return;
+    if (this.loading() || this.options().length || this.bonusBallRolling() || this.bonusBallReady() || this.annoyanceOfferOpen()) return;
+    this.now.set(Date.now());
+    if (this.waiting()) {
+      this.handleWaitingPull();
+      return;
+    }
+    const nextHour = new Date(this.now());
+    nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
     this.loading.set(true);
+    this.bonusDraw.set(false);
     this.selectedPcUid.set(null);
     this.movingUid.set(null);
     this.options.set([]);
@@ -120,7 +176,9 @@ export class PokeGacha implements OnInit {
         baseStatsTotal: await this.pokemonService.getBaseStatsTotal(pokemon.id),
       })));
       this.options.set(options.map((pokemon) => ({ pokemon, revealed: false })));
+      this.nextDrawAt.set(nextHour.getTime());
       this.setMessage('gachaRevealAll');
+      this.save();
     } catch {
       this.setMessage('gachaLoadError');
     } finally {
@@ -136,7 +194,7 @@ export class PokeGacha implements OnInit {
       currentIndex === index ? { ...current, revealed: true } : current,
     ));
     this.markPokedex(option.pokemon.id, 'seen');
-    this.setMessage(this.canChoose() ? 'gachaChooseOne' : 'gachaKeepRevealing');
+    this.setMessage(this.canChoose() ? (this.bonusDraw() ? 'gachaChooseBonus' : 'gachaChooseOne') : 'gachaKeepRevealing');
   }
 
   choose(option: GachaOption): void {
@@ -159,8 +217,56 @@ export class PokeGacha implements OnInit {
     this.pc.update((pc) => [...pc, pcPokemon]);
     this.markPokedex(option.pokemon.id, 'owned');
     this.options.set([]);
+    this.bonusDraw.set(false);
     this.setMessage('gachaSavedToPc', { name: pcPokemon.nickname || pcPokemon.pokemon.name });
     this.save();
+  }
+
+  declineAnnoyanceOffer(): void {
+    if (!this.annoyanceOfferOpen()) return;
+    this.annoyanceOfferOpen.set(false);
+    this.setRandomWaitingMessage();
+  }
+
+  acceptAnnoyanceOffer(): void {
+    if (!this.annoyanceOfferOpen()) return;
+    this.annoyanceOfferOpen.set(false);
+    this.bonusBallReady.set(false);
+    this.bonusBallRolling.set(true);
+    this.setMessage('gachaBonusRolling');
+    this.save();
+  }
+
+  finishBonusBallRoll(): void {
+    if (!this.bonusBallRolling()) return;
+    this.bonusBallRolling.set(false);
+    this.bonusBallReady.set(true);
+    this.setMessage('gachaBonusReady');
+  }
+
+  async openBonusBall(): Promise<void> {
+    if (!this.bonusBallReady() || this.loading() || this.options().length) return;
+    this.loading.set(true);
+    this.bonusBallReady.set(false);
+    this.bonusDraw.set(true);
+    this.setMessage('gachaBonusPreparing');
+    try {
+      const [pokemon] = await Promise.all((await this.getDrawableOptions(1)).map(async (option) => ({
+        ...option,
+        baseStatsTotal: await this.pokemonService.getBaseStatsTotal(option.id),
+      })));
+      if (!pokemon) throw new Error('No drawable Pokemon');
+      this.options.set([{ pokemon, revealed: true }]);
+      this.markPokedex(pokemon.id, 'seen');
+      this.setMessage('gachaChooseBonus');
+    } catch {
+      this.bonusDraw.set(false);
+      this.bonusBallReady.set(true);
+      this.setMessage('gachaLoadError');
+      this.save();
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   openPc(): void {
@@ -234,15 +340,29 @@ export class PokeGacha implements OnInit {
     this.save();
   }
 
-  private async getDrawableOptions(): Promise<Pokemon[]> {
+  private handleWaitingPull(): void {
+    if (Math.random() < 0.01) {
+      this.annoyanceOfferOpen.set(true);
+      return;
+    }
+    this.setRandomWaitingMessage();
+  }
+
+  private setRandomWaitingMessage(): void {
+    this.setMessage(waitingMessages[Math.floor(Math.random() * waitingMessages.length)]);
+    this.noticeFading.set(false);
+    this.waitingNotice.set(this.message());
+  }
+
+  private async getDrawableOptions(count = 3): Promise<Pokemon[]> {
     const blocked = new Set<number>();
     for (let attempt = 0; attempt < 5; attempt++) {
-      const options = await this.pokemonPool.getRandomOptions(6, [...blocked]);
+      const options = await this.pokemonPool.getRandomOptions(Math.max(6, count * 2), [...blocked]);
       const drawable = options.filter((pokemon) => pokemon.sprite || pokemon.artwork);
-      if (drawable.length >= 3) return drawable.slice(0, 3);
+      if (drawable.length >= count) return drawable.slice(0, count);
       options.forEach((pokemon) => blocked.add(pokemon.id));
     }
-    return this.pokemonPool.getRandomOptions(3, [...blocked]);
+    return this.pokemonPool.getRandomOptions(count, [...blocked]);
   }
 
   private nextFreeSlot(): { box: number; slot: number } | null {
@@ -274,6 +394,12 @@ export class PokeGacha implements OnInit {
       const save = JSON.parse(raw) as GachaSave;
       this.pc.set(Array.isArray(save.pc) ? save.pc : []);
       this.pokedex.set(save.pokedex ?? {});
+      this.nextDrawAt.set(typeof save.nextDrawAt === 'number' && Number.isFinite(save.nextDrawAt) ? save.nextDrawAt : 0);
+      this.bonusDraw.set(save.bonusDraw === true);
+      this.options.set(Array.isArray(save.options) && save.options.length === (this.bonusDraw() ? 1 : 3) ? save.options : []);
+      this.bonusBallReady.set(save.bonusBallPending === true && !this.options().length);
+      if (this.options().length) this.setMessage(this.canChoose() ? (this.bonusDraw() ? 'gachaChooseBonus' : 'gachaChooseOne') : 'gachaRevealAll');
+      else if (this.bonusBallReady()) this.setMessage('gachaBonusReady');
     } catch {
       this.pc.set([]);
       this.pokedex.set({});
@@ -282,7 +408,10 @@ export class PokeGacha implements OnInit {
 
   private save(): void {
     try {
-      localStorage.setItem(storageKey, JSON.stringify({ pc: this.pc(), pokedex: this.pokedex() }));
+      localStorage.setItem(storageKey, JSON.stringify({
+        pc: this.pc(), pokedex: this.pokedex(), nextDrawAt: this.nextDrawAt(), options: this.options(),
+        bonusDraw: this.bonusDraw(), bonusBallPending: this.bonusBallRolling() || this.bonusBallReady(),
+      }));
     } catch {
       this.setMessage('gachaSaveError');
     }

@@ -5,6 +5,8 @@ import { Meta, Title } from '@angular/platform-browser';
 import { LucideMoon, LucideSun } from '@lucide/angular';
 import { inject as injectAnalytics, pageview } from '@vercel/analytics';
 import { LanguageService } from './services/language.service';
+import { FavoritePokemonService } from './services/favorite-pokemon.service';
+import { FavoritePicker } from './components/favorite-picker/favorite-picker';
 import {
   ActivatedRoute,
   NavigationEnd,
@@ -26,12 +28,13 @@ const analyticsRoutes = [
 
 @Component({
   selector: 'app-root',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, LucideMoon, LucideSun],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, LucideMoon, LucideSun, FavoritePicker],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
 export class App {
   readonly i18n = inject(LanguageService);
+  readonly favorites = inject(FavoritePokemonService);
   private readonly document = inject(DOCUMENT);
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);

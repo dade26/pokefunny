@@ -1,18 +1,38 @@
 <main class="poke-gacha">
   <section class="gacha-stage" aria-live="polite">
-    <button class="machine" type="button" (click)="pull()" [disabled]="loading() || options().length > 0">
-      <img src="images/gacha/pokegacha.png" alt="PokeGacha" />
-      <span>{{ loading() ? i18n.t('gachaSpinning') : i18n.t('gachaPull') }}</span>
-    </button>
+    <div class="machine-scene" [class.bonus-active]="bonusBallRolling() || bonusBallReady()">
+      @if (bubbleVisible()) {
+        <div class="status-line speech-bubble" [style.opacity]="!machineReady() && noticeFading() ? 0 : null">
+          <p class="speech-content">{{ bubbleText() }}</p>
+        </div>
+      }
 
-    <div class="status-line">{{ messageText() }}</div>
+      <button class="machine" type="button" (click)="pull()" [disabled]="loading() || options().length > 0 || bonusBallRolling() || bonusBallReady() || annoyanceOfferOpen()">
+        <img src="images/gacha/pokegacha.png" alt="PokeGacha" />
+        <span>{{ loading() ? i18n.t('gachaSpinning') : waiting() ? i18n.t('gachaNextDraw', { time: countdown() }) : i18n.t('gachaPull') }}</span>
+      </button>
+
+      @if (bonusBallRolling() || bonusBallReady()) {
+        <button
+          class="bonus-pokeball"
+          type="button"
+          [class.ready]="bonusBallReady()"
+          [disabled]="!bonusBallReady() || loading()"
+          [attr.aria-label]="i18n.t('gachaBonusReady')"
+          (animationend)="finishBonusBallRoll()"
+          (click)="openBonusBall()"
+        >
+          <img src="images/gacha/pokeball.png" alt="" />
+        </button>
+      }
+    </div>
 
   </section>
 
   @if (options().length) {
     <dialog #drawDialog class="draw-popup" [attr.aria-label]="i18n.t('gachaChoosePokemon')" (cancel)="$event.preventDefault()">
       <p class="draw-status" aria-live="polite">{{ messageText() }}</p>
-      <div class="capsules">
+      <div class="capsules" [class.bonus-capsules]="bonusDraw()">
         @for (option of options(); track option.pokemon.id; let index = $index) {
           <article class="capsule-card" [class.revealed]="option.revealed" [style.--capsule-index]="index">
             @if (!option.revealed) {
@@ -37,6 +57,18 @@
             }
           </article>
         }
+      </div>
+    </dialog>
+  }
+
+  @if (annoyanceOfferOpen()) {
+    <dialog #offerDialog class="draw-popup annoyance-panel speech-bubble" style="--surface: #fff;" aria-labelledby="annoyance-offer-text" (cancel)="$event.preventDefault(); declineAnnoyanceOffer()">
+      <div class="speech-content">
+        <p id="annoyance-offer-text">{{ i18n.t('gachaAnnoyedOffer') }}</p>
+        <div class="annoyance-actions">
+          <button type="button" (click)="acceptAnnoyanceOffer()">{{ i18n.t('gachaAccept') }}</button>
+          <button type="button" (click)="declineAnnoyanceOffer()">{{ i18n.t('gachaDecline') }}</button>
+        </div>
       </div>
     </dialog>
   }
