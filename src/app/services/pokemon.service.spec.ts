@@ -48,6 +48,23 @@ describe('PokemonService draft catalog', () => {
     http.expectNone(catalogUrl);
   });
 
+  it('excludes Eternamax from every catalog and rejects direct lookups while keeping normal Eternatus', async () => {
+    const eternatus = { id: 890, name: 'eternatus', generation: 8, family: 'chain:469', types: ['dragon', 'poison'], images: 15 };
+    const eternamax = { ...eternatus, id: 10190, name: 'eternatus-eternamax' };
+    const pending = service.getPokemonCatalog();
+    http.expectOne(catalogUrl).flush([...catalog, eternatus, eternamax]);
+    expect(await pending).not.toContainEqual(eternamax);
+    expect(await service.getPokemonList()).not.toContainEqual(eternamax);
+    expect(await service.getTypeIds('dragon')).toEqual(new Set([1007, 890]));
+    expect(await service.getPokemon(890)).toMatchObject({ id: 890, rawName: 'eternatus' });
+    await expect(service.getPokemon(10190)).rejects.toThrow('Unknown Pokemon');
+    await expect(service.getDetail(10190)).rejects.toThrow('Unknown Pokemon');
+    http.expectNone('https://pokeapi.co/api/v2/pokemon/10190');
+    const pool = TestBed.inject(PokemonPoolService);
+    expect((await pool.getRandomOptions(2, [], undefined, 'dragon')).map((entry) => entry.id).sort())
+      .toEqual([1007, 890]);
+  });
+
   it('uses only existing images and retains sprite fallbacks for forms without artwork', async () => {
     const pending = Promise.all([service.getPokemon(1007), service.getPokemon(10033)]);
     http.expectOne(catalogUrl).flush(catalog);

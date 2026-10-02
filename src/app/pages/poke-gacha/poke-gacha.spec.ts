@@ -69,6 +69,23 @@ describe('PokeGacha hourly draws', () => {
     expect(getRandomOptions).toHaveBeenCalledTimes(1);
   });
 
+  it('removes Eternamax from a saved PC, Pokedex and pending capsules', async () => {
+    const banned = { ...pokemon[0], id: 10190, name: 'Eternatus Eternamax' };
+    localStorage.setItem(storageKey, JSON.stringify({
+      pc: [{ uid: 'banned', pokemon: banned, box: 0, slot: 0, nickname: '' }],
+      pokedex: { 10190: 'owned', 1: 'seen' },
+      options: [banned, pokemon[0], pokemon[1]].map((pokemon) => ({ pokemon, revealed: true })),
+    }));
+    const gacha = await createGacha();
+    expect(gacha.pc()).toEqual([]);
+    expect(gacha.dexStatus(10190)).toBe('unknown');
+    expect(gacha.dexStatus(1)).toBe('seen');
+    expect(gacha.options().map((option) => option.pokemon.id)).toEqual([1, 4]);
+    expect(gacha.canChoose()).toBe(true);
+    gacha.reveal(0);
+    expect((await createGacha()).options().map((option) => option.pokemon.id)).toEqual([1, 4]);
+  });
+
   it('does not consume the draw when loading fails', async () => {
     getRandomOptions.mockRejectedValueOnce(new Error('offline'));
     const gacha = await createGacha();

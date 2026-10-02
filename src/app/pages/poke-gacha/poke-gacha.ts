@@ -1,6 +1,6 @@
 import { Component, DestroyRef, ElementRef, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Pokemon } from '../../models/pokemon.model';
+import { BANNED_POKEMON_ID, Pokemon } from '../../models/pokemon.model';
 import { LanguageService, TranslationKey } from '../../services/language.service';
 import { PokemonCatalogEntry, PokemonService } from '../../services/pokemon.service';
 import { PokemonPoolService } from '../../services/pokemon-pool.service';
@@ -392,11 +392,14 @@ export class PokeGacha implements OnInit {
       const raw = localStorage.getItem(storageKey);
       if (!raw) return;
       const save = JSON.parse(raw) as GachaSave;
-      this.pc.set(Array.isArray(save.pc) ? save.pc : []);
-      this.pokedex.set(save.pokedex ?? {});
+      this.pc.set(Array.isArray(save.pc) ? save.pc.filter((entry) => entry.pokemon.id !== BANNED_POKEMON_ID) : []);
+      const pokedex = { ...(save.pokedex ?? {}) };
+      delete pokedex[String(BANNED_POKEMON_ID)];
+      this.pokedex.set(pokedex);
       this.nextDrawAt.set(typeof save.nextDrawAt === 'number' && Number.isFinite(save.nextDrawAt) ? save.nextDrawAt : 0);
       this.bonusDraw.set(save.bonusDraw === true);
-      this.options.set(Array.isArray(save.options) && save.options.length === (this.bonusDraw() ? 1 : 3) ? save.options : []);
+      this.options.set(Array.isArray(save.options) && save.options.length > 0 && save.options.length <= (this.bonusDraw() ? 1 : 3)
+        ? save.options.filter((option) => option.pokemon.id !== BANNED_POKEMON_ID) : []);
       this.bonusBallReady.set(save.bonusBallPending === true && !this.options().length);
       if (this.options().length) this.setMessage(this.canChoose() ? (this.bonusDraw() ? 'gachaChooseBonus' : 'gachaChooseOne') : 'gachaRevealAll');
       else if (this.bonusBallReady()) this.setMessage('gachaBonusReady');

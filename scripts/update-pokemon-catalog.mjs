@@ -55,7 +55,7 @@ for (const entry of memberships.sort((a, b) => Number(a.slot) - Number(b.slot)))
   names.push(typeById.get(entry.type_id));
   pokemonTypes.set(entry.pokemon_id, names);
 }
-const entries = pokemon.map((entry) => {
+const entries = pokemon.filter((entry) => entry.id !== '10190' && entry.identifier !== 'eternatus-eternamax').map((entry) => {
   const original = speciesById.get(entry.species_id);
   const names = pokemonTypes.get(entry.id);
   if (!original || !names?.length || names.some((name) => !name)) {

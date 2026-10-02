@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { Pokemon, PokemonType } from '../models/pokemon.model';
+import { BANNED_POKEMON_ID, Pokemon, PokemonType } from '../models/pokemon.model';
 import { pokemonArtworkUrl } from '../models/pokemon-images';
 
 export interface PokemonCatalogEntry {
@@ -92,6 +92,7 @@ export class PokemonService {
   }
 
   async getDetail(id: number): Promise<PokemonDetailResponse> {
+    if (id === BANNED_POKEMON_ID) throw new Error(`Unknown Pokemon: ${id}`);
     const cached = this.responseCache.get(id);
     if (cached) return cached;
     let pending = this.detailRequestCache.get(id);
@@ -149,6 +150,7 @@ export class PokemonService {
       this.catalogRequest = firstValueFrom(
         this.http.get<PokemonCatalogEntry[]>('data/pokemon-catalog.v1.json'),
       ).then((entries) => {
+        entries = entries.filter((entry) => entry.id !== BANNED_POKEMON_ID && entry.name !== 'eternatus-eternamax');
         this.catalogById = new Map(entries.map((entry) => [entry.id, entry]));
         return entries;
       }).catch((error) => {

@@ -1,3 +1,5 @@
+export const BANNED_POKEMON_ID = 10190; // Eternatus-Eternamax is unavailable in every mode.
+
 export interface Pokemon {
   id: number;
   name: string;

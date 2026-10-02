@@ -28,6 +28,35 @@ describe('StorageService draft history', () => {
     expect(storage.loadDrafts()).toEqual(saved);
   });
 
+  it('removes saved Eternamax picks and encounters without shifting the current valid encounter', () => {
+    const allowed = state.currentTurn!.options[0];
+    const banned = { ...allowed, id: 10190, name: 'Eternatus Eternamax' };
+    const savedState: DraftState = {
+      ...state,
+      players: [{ ...state.players[0], team: [banned, allowed], lastPickIndex: 1 }],
+      currentTurn: { ...state.currentTurn!, options: [banned, allowed], currentIndex: 1, skippedPokemonIds: [10190] },
+    };
+    const storage = new StorageService();
+    storage.saveDrafts([{ id: 'old', createdAt: '2026-01-01', updatedAt: '2026-01-01', state: savedState }]);
+    const resumed = storage.loadDrafts()[0].state;
+    expect(resumed.players[0].team).toEqual([allowed]);
+    expect(resumed.players[0].lastPickIndex).toBe(0);
+    expect(resumed.currentTurn?.options).toEqual([allowed]);
+    expect(resumed.currentTurn?.currentIndex).toBe(0);
+    expect(resumed.currentTurn?.skippedPokemonIds).toEqual([]);
+  });
+
+  it('discards a saved turn containing a selected Eternamax', () => {
+    const banned = { ...state.currentTurn!.options[0], id: 10190 };
+    const savedState: DraftState = {
+      ...state,
+      currentTurn: { ...state.currentTurn!, options: [banned], selectedPokemon: banned, finished: true },
+    };
+    const storage = new StorageService();
+    storage.saveDrafts([{ id: 'old', createdAt: '2026-01-01', updatedAt: '2026-01-01', state: savedState }]);
+    expect(storage.loadDrafts()[0].state.currentTurn).toBeUndefined();
+  });
+
   it('retains the legacy draft if migration cannot be saved', () => {
     localStorage.setItem(legacyKey, JSON.stringify(state));
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Quota'); });
