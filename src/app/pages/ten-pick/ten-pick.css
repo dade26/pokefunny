@@ -5,6 +5,15 @@
 .setup-copy { margin-bottom: 28px; }
 .setup-copy h1, .complete h1 { font-size: 30px; margin: 0; }
 .setup-panel { border-top: 2px solid var(--border-strong, #344b40); padding: 24px 0; }
+.setup-options { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; }
+.setup-option-fields { min-width: 0; }
+.checkbox-option { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.checkbox-option input { width: 18px; min-height: 18px; padding: 0; flex-shrink: 0; }
+.festa-deck-toggle { display: flex; align-items: center; gap: 12px; padding: 0; color: var(--text, #293631); text-decoration: none; }
+.festa-deck-toggle:focus-visible { outline: 2px solid var(--border-strong, #344b40); outline-offset: 6px; }
+.festa-deck-toggle img { width: 80px; height: 100px; object-fit: contain; transition: transform 160ms ease; }
+.festa-deck-toggle:hover img { transform: translateY(-3px); }
+.festa-deck-toggle strong { font-size: 16px; white-space: nowrap; }
 label { display: grid; gap: 8px; font-size: 14px; font-weight: 700; }
 input { width: 100%; min-height: 44px; border: 2px solid var(--border, #a5b4ab); border-radius: 4px; padding: 0 12px; background: var(--surface, #fff); color: var(--text, #293631); }
 input[type=number] { max-width: 100px; }
@@ -35,6 +44,8 @@ h2 { margin: 0; font-size: 28px; overflow-wrap: anywhere; max-width: 100%; }
 .types, .turn-actions, .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 16px; }
 .types span { font-size: 11px; border-radius: 3px; padding: 5px 10px; background: #728277; color: #fff; font-weight: 700; text-transform: uppercase; }
 .turn-actions { margin-top: 24px; }
+.nickname-entry { width: min(360px, 100%); margin: 0 auto; text-align: left; }
+.turn-actions .nickname-entry { flex-basis: 100%; }
 .turn-actions button { min-width: 136px; }
 .remaining { color: var(--muted, #65746b); font-size: 12px; margin: 20px 0 0; }
 .final-pick { margin: 16px 0 0; display: flex; justify-content: center; gap: 10px; padding: 10px; border: 1px solid var(--warning-border, #c3a63a); background: var(--warning, #fff3bd); font-size: 13px; }
@@ -45,17 +56,6 @@ h2 { margin: 0; font-size: 28px; overflow-wrap: anywhere; max-width: 100%; }
 .loading:not(.error)::before { content: ''; width: 32px; height: 32px; justify-self: center; border: 6px solid #c9363d; border-radius: 50%; animation: pulse 1s ease infinite; }
 .error { color: var(--error, #a72932); }
 .festa-stage { display: grid; justify-items: center; gap: 24px; animation: reveal 280ms ease both; }
-.festa-card { position: relative; overflow: hidden; width: min(420px, 100%); min-height: 560px; display: grid; justify-items: center; align-content: center; gap: 18px; padding: 28px; border: 2px solid #343434; border-radius: 8px; color: #292929; text-align: center; background: #fff; box-shadow: none; }
-.festa-badge { position: relative; z-index: 1; justify-self: center; max-width: 100%; padding: 4px 8px; font-family: Impact, Haettenschweiler, 'Arial Black', sans-serif; font-size: 64px; font-weight: 900; line-height: 1.1; letter-spacing: 0; color: #d62c72; transform: rotate(-4deg); }
-.festa-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.festa-mascot, .festa-card h1, .festa-card p { position: relative; z-index: 1; }
-.festa-confetti i { position: absolute; top: -24px; left: var(--x); width: 9px; height: 16px; border-radius: 2px; background: #f8d34f; animation: festa-confetti var(--t, 2200ms) linear var(--d) infinite; }
-.festa-confetti i:nth-child(2n) { background: #43b2e6; }
-.festa-confetti i:nth-child(3n) { background: #e45b8f; }
-.festa-confetti i:nth-child(4n) { background: #62bd73; }
-.festa-mascot { display: block; width: min(192px, 100%); aspect-ratio: 1; object-fit: contain; image-rendering: pixelated; }
-.festa-card h1 { margin: 0; font-size: 28px; overflow-wrap: anywhere; }
-.festa-card p { margin: 0; font-size: 16px; line-height: 1.5; }
 .festa-loading { min-height: 160px; }
 .festa-resolution { width: 100%; display: grid; justify-items: center; gap: 18px; }
 .festa-resolution > input { max-width: 460px; }
@@ -65,9 +65,24 @@ h2 { margin: 0; font-size: 28px; overflow-wrap: anywhere; max-width: 100%; }
 .festa-pokemon.selected { border-color: #c9363d; outline: 3px solid rgba(201,54,61,.22); }
 .festa-pokemon img { width: 72px; height: 72px; object-fit: contain; }
 .festa-pokemon span { max-width: 100%; font-size: 12px; overflow-wrap: anywhere; }
+.festa-grid.catalog { max-height: 220px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.catalog-choice { min-height: 64px; display: grid; grid-template-columns: 32px minmax(0, 1fr); align-items: center; justify-items: start; gap: 8px; padding: 8px 10px; box-shadow: none; text-align: left; }
+.catalog-choice img { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; }
+.catalog-choice span { max-width: 100%; font-size: 12px; overflow-wrap: anywhere; }
+.scope-toggle { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.scope-toggle button.selected { border-color: #c9363d; outline: 3px solid rgba(201,54,61,.22); }
+.scope-toggle { border: 0; padding: 0; margin: 0; }
+.scope-toggle label { display: flex; align-items: center; gap: 8px; }
+.scope-toggle input { width: 18px; min-height: 18px; }
+.festa-item-select { width: 100%; min-height: 44px; padding: 8px 12px; border: 2px solid var(--border, #a5b4ab); border-radius: 4px; background: var(--surface, #fff); color: var(--text, #293631); }
 .trade-columns { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; text-align: center; }
 .trade-columns h2 { font-size: 16px; margin: 0 0 10px; }
 .festa-note { color: var(--muted, #65746b); margin: 0; }
+.festa-target-roll { width: min(360px, 100%); min-height: 280px; display: grid; justify-items: center; align-content: center; gap: 10px; text-align: center; }
+.festa-target-roll span { color: var(--muted, #65746b); font-size: 13px; font-weight: 700; }
+.festa-target-roll img { width: 160px; height: 160px; object-fit: contain; animation: target-roll 220ms ease-in-out infinite; }
+.festa-target-roll strong { max-width: 100%; font-size: 18px; overflow-wrap: anywhere; }
+.festa-target-roll.revealed img { animation: target-reveal 520ms cubic-bezier(.2,.8,.2,1) both; }
 .reroll-stage { display: grid; justify-items: center; align-content: center; min-height: 540px; padding: 24px 0; gap: 20px; text-align: center; }
 .reroll-stage h1 { margin: 0; font-size: 24px; }
 .reroll-stage p { margin: 12px 0; }
@@ -76,8 +91,8 @@ h2 { margin: 0; font-size: 28px; overflow-wrap: anywhere; max-width: 100%; }
 .reroll-result { animation: reroll-reveal 650ms cubic-bezier(.2,.8,.2,1) both; }
 @keyframes reroll-spin { 0%, 100% { transform: scale(.85) rotate(-8deg); opacity: .35; filter: grayscale(1); } 50% { transform: scale(.65) rotate(8deg); opacity: .7; filter: grayscale(1); } }
 @keyframes reroll-reveal { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-@keyframes festa-confetti { from { transform: translateY(-30px) rotate(0); opacity: 0; } 12% { opacity: 1; } to { transform: translateY(610px) rotate(540deg); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .reroll-spinning .artwork, .reroll-result, .reroll-result .artwork, .festa-confetti i, .festa-rival-roll strong { animation: none; } }
-@media (max-width: 640px) { .festa-badge { font-size: 52px; } }
+@keyframes target-roll { 0%, 100% { transform: translateX(-8px) scale(.88); opacity: .55; filter: grayscale(.8); } 50% { transform: translateX(8px) scale(.78); opacity: .8; filter: grayscale(.4); } }
+@keyframes target-reveal { from { transform: scale(.72); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .reroll-spinning .artwork, .reroll-result, .reroll-result .artwork, .festa-rival-roll strong, .festa-target-roll img { animation: none; } }
 @media (max-width: 860px) { .draft-layout { grid-template-columns: 240px minmax(0, 1fr); gap: 20px; } .turn-card { padding: 18px; } .turn-top { flex-wrap: wrap; } }
-@media (max-width: 640px) { .ten-pick { padding: 24px 16px; } .draft-layout { grid-template-columns: minmax(0, 1fr); } .sidebar { order: 2; } .turn-top h1 { font-size: 20px; } .artwork { width: 240px; } .festa-card { min-height: 440px; } .festa-card h1 { font-size: 27px; } .trade-columns { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) { .ten-pick { padding: 24px 16px; } .draft-layout { grid-template-columns: minmax(0, 1fr); } .sidebar { order: 2; } .turn-top h1 { font-size: 20px; } .artwork { width: 240px; } .trade-columns { grid-template-columns: minmax(0, 1fr); } .festa-deck-toggle { gap: 6px; } .festa-deck-toggle img { width: 56px; height: 80px; } }

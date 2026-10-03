@@ -1,0 +1,19 @@
+<main class="deck-page">
+  <nav><a routerLink="/ten-pick-festa/new"><svg lucideArrowLeft aria-hidden="true"></svg>{{ i18n.t('newDraft') }}</a></nav>
+  <header>
+    <img src="images/festa/pokedeck.png" alt="" />
+    <h1>{{ i18n.t('festaDeck') }}</h1>
+    <strong aria-live="polite">{{ activeCount() }}/{{ cards.length }}</strong>
+  </header>
+  <section class="deck-grid" [attr.aria-label]="i18n.t('festaDeck')">
+    @for (card of cards; track card.id) {
+      <button type="button" class="deck-card"
+        [class.disabled]="!service.isFestaCardEnabled(card.id)"
+        [attr.aria-label]="cardName(card)"
+        [attr.aria-pressed]="service.isFestaCardEnabled(card.id)"
+        (click)="service.toggleFestaCard(card.id)">
+        <app-festa-card [card]="card" [compact]="true" [confetti]="false" />
+      </button>
+    }
+  </section>
+</main>

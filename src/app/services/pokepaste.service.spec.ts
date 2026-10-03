@@ -78,6 +78,13 @@ describe('PokepasteService', () => {
     expect(text.split('\n\n')[1]).not.toContain('Shiny:');
   });
 
+  it('exports nicknames in Showdown format', async () => {
+    const text = await TestBed.inject(PokepasteService).createText([
+      { ...team[0], nickname: 'Night Buddy' },
+    ]);
+    expect(text).toBe('Night Buddy (Darkrai)\nAbility: Bad Dreams');
+  });
+
   it('omits the ability when it is missing from Showdown data', async () => {
     getDetail.mockResolvedValue({
       name: 'venusaur-mega', is_default: false, species: { name: 'venusaur-mega' },
@@ -148,5 +155,13 @@ describe('PokepasteService', () => {
     getDetail.mockRejectedValue(new Error('Sin conexion'));
     await expect(TestBed.inject(PokepasteService).createText(team.slice(0, 1)))
       .rejects.toThrow('Sin conexion');
+  });
+
+  it('exports the equipped item but never the move stickers', async () => {
+    const pokemon = { ...team[0], heldItem: { id: 'leftovers', name: 'Leftovers' }, moveStickers: ['Placaje', 'Mi movimiento'] };
+    const text = await TestBed.inject(PokepasteService).createText([pokemon]);
+    expect(text).toContain('Darkrai @ Leftovers');
+    expect(text).not.toContain('Placaje');
+    expect(text).not.toContain('Mi movimiento');
   });
 });

@@ -14,11 +14,18 @@ describe('TenPickService saved drafts', () => {
     getPokemon: vi.fn(),
     getPokemonCatalog: vi.fn(),
     preloadArtwork: vi.fn(),
+    getFestaCatalog: vi.fn(),
+    getDetail: vi.fn(),
   };
 
   beforeEach(() => {
     localStorage.clear();
     getRandomOptions = vi.fn().mockResolvedValue(options);
+    pokemonService.getFestaCatalog.mockResolvedValue({
+      items: [{ id: 'leftovers', name: 'Leftovers', es: 'Restos' }, { id: 'choiceband', name: 'Choice Band', es: 'Cinta Elegida' }],
+      moves: [{ id: 'tackle', name: 'Tackle', es: 'Placaje' }, { id: 'surf', name: 'Surf', es: 'Surf' }],
+    });
+    pokemonService.getDetail.mockResolvedValue({ moves: [{ move: { name: 'tackle' } }] });
     service = new TenPickService(
       { getRandomOptions } as unknown as PokemonPoolService,
       pokemonService as never,
@@ -30,8 +37,218 @@ describe('TenPickService saved drafts', () => {
     vi.restoreAllMocks();
   });
 
+  async function beginModifier(cardId: string) {
+    await service.startDraft({ playerNames: ['Own', 'Rival'], teamSize: 6, mode: 'festa', festaChance: 0 });
+    await service.ensureTurn();
+    const state = service.state()!;
+    service.state.set({ ...state,
+      draftOrder: state.players.map((player) => player.id),
+      players: state.players.map((player, index) => ({ ...player, team: [options[index]] })),
+      activeFestaCard: { cardId, phase: 'revealed' },
+    });
+    service.startFestaResolution();
+  }
+
+  it.each([
+    ['item-random-rival', 1], ['item-chosen-rival', 1], ['item-random-own', 0],
+    ['item-random-opponent', 1], ['item-chosen-random', 0],
+  ])('equips %s on the correct team without consuming the encounter', async (cardId, teamIndex) => {
+    await beginModifier(cardId as string);
+    const turn = service.state()!.currentTurn;
+    await service.prepareFestaModifier();
+    const state = service.state()!;
+    const target = { playerId: state.players[teamIndex as number].id, index: 0 };
+    expect(await service.resolveFestaModifier('Restos', target)).toBe(true);
+    expect(service.state()!.players[teamIndex as number].team[0].heldItem).toBeDefined();
+    expect(service.state()!.players[1 - (teamIndex as number)].team[0].heldItem).toBeUndefined();
+    expect(service.state()!.currentTurn).toEqual(turn);
+    expect(service.state()!.activeFestaCard).toBeUndefined();
+  });
+
+  it('gives Items for Everyone only to the chosen rival Pokemon', async () => {
+    await beginModifier('item-random-group');
+    const initial = service.state()!;
+    service.state.set({ ...initial, players: initial.players.map((player) => ({ ...player, team: [...player.team, options[2]] })) });
+    await service.prepareFestaModifier();
+    const state = service.state()!;
+    const turn = state.currentTurn;
+    expect(service.getFestaModifierTargets().every((pick) => pick.playerId === state.players[1].id)).toBe(true);
+    expect(await service.resolveFestaModifier('', { playerId: state.players[0].id, index: 0 })).toBe(false);
+    expect(await service.resolveFestaModifier('')).toBe(false);
+    expect(await service.resolveFestaModifier('', { playerId: state.players[1].id, index: 1 })).toBe(true);
+    expect(service.state()!.players[1].team[1].heldItem).toEqual({ id: state.activeFestaCard!.item!.id, name: state.activeFestaCard!.item!.name });
+    expect(service.state()!.players[1].team[0].heldItem).toBeUndefined();
+    expect(service.state()!.players[0].team.every((pokemon) => !pokemon.heldItem)).toBe(true);
+    expect(service.state()!.currentTurn).toEqual(turn);
+  });
+
+  it.each([0, 1])('delivers the new gift to a random Pokemon on team %s and preserves its target when reopened', async (teamIndex) => {
+    await beginModifier('item-random-all');
+    const initial = service.state()!;
+    service.state.set({ ...initial, players: initial.players.map((player) => ({ ...player, team: [...player.team, options[2]] })),
+      activeFestaCard: { cardId: 'item-random-all', phase: 'revealed' } });
+    const random = vi.spyOn(Math, 'random').mockReturnValue(teamIndex === 0 ? 0.3 : 0.9);
+    service.startFestaResolution();
+    const state = service.state()!;
+    expect(state.activeFestaCard!.target).toBeUndefined();
+    expect(await service.chooseRandomFestaModifierTarget('Restos')).toBeTruthy();
+    const targeted = service.state()!;
+    const target = { playerId: state.players[teamIndex].id, index: 1 };
+    expect(targeted.activeFestaCard!.target).toEqual(target);
+    service.openDraft(service.activeDraftId()!);
+    service.startFestaResolution();
+    expect(service.state()!.activeFestaCard!.target).toEqual(target);
+    expect(random).toHaveBeenCalledTimes(1);
+    expect(await service.resolveFestaModifier('Restos', { playerId: state.players[1 - teamIndex].id, index: 0 })).toBe(true);
+    expect(service.state()!.players[teamIndex].team[1].heldItem).toEqual({ id: 'leftovers', name: 'Leftovers' });
+    expect(service.state()!.players.flatMap((player) => player.team).filter((pokemon) => pokemon.heldItem)).toHaveLength(1);
+    expect(service.state()!.currentTurn).toEqual(state.currentTurn);
+    expect(service.state()!.activeFestaCard).toBeUndefined();
+  });
+
+  it('keeps the random target and item when reopening the draft', async () => {
+    await beginModifier('item-random-rival');
+    expect(service.state()!.activeFestaCard!.target).toBeUndefined();
+    expect(await service.chooseRandomFestaModifierTarget('Restos')).toBeTruthy();
+    const target = service.state()!.activeFestaCard!.target;
+    const id = service.activeDraftId()!;
+    service.openDraft(id);
+    expect(service.state()!.activeFestaCard!.target).toEqual(target);
+    await beginModifier('item-random-group');
+    await service.prepareFestaModifier();
+    const active = service.state()!.activeFestaCard;
+    service.openDraft(service.activeDraftId()!);
+    await service.prepareFestaModifier();
+    expect(service.state()!.activeFestaCard).toEqual(active);
+  });
+
+  it.each(['item-random-rival', 'item-chosen-random', 'item-random-all'])('locks the item before drawing the recipient for %s', async (cardId) => {
+    await beginModifier(cardId);
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+    const before = service.state()!;
+    expect(before.activeFestaCard!.target).toBeUndefined();
+    expect(await service.chooseRandomFestaModifierTarget('')).toBeNull();
+    expect(await service.chooseRandomFestaModifierTarget('Not an item')).toBeNull();
+    expect(random).not.toHaveBeenCalled();
+    expect(service.state()).toBe(before);
+    const target = await service.chooseRandomFestaModifierTarget('Restos');
+    expect(target).toBeTruthy();
+    expect(service.state()!.activeFestaCard!.modifierValue).toBe('Leftovers');
+    expect(service.state()!.players.flatMap((player) => player.team).every((pokemon) => !pokemon.heldItem)).toBe(true);
+    service.openDraft(service.activeDraftId()!);
+    expect(await service.chooseRandomFestaModifierTarget('Choice Band')).toEqual(target);
+    expect(random).toHaveBeenCalledTimes(1);
+    expect(await service.resolveFestaModifier('Choice Band')).toBe(true);
+    const recipient = service.state()!.players.find((player) => player.id === target!.playerId)!.team[target!.index];
+    expect(recipient.heldItem).toEqual({ id: 'leftovers', name: 'Leftovers' });
+    expect(service.state()!.currentTurn).toEqual(before.currentTurn);
+  });
+
+  it('rejects unlearnable moves and accepts Spanish names as a saved sticker', async () => {
+    await beginModifier('move-rival-learnable');
+    expect(await service.resolveFestaModifier('Surf')).toBe(false);
+    expect(service.state()!.activeFestaCard).toBeDefined();
+    expect(await service.resolveFestaModifier('Placaje')).toBe(true);
+    expect(service.state()!.players[1].team[0].moveStickers).toEqual(['Placaje']);
+    service.openDraft(service.activeDraftId()!);
+    expect(service.state()!.players[1].team[0].moveStickers).toEqual(['Placaje']);
+  });
+
+  it.each(['move-rival-any', 'move-random'])('stores free text for %s without changing its moves or encounter', async (cardId) => {
+    await beginModifier(cardId);
+    const turn = service.state()!.currentTurn;
+    expect(await service.resolveFestaModifier('Mi movimiento')).toBe(true);
+    expect(service.state()!.players.flatMap((player) => player.team).filter((pokemon) => pokemon.moveStickers?.includes('Mi movimiento'))).toHaveLength(1);
+    expect(service.state()!.currentTurn).toEqual(turn);
+  });
+
+  it('rejects item targets outside the allowed team and resumes when no target exists', async () => {
+    await beginModifier('item-chosen-rival');
+    expect(await service.resolveFestaModifier('Leftovers', { playerId: service.state()!.players[0].id, index: 0 })).toBe(false);
+    service.state.set({ ...service.state()!, players: service.state()!.players.map((player) => ({ ...player, team: [] })),
+      activeFestaCard: { cardId: 'item-chosen-rival', phase: 'revealed' } });
+    service.startFestaResolution();
+    expect(service.state()!.activeFestaCard).toBeUndefined();
+    expect(service.state()!.currentTurn?.finished).toBe(false);
+  });
+
+  it('only activates Festa once every player has a Pokemon, including when skipping', async () => {
+    await service.startDraft({ playerNames: ['Current', 'First rival', 'Second rival'], teamSize: 6, mode: 'festa', festaChance: 100 });
+    const initial = service.state()!;
+    service.state.set({ ...initial, draftOrder: initial.players.map((player) => player.id) });
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+
+    await service.ensureTurn();
+    expect(service.state()?.activeFestaCard).toBeUndefined();
+    service.skip();
+    expect(service.state()?.activeFestaCard).toBeUndefined();
+
+    const state = service.state()!;
+    service.state.set({ ...state, players: state.players.map((player, index) =>
+      index === 1 ? { ...player, team: [options[0]] } : player,
+    ) });
+    service.skip();
+    expect(service.state()?.activeFestaCard).toBeUndefined();
+    expect(random).not.toHaveBeenCalled();
+
+    const ready = service.state()!;
+    service.state.set({ ...ready, players: ready.players.map((player, index) =>
+      index === 2 ? { ...player, team: [options[1]] } : player,
+    ) });
+    service.skip();
+    expect(service.state()?.activeFestaCard).toBeUndefined();
+    expect(random).not.toHaveBeenCalled();
+
+    const everyoneReady = service.state()!;
+    service.state.set({ ...everyoneReady, players: everyoneReady.players.map((player, index) =>
+      index === 0 ? { ...player, team: [options[2]] } : player,
+    ) });
+    service.skip();
+    expect(service.state()?.activeFestaCard).toBeDefined();
+    expect(service.state()?.players[0].team).toEqual([options[2]]);
+  });
+
+  it('blocks Festa throughout the first round until all players have picked', async () => {
+    await service.startDraft({ playerNames: ['First', 'Second', 'Third'], teamSize: 6, mode: 'festa', festaChance: 100 });
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    await service.ensureTurn();
+    for (let index = 0; index < 3; index++) {
+      expect(service.state()!.players.filter((player) => player.team.length > 0)).toHaveLength(index);
+      expect(service.state()?.activeFestaCard).toBeUndefined();
+      service.skip();
+      expect(service.state()?.activeFestaCard).toBeUndefined();
+      service.pick();
+      expect(service.state()?.activeFestaCard).toBeUndefined();
+      await service.nextTurn();
+    }
+    expect(service.state()!.players.every((player) => player.team.length > 0)).toBe(true);
+    expect(service.state()?.activeFestaCard).toBeDefined();
+  });
+
+  it.each(['revealed', 'resolving'] as const)('removes a premature saved Festa card in phase %s', async (phase) => {
+    const id = await service.startDraft({ playerNames: ['First', 'Second'], teamSize: 6, mode: 'festa', festaChance: 100 });
+    await service.ensureTurn();
+    const state = service.state()!;
+    const invalidState = {
+      ...state,
+      players: state.players.map((player, index) => index === 0 ? { ...player, team: [options[0]] } : player),
+      activeFestaCard: { cardId: 'first-stage', phase },
+    };
+    const storage = new StorageService();
+    storage.saveDrafts(service.drafts().map((draft) => ({ ...draft, state: invalidState })));
+    const reloaded = new TenPickService({ getRandomOptions } as unknown as PokemonPoolService, pokemonService as never, storage);
+    expect(reloaded.openDraft(id)).toBe(true);
+    expect(reloaded.state()?.activeFestaCard).toBeUndefined();
+    expect(reloaded.state()?.currentTurn).toEqual(state.currentTurn);
+    expect(storage.loadDrafts()[0].state.activeFestaCard).toBeUndefined();
+    reloaded.skip();
+    expect(reloaded.state()?.activeFestaCard).toBeUndefined();
+  });
+
   it('does not roll another Festa card when ensuring or reopening an existing encounter', async () => {
     const id = await service.startDraft({ playerNames: ['Solo'], teamSize: 6, mode: 'festa', festaChance: 50 });
+    const initial = service.state()!;
+    service.state.set({ ...initial, players: initial.players.map((player) => ({ ...player, team: [options[0]] })) });
     const random = vi.spyOn(Math, 'random').mockReturnValue(0.99);
     await service.ensureTurn();
     const encounter = service.state();
@@ -54,7 +271,7 @@ describe('TenPickService saved drafts', () => {
     await service.ensureTurn();
     expect(service.state()).toEqual(picked);
     expect(service.state()?.activeFestaCard).toBeUndefined();
-    expect(random).toHaveBeenCalledTimes(1);
+    expect(random).not.toHaveBeenCalled();
     await service.nextTurn();
     expect(service.state()?.activeFestaCard).toBeDefined();
     expect(service.state()?.currentTurn?.finished).toBe(false);
@@ -74,6 +291,77 @@ describe('TenPickService saved drafts', () => {
     expect(service.state()?.currentTurn?.finished).toBe(true);
     expect(service.state()?.activeFestaCard).toBeUndefined();
     expect(random).not.toHaveBeenCalled();
+  });
+
+  it('requires and saves nicknames for normal picks when enabled', async () => {
+    await service.startDraft({ playerNames: ['Solo'], teamSize: 1, requireNicknames: true });
+    await service.ensureTurn();
+    service.pick();
+    expect(service.state()?.players[0].team).toEqual([]);
+    service.pick('Buddy');
+    expect(service.state()?.players[0].team[0]).toEqual({ ...options[0], nickname: 'Buddy' });
+    expect(service.state()?.currentTurn?.selectedPokemon).toEqual({ ...options[0], nickname: 'Buddy' });
+  });
+
+  it('requires nicknames for Festa Pokemon choices and forced rerolls when enabled', async () => {
+    await service.startDraft({ playerNames: ['Solo'], teamSize: 6, mode: 'festa', festaChance: 0, requireNicknames: true });
+    await service.ensureTurn();
+    service.state.set({ ...service.state()!, activeFestaCard: { cardId: 'first-stage', phase: 'resolving' } });
+    pokemonService.getPokemon.mockResolvedValue(options[4]);
+    await service.resolveFestaPokemonChoice(options[4].id);
+    expect(service.state()?.players[0].team).toEqual([]);
+    await service.resolveFestaPokemonChoice(options[4].id, 'Gift');
+    expect(service.state()?.players[0].team[0]).toEqual({ ...options[4], nickname: 'Gift' });
+
+    service.state.set({ ...service.state()!, activeFestaCard: { cardId: 'forced-reroll', phase: 'resolving' } });
+    getRandomOptions.mockResolvedValue([options[5]]);
+    expect(await service.previewForcedReroll(0)).toEqual(options[5]);
+    expect(service.state()?.players[0].team[0]).toEqual({ ...options[4], nickname: 'Gift' });
+    expect(service.confirmForcedReroll(0, options[5])).toBeUndefined();
+    expect(service.state()?.players[0].team[0]).toEqual({ ...options[4], nickname: 'Gift' });
+    service.confirmForcedReroll(0, options[5], 'Fresh');
+    expect(service.state()?.players[0].team[0]).toEqual({ ...options[5], nickname: 'Fresh' });
+  });
+
+  it('remembers disabled Festa cards and only rolls active cards', async () => {
+    for (const card of service.festaCards.filter((card) => card.id !== 'trade-last')) {
+      service.toggleFestaCard(card.id);
+    }
+    expect(service.disabledFestaCardIds()).toEqual(service.festaCards.filter((card) => card.id !== 'trade-last').map((card) => card.id));
+
+    const reloaded = new TenPickService(
+      { getRandomOptions } as unknown as PokemonPoolService,
+      pokemonService as never,
+      new StorageService(),
+    );
+    expect(reloaded.isFestaCardEnabled('trade-last')).toBe(true);
+    expect(reloaded.isFestaCardEnabled('first-stage')).toBe(false);
+
+    await reloaded.startDraft({ playerNames: ['Solo'], teamSize: 6, mode: 'festa', festaChance: 100 });
+    const state = reloaded.state()!;
+    reloaded.state.set({ ...state, players: state.players.map((player) => ({ ...player, team: [options[0]] })) });
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+    try {
+      await reloaded.ensureTurn();
+    } finally {
+      random.mockRestore();
+    }
+    expect(reloaded.state()?.activeFestaCard?.cardId).toBe('trade-last');
+  });
+
+  it('does not activate Festa when every card is disabled', async () => {
+    for (const card of service.festaCards) {
+      service.toggleFestaCard(card.id);
+    }
+    await service.startDraft({ playerNames: ['Solo'], teamSize: 6, mode: 'festa', festaChance: 100 });
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+    try {
+      await service.ensureTurn();
+    } finally {
+      random.mockRestore();
+    }
+    expect(service.state()?.activeFestaCard).toBeUndefined();
+    expect(service.state()?.currentTurn?.finished).toBe(false);
   });
 
   it('offers restricted legendaries and mythical Pokemon but excludes ordinary Pokemon', async () => {
@@ -116,6 +404,7 @@ describe('TenPickService saved drafts', () => {
       await service.ensureTurn();
       const state = service.state()!;
       service.state.set({ ...state, draftOrder: state.players.map((player) => player.id), currentTurn: { ...state.currentTurn!, playerId: state.players[0].id },
+        players: state.players.map((player, index) => ({ ...player, team: [options[index]] })),
         activeFestaCard: { cardId, phase: 'revealed' } });
       const random = vi.spyOn(Math, 'random').mockReturnValue(0.99);
       try { service.startFestaResolution(); } finally { random.mockRestore(); }
@@ -126,7 +415,7 @@ describe('TenPickService saved drafts', () => {
       expect(reloaded.getFestaRival(reloaded.state()!)?.id).toBe(state.players[2].id);
       pokemonService.getPokemon.mockResolvedValue(options[5]);
       await Promise.all([reloaded.resolveFestaPokemonChoice(options[5].id), reloaded.resolveFestaPokemonChoice(options[5].id)]);
-      expect(reloaded.state()?.players.map((player) => player.team)).toEqual([[options[5]], [], []]);
+      expect(reloaded.state()?.players.map((player) => player.team)).toEqual([[options[0], options[5]], [options[1]], [options[2]]]);
       expect(reloaded.state()?.currentTurn?.finished).toBe(true);
       expect(reloaded.state()?.activeFestaCard).toBeUndefined();
       expect(reloaded.state()?.history?.at(-1)?.message).toContain('Other rival selected');

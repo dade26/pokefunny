@@ -12,6 +12,14 @@ export interface Pokemon {
   shiny?: boolean;
   shinySprite?: string;
   shinyArtwork?: string;
+  nickname?: string;
+  heldItem?: FestaHeldItem | string;
+  moveStickers?: string[];
+}
+
+export interface FestaHeldItem {
+  id: string;
+  name: string;
 }
 
 export interface Player {
@@ -41,7 +49,17 @@ export type FestaEffectType =
   | 'opponent-fully-evolved'
   | 'forced-reroll'
   | 'trade-any'
-  | 'trade-last';
+  | 'trade-last'
+  | 'item-random-rival'
+  | 'item-random-all'
+  | 'item-chosen-rival'
+  | 'item-random-own'
+  | 'item-random-opponent'
+  | 'item-chosen-random'
+  | 'item-random-group'
+  | 'move-rival-learnable'
+  | 'move-rival-any'
+  | 'move-random';
 
 export interface FestaCard {
   id: string;
@@ -57,6 +75,9 @@ export interface ActiveFestaCard {
   cardId: string;
   phase: 'revealed' | 'resolving';
   rivalPlayerId?: string;
+  target?: { playerId: string; index: number };
+  item?: FestaHeldItem;
+  modifierValue?: string;
 }
 
 export interface DraftHistoryEvent {
@@ -69,6 +90,7 @@ export interface DraftState {
   mode?: DraftMode;
   filters?: DraftFilters;
   festaChance?: number;
+  requireNicknames?: boolean;
   activeFestaCard?: ActiveFestaCard;
   history?: DraftHistoryEvent[];
   players: Player[];
@@ -83,6 +105,7 @@ export interface DraftState {
 export interface DraftSetup {
   mode?: DraftMode;
   festaChance?: number;
+  requireNicknames?: boolean;
   playerTypes?: (PokemonType | undefined)[];
   filters?: DraftFilters;
   playerNames: string[];

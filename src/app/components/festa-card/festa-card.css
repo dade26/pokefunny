@@ -1,0 +1,20 @@
+:host { display: block; width: min(420px, 100%); }
+.festa-card { position: relative; overflow: hidden; width: 100%; min-height: 560px; display: grid; justify-items: center; align-content: center; gap: 18px; padding: 28px; border: 2px solid #343434; border-radius: 8px; color: #292929; text-align: center; background: #fff; box-shadow: none; }
+.festa-badge { position: relative; z-index: 1; justify-self: center; max-width: 100%; padding: 4px 8px; font-family: Impact, Haettenschweiler, 'Arial Black', sans-serif; font-size: 64px; font-weight: 900; line-height: 1.1; letter-spacing: 0; color: #d62c72; transform: rotate(-4deg); }
+.festa-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.festa-mascot, h2, p { position: relative; z-index: 1; }
+.festa-confetti i { position: absolute; top: -24px; left: var(--x); width: 9px; height: 16px; border-radius: 2px; background: #f8d34f; animation: festa-confetti var(--t, 2200ms) linear var(--d) infinite; }
+.festa-confetti i:nth-child(2n) { background: #43b2e6; }
+.festa-confetti i:nth-child(3n) { background: #e45b8f; }
+.festa-confetti i:nth-child(4n) { background: #62bd73; }
+.festa-mascot { display: block; width: min(192px, 100%); aspect-ratio: 1; object-fit: contain; image-rendering: pixelated; }
+h2 { margin: 0; max-width: 100%; font-size: 28px; overflow-wrap: anywhere; }
+p { margin: 0; font-size: 16px; line-height: 1.5; font-weight: 400; }
+@keyframes festa-confetti { from { transform: translateY(-30px) rotate(0); opacity: 0; } 12% { opacity: 1; } to { transform: translateY(610px) rotate(540deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .festa-confetti i { animation: none; } }
+@media (max-width: 640px) { .festa-card { min-height: 440px; } .festa-badge { font-size: 52px; } h2 { font-size: 27px; } }
+.festa-card.compact { height: 100%; min-height: 360px; align-content: start; gap: 14px; padding: 20px 12px; }
+.compact .festa-badge { font-size: 36px; }
+.compact .festa-mascot { width: 96px; }
+.compact h2 { font-size: 18px; line-height: 1.2; }
+.compact p { font-size: 13px; line-height: 1.4; }

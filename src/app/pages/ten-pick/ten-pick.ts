@@ -10,10 +10,13 @@ import { TenPickResult } from '../../components/ten-pick-result/ten-pick-result'
 import { ALL_GENERATIONS, FestaCard, POKEMON_TYPES, Pokemon, PokemonType, typeIcon } from '../../models/pokemon.model';
 import { TenPickService } from '../../services/ten-pick.service';
 import { PokemonService } from '../../services/pokemon.service';
+import { FestaSetupService } from '../../services/festa-setup.service';
+import { FestaCard as FestaCardView } from '../../components/festa-card/festa-card';
+import { FestaCatalogEntry, festaModifierRule, normalizeFestaName } from '../../models/festa-modifiers';
 
 @Component({
   selector: 'app-ten-pick',
-  imports: [FormsModule, RouterLink, DraftOrder, TeamList, TenPickResult, LucideChevronDown],
+  imports: [FormsModule, RouterLink, DraftOrder, TeamList, TenPickResult, LucideChevronDown, FestaCardView],
   templateUrl: './ten-pick.html',
   styleUrls: ['./ten-pick.css', './draft-filters.css', './monotype.css', './festa-rival.css'],
   host: { '(document:click)': 'closeFilters($event)', '(document:keydown.escape)': 'closeFilters()' },
@@ -22,6 +25,7 @@ export class TenPick implements OnInit {
   readonly i18n = inject(LanguageService);
   private readonly tenPickService = inject(TenPickService);
   private readonly pokemonService = inject(PokemonService);
+  private readonly festaSetupService = inject(FestaSetupService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -41,11 +45,14 @@ export class TenPick implements OnInit {
   readonly routeBase = computed(() => this.monotype() ? '/ten-pick-monotype' : this.festa() ? '/ten-pick-festa' : '/ten-pick');
   readonly teamSize = signal(6);
   readonly festaChance = signal(5);
+  readonly requireNicknames = signal(false);
+  readonly draftNickname = signal('');
   readonly generations = ALL_GENERATIONS;
   readonly selectedGenerations = signal([...ALL_GENERATIONS]);
   readonly mega = signal(true);
   readonly gigantamax = signal(false);
   readonly service = this.tenPickService;
+  readonly festaCards = this.tenPickService.festaCards;
   readonly state = this.tenPickService.state;
   readonly currentPlayer = computed(() => {
     const state = this.state();
@@ -56,11 +63,7 @@ export class TenPick implements OnInit {
     return card ? this.tenPickService.getFestaCard(card.cardId) : null;
   });
   readonly festaChoices = signal<Pokemon[]>([]);
-  readonly festaMascot = computed(() => {
-    const negative = this.activeFestaCard()?.effect === 'forced-reroll';
-    return { name: negative ? 'Impidimp' : 'Tinkatink', sprite: negative ? 'images/festa/impidimp.png' : 'images/festa/tinkatink.png' };
-  });
-  readonly rerollReveal = signal<{ previous: Pokemon; result?: Pokemon } | null>(null);
+  readonly rerollReveal = signal<{ index: number; previous: Pokemon; result?: Pokemon } | null>(null);
   readonly rerollError = signal(false);
   readonly festaChoicesLoading = signal(false);
   readonly festaChoicesError = signal(false);
@@ -68,10 +71,27 @@ export class TenPick implements OnInit {
   readonly festaRivalRolling = signal(false);
   readonly festaRivalRevealed = signal(false);
   readonly festaRivalPreview = signal<string | null>(null);
+  readonly festaTargetRolling = signal(false);
+  readonly festaTargetRevealed = signal(false);
+  readonly festaTargetPreview = signal<{ playerName: string; pokemon: Pokemon } | null>(null);
   readonly festaQuery = signal('');
   readonly selectedFestaPokemonId = signal<number | null>(null);
   readonly selectedTradeFirst = signal<string | null>(null);
   readonly selectedTradeSecond = signal<string | null>(null);
+  readonly festaItems = signal<FestaCatalogEntry[]>([]);
+  readonly festaMoves = signal<FestaCatalogEntry[]>([]);
+  readonly festaItemQuery = signal('');
+  readonly festaMoveQuery = signal('');
+  readonly festaTargetKey = signal<string | null>(null);
+  readonly festaModifierError = signal<TranslationKey | null>(null);
+  readonly festaCatalogLoading = signal(false);
+  readonly activeModifierRule = computed(() => {
+    const card = this.activeFestaCard();
+    return card ? festaModifierRule(card.effect) : undefined;
+  });
+  readonly festaModifierTargets = computed(() => this.tenPickService.getFestaModifierTargets());
+  readonly visibleFestaItems = computed(() => this.filterCatalog(this.festaItems(), this.festaItemQuery()).slice(0, 80));
+  readonly visibleFestaMoves = computed(() => this.filterCatalog(this.festaMoves(), this.festaMoveQuery()).slice(0, 80));
   readonly filteredFestaChoices = computed(() => {
     const query = this.festaQuery().trim().toLowerCase();
     return this.festaChoices().filter((pokemon) => !query || pokemon.name.toLowerCase().includes(query)).slice(0, 80);
@@ -116,6 +136,13 @@ export class TenPick implements OnInit {
         this.pokemonService.preloadArtwork(turn.options.slice(turn.currentIndex));
       }
     });
+    effect(() => {
+      const active = this.state()?.activeFestaCard;
+      const rule = this.activeModifierRule();
+      if (active?.phase !== 'resolving' || !rule) return;
+      this.festaModifierError.set(null);
+      void this.loadFestaCatalog();
+    });
   }
 
   ngOnInit(): void {
@@ -124,6 +151,7 @@ export class TenPick implements OnInit {
       const id = params.get('draftId');
       if (!id) {
         this.tenPickService.reset();
+        if (this.festa()) this.restoreFestaSetup();
       } else if (this.tenPickService.openDraft(id)) {
         void this.tenPickService.ensureTurn();
       } else {
@@ -192,10 +220,12 @@ export class TenPick implements OnInit {
         playerNames: this.setupPlayers(),
         mode: this.monotype() ? 'monotype' : this.festa() ? 'festa' : 'normal',
         festaChance: this.festaChance(),
+        requireNicknames: this.requireNicknames(),
         playerTypes: this.playerTypes(),
         teamSize: this.teamSize(),
         filters: { generations: this.selectedGenerations(), mega: this.mega(), gigantamax: this.gigantamax() },
       });
+      if (this.festa()) this.festaSetupService.clear();
       await this.router.navigate([this.routeBase(), id]);
     } finally {
       this.starting.set(false);
@@ -213,6 +243,37 @@ export class TenPick implements OnInit {
 
   festaCardText(card: FestaCard, field: 'nameKey' | 'descriptionKey'): string {
     return this.i18n.t(card[field] as TranslationKey);
+  }
+
+  festaDeckCount(): number {
+    return this.festaCards.filter((card) => this.tenPickService.isFestaCardEnabled(card.id)).length;
+  }
+
+  saveFestaSetup(): void {
+    this.festaSetupService.save({
+      newPlayer: this.newPlayer(),
+      players: [...this.setupPlayers()],
+      teamSize: this.teamSize(),
+      festaChance: this.festaChance(),
+      requireNicknames: this.requireNicknames(),
+      generations: [...this.selectedGenerations()],
+      mega: this.mega(),
+      gigantamax: this.gigantamax(),
+    });
+  }
+
+  private restoreFestaSetup(): void {
+    const setup = this.festaSetupService.load();
+    if (!setup) return;
+    this.newPlayer.set(setup.newPlayer);
+    this.setupPlayers.set([...setup.players]);
+    this.playerTypes.set(setup.players.map(() => undefined));
+    this.teamSize.set(setup.teamSize);
+    this.festaChance.set(setup.festaChance);
+    this.requireNicknames.set(setup.requireNicknames ?? false);
+    this.selectedGenerations.set([...setup.generations]);
+    this.mega.set(setup.mega);
+    this.gigantamax.set(setup.gigantamax);
   }
 
   async startFestaResolution(): Promise<void> {
@@ -246,15 +307,83 @@ export class TenPick implements OnInit {
     this.selectedFestaPokemonId.set(id);
   }
 
+  nicknameRequired(): boolean {
+    return this.state()?.requireNicknames ?? false;
+  }
+
+  nicknameReady(): boolean {
+    return !this.nicknameRequired() || !!this.draftNickname().trim();
+  }
+
+  pickCurrentPokemon(): void {
+    if (!this.nicknameReady()) return;
+    this.tenPickService.pick(this.draftNickname());
+    this.draftNickname.set('');
+  }
+
+  skipCurrentPokemon(): void {
+    this.tenPickService.skip();
+    this.draftNickname.set('');
+  }
+
   retryFestaChoices(): void {
     this.festaChoicesRetry.update((attempt) => attempt + 1);
   }
 
+  selectFestaModifierTarget(key: string): void {
+    this.festaTargetKey.set(key);
+  }
+
+  chooseFestaItem(item: FestaCatalogEntry): void {
+    this.festaItemQuery.set(item.name);
+  }
+
+  chooseFestaMove(move: FestaCatalogEntry): void {
+    this.festaMoveQuery.set(move.name);
+  }
+
+  festaCatalogLabel(entry: FestaCatalogEntry): string {
+    return this.i18n.language() === 'es' ? entry.es : entry.name;
+  }
+
+  itemSprite(item: FestaCatalogEntry): string {
+    const slug = item.name.toLowerCase().replace(/['.]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${slug}.png`;
+  }
+
+  async confirmFestaModifier(): Promise<void> {
+    const rule = this.activeModifierRule();
+    if (!rule || this.service.loadingTurn() || this.festaTargetRolling()) return;
+    const value = rule.kind === 'item' ? this.festaItemQuery() : this.festaMoveQuery();
+    const target = this.parseTradeKey(this.festaTargetKey());
+    try {
+      if (rule.target === 'random' && !this.state()?.activeFestaCard?.target) {
+        const targets = this.festaModifierTargets();
+        const chosen = await this.tenPickService.chooseRandomFestaModifierTarget(value);
+        if (!chosen) {
+          this.festaModifierError.set(rule.learnable ? 'festaInvalidMove' : 'festaNoTargets');
+          return;
+        }
+        if (!await this.rollFestaModifierTarget(targets, chosen)) return;
+      }
+      const success = await this.tenPickService.resolveFestaModifier(value, target ?? undefined);
+      if (!success) {
+        this.festaModifierError.set(rule.learnable ? 'festaInvalidMove' : 'festaNoTargets');
+        return;
+      }
+      this.clearFestaSelection();
+    } catch {
+      this.festaTargetRolling.set(false);
+      this.festaModifierError.set('turnError');
+    }
+  }
+
   async confirmFestaPokemon(): Promise<void> {
     const id = this.selectedFestaPokemonId();
-    if (id == null || this.service.loadingTurn()) return;
+    if (id == null || this.service.loadingTurn() || !this.nicknameReady()) return;
     try {
-      await this.tenPickService.resolveFestaPokemonChoice(id);
+      await this.tenPickService.resolveFestaPokemonChoice(id, this.draftNickname());
+      this.draftNickname.set('');
       this.clearFestaSelection();
     } catch {
       this.festaChoicesError.set(true);
@@ -265,21 +394,31 @@ export class TenPick implements OnInit {
     const previous = this.currentPlayer()?.team[index];
     if (!previous || this.rerollReveal()) return;
     this.rerollError.set(false);
-    this.rerollReveal.set({ previous });
+    this.draftNickname.set('');
+    this.rerollReveal.set({ index, previous });
     try {
       const [result] = await Promise.all([
-        this.tenPickService.resolveForcedReroll(index),
+        this.tenPickService.previewForcedReroll(index),
         new Promise<void>((resolve) => setTimeout(resolve, 1400)),
       ]);
       if (this.destroyRef.destroyed) return;
       if (!result) { this.rerollReveal.set(null); return; }
-      this.rerollReveal.set({ previous, result });
-      this.clearFestaSelection();
+      this.rerollReveal.set({ index, previous, result });
     } catch {
       if (this.destroyRef.destroyed) return;
       this.rerollReveal.set(null);
       this.rerollError.set(true);
     }
+  }
+
+  confirmForcedReroll(): void {
+    const reveal = this.rerollReveal();
+    if (!reveal?.result || !this.nicknameReady()) return;
+    const saved = this.tenPickService.confirmForcedReroll(reveal.index, reveal.result, this.draftNickname());
+    if (!saved) return;
+    this.draftNickname.set('');
+    this.rerollReveal.set(null);
+    this.clearFestaSelection();
   }
 
   selectTrade(slot: 'first' | 'second', key: string): void {
@@ -315,10 +454,53 @@ export class TenPick implements OnInit {
     this.festaRivalRolling.set(false);
     this.festaRivalRevealed.set(false);
     this.festaRivalPreview.set(null);
+    this.festaTargetRolling.set(false);
+    this.festaTargetRevealed.set(false);
+    this.festaTargetPreview.set(null);
     this.festaQuery.set('');
     this.selectedFestaPokemonId.set(null);
     this.selectedTradeFirst.set(null);
     this.selectedTradeSecond.set(null);
+    this.festaItemQuery.set('');
+    this.festaMoveQuery.set('');
+    this.festaTargetKey.set(null);
+    this.festaModifierError.set(null);
+    this.draftNickname.set('');
+  }
+
+  async loadFestaCatalog(): Promise<void> {
+    const active = this.state()?.activeFestaCard;
+    this.festaCatalogLoading.set(true);
+    try {
+      const [catalog, items] = await Promise.all([
+        this.pokemonService.getFestaCatalog(),
+        this.tenPickService.getAssignableFestaItems(),
+      ]);
+      await this.tenPickService.prepareFestaModifier();
+      if (this.destroyRef.destroyed || this.state()?.activeFestaCard?.cardId !== active?.cardId) return;
+      this.festaItems.set(items);
+      if (active?.modifierValue) this.festaItemQuery.set(active.modifierValue);
+      if (this.activeModifierRule()?.kind === 'item' && this.activeModifierRule()?.target === 'random') {
+        this.pokemonService.preloadArtwork(this.festaModifierTargets().map((target) => target.pokemon));
+      }
+      const target = this.state()?.activeFestaCard?.target;
+      const pokemon = target ? this.state()?.players.find((player) => player.id === target.playerId)?.team[target.index] : undefined;
+      if (this.activeModifierRule()?.learnable && pokemon) {
+        const detail = await this.pokemonService.getDetail(pokemon.id);
+        if (this.destroyRef.destroyed) return;
+        const moves = new Set(detail.moves?.map(({ move }) => normalizeFestaName(move.name)));
+        this.festaMoves.set(catalog.moves.filter((move) => moves.has(move.id)));
+      } else { this.festaMoves.set(catalog.moves); }
+    } catch { if (!this.destroyRef.destroyed) this.festaModifierError.set('turnError'); }
+    finally { if (!this.destroyRef.destroyed) this.festaCatalogLoading.set(false); }
+  }
+
+  private filterCatalog(entries: FestaCatalogEntry[], query: string): FestaCatalogEntry[] {
+    const normalized = normalizeFestaName(query);
+    return entries.filter((entry) => !normalized
+      || normalizeFestaName(entry.name).includes(normalized)
+      || normalizeFestaName(entry.es).includes(normalized)
+      || normalizeFestaName(entry.id).includes(normalized));
   }
 
   private async rollFestaRival(rivals: { name: string }[], selectedName: string): Promise<void> {
@@ -336,5 +518,34 @@ export class TenPick implements OnInit {
     await new Promise<void>((resolve) => setTimeout(resolve, 900));
     if (this.destroyRef.destroyed || this.state()?.activeFestaCard !== active) return;
     this.festaRivalRolling.set(false);
+  }
+
+  private async rollFestaModifierTarget(
+    targets: { player: { name: string }; pokemon: Pokemon; playerId: string; index: number }[],
+    selected: { playerId: string; index: number },
+  ): Promise<boolean> {
+    const active = this.state()?.activeFestaCard;
+    const selectedTarget = targets.find((target) => target.playerId === selected.playerId && target.index === selected.index);
+    if (!selectedTarget) return false;
+    this.festaTargetRolling.set(true);
+    this.festaTargetRevealed.set(false);
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.festaTargetPreview.set({ playerName: targets[0].player.name, pokemon: targets[0].pokemon });
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    if (this.destroyRef.destroyed || this.state()?.activeFestaCard !== active) return false;
+    this.element.nativeElement.querySelector('.festa-target-roll')?.scrollIntoView({ block: 'center' });
+    for (let step = 0; step < (reducedMotion ? 0 : 14); step++) {
+      if (this.destroyRef.destroyed || this.state()?.activeFestaCard !== active) return false;
+      const preview = targets[step % targets.length];
+      this.festaTargetPreview.set({ playerName: preview.player.name, pokemon: preview.pokemon });
+      await new Promise<void>((resolve) => setTimeout(resolve, 55 + step * 12));
+    }
+    if (this.destroyRef.destroyed || this.state()?.activeFestaCard !== active) return false;
+    this.festaTargetPreview.set({ playerName: selectedTarget.player.name, pokemon: selectedTarget.pokemon });
+    this.festaTargetRevealed.set(true);
+    await new Promise<void>((resolve) => setTimeout(resolve, 900));
+    if (this.destroyRef.destroyed || this.state()?.activeFestaCard !== active) return false;
+    this.festaTargetRolling.set(false);
+    return true;
   }
 }

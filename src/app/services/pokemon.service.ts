@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { BANNED_POKEMON_ID, Pokemon, PokemonType } from '../models/pokemon.model';
 import { pokemonArtworkUrl } from '../models/pokemon-images';
+import { FestaCatalog } from '../models/festa-modifiers';
 
 export interface PokemonCatalogEntry {
   id: number;
@@ -31,6 +32,7 @@ export interface PokemonDetailResponse {
   };
   stats: { base_stat: number }[];
   types: { type: { name: string } }[];
+  moves?: { move: { name: string } }[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -38,6 +40,7 @@ export class PokemonService {
   private readonly apiUrl = 'https://pokeapi.co/api/v2';
   private readonly spriteUrl = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
   private catalogRequest?: Promise<PokemonCatalogEntry[]>;
+  private festaCatalogRequest?: Promise<FestaCatalog>;
   private catalogById = new Map<number, PokemonCatalogEntry>();
   private readonly preloadedImages = new Map<string, HTMLImageElement>();
   private detailCache = new Map<number, Pokemon>();
@@ -53,6 +56,11 @@ export class PokemonService {
 
   async getPokemonCatalog(): Promise<PokemonCatalogEntry[]> {
     return this.getCatalog();
+  }
+
+  getFestaCatalog(): Promise<FestaCatalog> {
+    return this.festaCatalogRequest ??= firstValueFrom(this.http.get<FestaCatalog>('data/festa-catalog.v1.json'))
+      .catch((error) => { this.festaCatalogRequest = undefined; throw error; });
   }
 
   async getTypeIds(type: PokemonType): Promise<Set<number>> {

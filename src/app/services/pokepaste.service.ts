@@ -31,12 +31,20 @@ export class PokepasteService {
         ? species.gender
         : /-female(?:-|$)/.test(detail.name) ? 'F' : /-male(?:-|$)/.test(detail.name) ? 'M' : '';
       const gender = fixedGender ? ` (${fixedGender})` : '';
-      const item = species.requiredItem ? ` @ ${species.requiredItem}` : '';
+      const assignedItem = typeof pokemon.heldItem === 'string' ? pokemon.heldItem : pokemon.heldItem?.name;
+      const heldItem = assignedItem || species.requiredItem;
+      const item = heldItem ? ` @ ${heldItem}` : '';
+      const nickname = this.cleanSetText(pokemon.nickname);
+      const name = nickname ? `${nickname} (${species.name})` : species.name;
       const shiny = pokemon.shiny ? '\nShiny: Yes' : '';
       const abilityText = ability?.exists ? `\nAbility: ${ability.name}` : '';
-      return `${species.name}${gender}${item}${abilityText}${shiny}`;
+      return `${name}${gender}${item}${abilityText}${shiny}`;
     }));
     return sets.join('\n\n');
+  }
+
+  private cleanSetText(value: string | undefined): string {
+    return value?.replace(/[\r\n]/g, ' ').trim() ?? '';
   }
 
   private toShowdownSpeciesName(name: string): string {

@@ -1,0 +1,21 @@
+.deck-page { max-width: 1800px; margin: 0 auto; padding: 32px 24px; }
+nav a { display: inline-flex; align-items: center; gap: 8px; color: var(--muted, #52665a); }
+nav svg { width: 20px; height: 20px; }
+header { display: flex; align-items: center; gap: 16px; padding: 24px 0; }
+header img { width: 56px; height: 64px; object-fit: contain; }
+h1 { margin: 0; font-size: 30px; overflow-wrap: anywhere; }
+header strong { margin-left: auto; white-space: nowrap; }
+.deck-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
+.deck-card { display: flex; justify-content: center; align-items: stretch; width: 100%; padding: 0; border: 0; border-radius: 8px; background: transparent; cursor: pointer; font-family: inherit; transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease; }
+.deck-card app-festa-card { height: 100%; }
+.deck-card.disabled { filter: grayscale(1); }
+.deck-card:focus-visible { outline: 3px solid #c9363d; outline-offset: 4px; }
+@media (hover: hover) and (pointer: fine) {
+  .deck-card:hover { transform: translateY(-2px); filter: brightness(1.04); box-shadow: 0 6px 14px rgba(31, 43, 35, 0.12); }
+  .deck-card.disabled:hover { filter: grayscale(1) brightness(1.04); }
+}
+@media (prefers-reduced-motion: reduce) { .deck-card { transition: filter 160ms ease, box-shadow 160ms ease; } .deck-card:hover { transform: none; } }
+@media (max-width: 1199px) { .deck-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .deck-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .deck-page { padding: 24px 16px; } .deck-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } header { gap: 10px; } h1 { font-size: 24px; } }
+@media (max-width: 420px) { .deck-grid { grid-template-columns: minmax(0, 1fr); } }

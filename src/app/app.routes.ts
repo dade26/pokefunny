@@ -124,6 +124,15 @@ export const routes: Routes = [
     },
   },
   {
+    path: 'ten-pick-festa/deck',
+    loadComponent: () => import('./pages/festa-deck/festa-deck').then((module) => module.FestaDeck),
+    data: {
+      title: 'Festa Card Deck | Pokefunny',
+      description: 'Choose the active Festa Cards for your Pokemon drafts.',
+      canonicalPath: '/ten-pick-festa/deck',
+    },
+  },
+  {
     path: 'ten-pick-festa/:draftId',
     component: TenPick,
     data: {

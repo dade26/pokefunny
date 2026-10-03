@@ -2,7 +2,7 @@ import { LanguageService, TranslationKey } from '../../services/language.service
 import { Component, Input, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideCopy, LucideFileText, LucideX } from '@lucide/angular';
-import { DraftState, Player, typeIcon } from '../../models/pokemon.model';
+import { DraftState, FestaHeldItem, Player, Pokemon, typeIcon } from '../../models/pokemon.model';
 import { PokepasteError, PokepasteService } from '../../services/pokepaste.service';
 
 interface PasteState {
@@ -82,5 +82,21 @@ export class TeamList {
 
   slots(): number[] {
     return Array.from({ length: this.state.teamSize }, (_, index) => index);
+  }
+
+  itemName(pokemon: Pokemon): string {
+    const item = pokemon.heldItem;
+    return typeof item === 'string' ? item : item?.name ?? '';
+  }
+
+  itemImage(pokemon: Pokemon): string {
+    const item = pokemon.heldItem as FestaHeldItem | string | undefined;
+    return typeof item === 'object' && item?.id
+      ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${this.itemSpriteSlug(item.name)}.png`
+      : '';
+  }
+
+  private itemSpriteSlug(name: string): string {
+    return name.toLowerCase().replace(/['.]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   }
 }

@@ -73,10 +73,32 @@ export const FESTA_CARDS: FestaCard[] = [
     consumesPick: false,
     effect: 'trade-last',
   },
+  ...([
+    ['item-random-rival', 'festaItemRandomRival'],
+    ['item-random-all', 'festaItemRandomAll'],
+    ['item-chosen-rival', 'festaItemChosenRival'],
+    ['item-random-own', 'festaItemRandomOwn'],
+    ['item-random-opponent', 'festaItemRandomOpponent'],
+    ['item-chosen-random', 'festaItemChosenRandom'],
+    ['item-random-group', 'festaItemRandomGroup'],
+    ['move-rival-learnable', 'festaMoveRivalLearnable'],
+    ['move-rival-any', 'festaMoveRivalAny'],
+    ['move-random', 'festaMoveRandom'],
+  ] as const).map(([effect, key]) => ({
+    id: effect, effect, name: effect === 'item-random-all' ? 'A Gift for... anyone!?' : effect, description: effect,
+    nameKey: `${key}Name`, descriptionKey: `${key}Description`, consumesPick: false,
+  })),
 ];
 
 export function pickRandomFestaCard(): FestaCard {
   return FESTA_CARDS[Math.floor(Math.random() * FESTA_CARDS.length)];
+}
+
+export function pickRandomActiveFestaCard(activeCardIds: string[]): FestaCard | undefined {
+  const activeCards = FESTA_CARDS.filter((card) => activeCardIds.includes(card.id));
+  return activeCards.length
+    ? activeCards[Math.floor(Math.random() * activeCards.length)]
+    : undefined;
 }
 
 export function getFestaCard(cardId: string): FestaCard | undefined {

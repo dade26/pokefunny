@@ -63,29 +63,35 @@
           }
         </div>
 
-        <label>
-          {{ i18n.t('teamSize') }}
-          <input
-            type="number"
-            min="1"
-            max="12"
-            [ngModel]="teamSize()"
-            (ngModelChange)="updateTeamSize($event)"
-          />
-        </label>
-
-        @if (festa()) {
-          <label>
-            {{ i18n.t('festaChance') }}
-            <input
-              type="number"
-              min="0"
-              max="100"
-              [ngModel]="festaChance()"
-              (ngModelChange)="updateFestaChance($event)"
-            />
-          </label>
-        }
+        <div class="setup-options">
+          <div class="setup-option-fields">
+            <label>
+              {{ i18n.t('teamSize') }}
+              <input type="number" min="1" max="12"
+                [ngModel]="teamSize()" (ngModelChange)="updateTeamSize($event)" />
+            </label>
+            @if (festa()) {
+              <label>
+                {{ i18n.t('festaChance') }}
+                <input type="number" min="0" max="100"
+                  [ngModel]="festaChance()" (ngModelChange)="updateFestaChance($event)" />
+              </label>
+            }
+            <label class="checkbox-option">
+              <input type="checkbox" [ngModel]="requireNicknames()" (ngModelChange)="requireNicknames.set($event)" />
+              <span>{{ i18n.t('draftNicknamesRequired') }}</span>
+            </label>
+          </div>
+          @if (festa()) {
+            <a class="festa-deck-toggle" routerLink="/ten-pick-festa/deck"
+              [attr.aria-label]="i18n.t('festaDeck')"
+              [attr.title]="i18n.t('festaDeck')"
+              (click)="saveFestaSetup()">
+              <img src="images/festa/pokedeck.png" alt="" />
+              <strong>{{ festaDeckCount() }}/{{ festaCards.length }}</strong>
+            </a>
+          }
+        </div>
 
         @if (!selectedGenerations().length) { <p class="filter-error" role="alert">{{ i18n.t('selectGeneration') }}</p> }
         <button class="start" type="button" [disabled]="setupPlayers().length < 1 || !selectedGenerations().length || starting()" (click)="startDraft()">
@@ -123,8 +129,14 @@
                 <h2>{{ pokemon.name }}</h2>
                 @if (pokemon.shiny) { <span class="shiny-label">{{ i18n.t('shiny') }}</span> }
                 <p>{{ i18n.t('festaReplaced', { name: reveal.previous.name }) }}</p>
+                @if (nicknameRequired()) {
+                  <label class="nickname-entry">
+                    {{ i18n.t('draftNickname') }}
+                    <input maxlength="18" autocomplete="off" [ngModel]="draftNickname()" (ngModelChange)="draftNickname.set($event)" />
+                  </label>
+                }
               </div>
-              <button type="button" class="pick" (click)="rerollReveal.set(null)">{{ i18n.t('continue') }}</button>
+              <button type="button" class="pick" [disabled]="!nicknameReady()" (click)="confirmForcedReroll()">{{ i18n.t('festaConfirm') }}</button>
             } @else {
               <div class="reroll-spinning">
                 <img class="artwork" [src]="reveal.previous.artwork || reveal.previous.sprite" alt="" />
@@ -134,15 +146,7 @@
           </article>
         } @else if (draft.activeFestaCard && activeFestaCard(); as card) {
           <article class="festa-stage">
-            <div class="festa-card">
-              <div class="festa-confetti" aria-hidden="true">
-                <i style="--x:8%;--d:-200ms"></i><i style="--x:16%;--d:-900ms;--t:2600ms"></i><i style="--x:25%;--d:-1300ms"></i><i style="--x:34%;--d:-600ms;--t:2400ms"></i><i style="--x:43%;--d:-1700ms"></i><i style="--x:52%;--d:-1100ms;--t:2800ms"></i><i style="--x:61%;--d:-300ms"></i><i style="--x:70%;--d:-1500ms;--t:2500ms"></i><i style="--x:78%;--d:-800ms"></i><i style="--x:86%;--d:-1900ms;--t:2700ms"></i><i style="--x:92%;--d:-500ms"></i><i style="--x:48%;--d:-2100ms;--t:2900ms"></i>
-              </div>
-              <span class="festa-badge">FESTA!</span>
-              <img class="festa-mascot" [src]="festaMascot().sprite" [alt]="festaMascot().name" />
-              <h1>{{ festaCardText(card, 'nameKey') }}</h1>
-              <p>{{ festaCardText(card, 'descriptionKey') }}</p>
-            </div>
+            <app-festa-card [card]="card" />
 
             @if (festaRivalRolling()) {
               <div class="festa-rival-roll" [class.revealed]="festaRivalRevealed()" role="status" [attr.aria-live]="festaRivalRevealed() ? 'polite' : 'off'">
@@ -171,7 +175,72 @@
                       </button>
                     }
                   </div>
-                  <button class="pick" type="button" [disabled]="selectedFestaPokemonId() === null" (click)="confirmFestaPokemon()">{{ i18n.t('festaConfirm') }}</button>
+                  @if (nicknameRequired()) {
+                    <label class="nickname-entry">
+                      {{ i18n.t('draftNickname') }}
+                      <input maxlength="18" autocomplete="off" [ngModel]="draftNickname()" (ngModelChange)="draftNickname.set($event)" />
+                    </label>
+                  }
+                  <button class="pick" type="button" [disabled]="selectedFestaPokemonId() === null || !nicknameReady()" (click)="confirmFestaPokemon()">{{ i18n.t('festaConfirm') }}</button>
+                </div>
+              } @else if (activeModifierRule(); as rule) {
+                <div class="festa-resolution">
+                  @if (festaModifierError(); as modifierError) {
+                    <p class="error" role="alert">{{ i18n.t(modifierError) }}</p>
+                    @if (modifierError === 'turnError') { <button type="button" (click)="loadFestaCatalog()">{{ i18n.t('retry') }}</button> }
+                  }
+                  @if (festaCatalogLoading()) { <p role="status">{{ i18n.t('loading') }}</p> }
+
+                  @if (festaTargetRolling() && festaTargetPreview(); as preview) {
+                    <div class="festa-target-roll" [class.revealed]="festaTargetRevealed()" role="status" [attr.aria-live]="festaTargetRevealed() ? 'polite' : 'off'">
+                      <span>{{ i18n.t(festaTargetRevealed() ? 'festaTargetSelected' : 'festaChoosingTarget') }}</span>
+                      <img [src]="preview.pokemon.artwork || preview.pokemon.sprite" [alt]="preview.pokemon.name" />
+                      <strong>{{ preview.playerName }} - {{ preview.pokemon.name }}</strong>
+                    </div>
+                  } @else if (!festaModifierTargets().length) {
+                    <p class="festa-note">{{ i18n.t('festaNoTargets') }}</p>
+                  } @else {
+                    @if (rule.target === 'random' && draft.activeFestaCard.target) {
+                      @for (pick of festaModifierTargets(); track pick.playerId + ':' + pick.index) {
+                        @if (pick.playerId === draft.activeFestaCard.target.playerId && pick.index === draft.activeFestaCard.target.index) {
+                          <p class="festa-note"><strong>{{ pick.player.name }}</strong> - {{ pick.pokemon.name }}</p>
+                        }
+                      }
+                    } @else if (rule.target === 'choose') {
+                      <div class="festa-grid compact">
+                        @for (pick of festaModifierTargets(); track pick.playerId + ':' + pick.index) {
+                          <button type="button" class="festa-pokemon" [class.selected]="festaTargetKey() === pick.playerId + ':' + pick.index" (click)="selectFestaModifierTarget(pick.playerId + ':' + pick.index)">
+                            <img [src]="pick.pokemon.artwork || pick.pokemon.sprite" [alt]="pick.pokemon.name" />
+                            <span>{{ pick.player.name }} - {{ pick.pokemon.name }}</span>
+                          </button>
+                        }
+                      </div>
+                    }
+
+                    @if (rule.kind === 'item') {
+                      @if (rule.randomItem && draft.activeFestaCard.item) {
+                        <p class="festa-note">{{ i18n.t('festaItem') }}: <strong>{{ draft.activeFestaCard.item.name }}</strong></p>
+                      } @else if (!rule.randomItem) {
+                        <label>{{ i18n.t('festaItem') }}
+                          <select class="festa-item-select" [disabled]="!!draft.activeFestaCard.modifierValue || service.loadingTurn()" [ngModel]="festaItemQuery()" (ngModelChange)="festaItemQuery.set($event)">
+                            <option value="" disabled>{{ i18n.t('festaItem') }}</option>
+                            @for (item of festaItems(); track item.id) { <option [value]="item.name">{{ festaCatalogLabel(item) }}</option> }
+                          </select>
+                        </label>
+                      }
+                    } @else {
+                      <label>{{ i18n.t('festaMove') }}
+                        <input list="festa-moves" maxlength="80" autocomplete="off" [ngModel]="festaMoveQuery()" (ngModelChange)="festaMoveQuery.set($event)" />
+                      </label>
+                      <datalist id="festa-moves">
+                        @for (move of festaMoves(); track move.id) { <option [value]="festaCatalogLabel(move)">{{ move.name }}</option> }
+                      </datalist>
+                    }
+
+                    <button class="pick" type="button"
+                      [disabled]="service.loadingTurn() || festaTargetRolling() || festaCatalogLoading() || (rule.target === 'choose' && !festaTargetKey()) || (rule.randomItem && rule.kind === 'item' && !draft.activeFestaCard.item) || (!rule.randomItem && rule.kind === 'item' && !festaItemQuery().trim()) || (rule.kind === 'move' && !festaMoveQuery().trim())"
+                      (click)="confirmFestaModifier()">{{ i18n.t('festaConfirm') }}</button>
+                  }
                 </div>
               } @else if (card.effect === 'forced-reroll') {
                 <div class="festa-resolution">
@@ -285,9 +354,15 @@
             }
 
             <div class="turn-actions">
-              <button type="button" class="pick" (click)="service.pick()">{{ i18n.t('pick') }}</button>
+              @if (nicknameRequired()) {
+                <label class="nickname-entry">
+                  {{ i18n.t('draftNickname') }}
+                  <input maxlength="18" autocomplete="off" [ngModel]="draftNickname()" (ngModelChange)="draftNickname.set($event)" />
+                </label>
+              }
+              <button type="button" class="pick" [disabled]="!nicknameReady()" (click)="pickCurrentPokemon()">{{ i18n.t('pick') }}</button>
               @if (draft.currentTurn.currentIndex < draft.currentTurn.options.length - 1) {
-                <button type="button" class="skip" (click)="service.skip()">{{ i18n.t('skip') }}</button>
+                <button type="button" class="skip" (click)="skipCurrentPokemon()">{{ i18n.t('skip') }}</button>
               }
             </div>
 

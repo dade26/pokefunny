@@ -1,0 +1,11 @@
+<div class="festa-card" [class.compact]="compact()">
+  @if (confetti()) {
+  <div class="festa-confetti" aria-hidden="true">
+    <i style="--x:8%;--d:-200ms"></i><i style="--x:16%;--d:-900ms;--t:2600ms"></i><i style="--x:25%;--d:-1300ms"></i><i style="--x:34%;--d:-600ms;--t:2400ms"></i><i style="--x:43%;--d:-1700ms"></i><i style="--x:52%;--d:-1100ms;--t:2800ms"></i><i style="--x:61%;--d:-300ms"></i><i style="--x:70%;--d:-1500ms;--t:2500ms"></i><i style="--x:78%;--d:-800ms"></i><i style="--x:86%;--d:-1900ms;--t:2700ms"></i><i style="--x:92%;--d:-500ms"></i><i style="--x:48%;--d:-2100ms;--t:2900ms"></i>
+  </div>
+  }
+  <span class="festa-badge">FESTA!</span>
+  <img class="festa-mascot" [src]="mascotUrl()" [alt]="coverPokemon().name" />
+  <h2>{{ text('nameKey') }}</h2>
+  <p>{{ text('descriptionKey') }}</p>
+</div>
