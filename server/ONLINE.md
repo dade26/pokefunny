@@ -1,5 +1,13 @@
 # Modo online
 
+## Comprobar la versión publicada
+
+La web y el backend se despliegan por separado. Hacer push o publicar la web no actualiza necesariamente el proceso de Render. Tras cambiar el motor Online, despliega también el último commit de `main` en el servicio `pokefunny.onrender.com`.
+
+`https://pokefunny.onrender.com/health` debe incluir `gameEngineVersion: 2` y `revision` con el commit desplegado. Si solo responde `{"ok":true}`, sigue ejecutando una versión antigua. Esa versión puede enviar `festa-wait` al jugador activo al resolver cartas de transformación u objetos, dejando la partida bloqueada.
+
+Comprueba en Render que el servicio usa la rama `main`, instala con `npm ci` y arranca con `npm run start:server`. El reinicio elimina las salas en memoria, por lo que las partidas anteriores deben crearse de nuevo.
+
 Cualquier visitante puede crear una sala desde «Jugar Online» en Ten Pick, Monotype o Festa. Solo configura las opciones de la partida; no introduce nombres ni un número de jugadores. Comparte el enlace `/join/CODIGO`, cada persona entra con su nombre y el host empieza cuando estén todos. Se fija la lista de participantes con los jugadores conectados al empezar. Después solo pueden volver a entrar los participantes de esa partida.
 
 El host es el organizador de una sala en el navegador. El servidor Node es el servicio común que sincroniza todas las salas. Los visitantes no necesitan instalar Node ni ejecutar un servidor. El host observa y dirige; si quiere jugar también debe entrar por el enlace desde otro navegador o dispositivo. Recargar `/host/CODIGO` recupera la sala en el navegador que la creó. Las conexiones recuperan su sesión automáticamente tras un corte de red.

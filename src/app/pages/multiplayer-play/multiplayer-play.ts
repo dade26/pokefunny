@@ -22,6 +22,7 @@ export class MultiplayerPlay implements OnInit {
   readonly selectedSecond = signal('');
   readonly modifierTarget = signal('');
   readonly modifierValue = signal('');
+  readonly refreshing = signal(false);
   readonly activeCard = computed(() => {
     const id = this.state()?.draft?.activeFestaCard?.cardId;
     return id ? getFestaCard(id) ?? null : null;
@@ -57,6 +58,18 @@ export class MultiplayerPlay implements OnInit {
   async resolveFestaReroll(teamIndex: number): Promise<void> {
     await this.socket.resolveFestaReroll(teamIndex, this.nickname());
     this.nickname.set('');
+  }
+
+  async refreshState(): Promise<void> {
+    if (this.refreshing()) return;
+    this.refreshing.set(true);
+    try {
+      await this.socket.reconnectPlayer(this.state()?.roomCode ?? '');
+    } catch {
+      // The socket service displays the connection error without clearing the current team.
+    } finally {
+      this.refreshing.set(false);
+    }
   }
 
   allPicks(): { key: string; player: Player; pokemonName: string }[] {

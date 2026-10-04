@@ -144,7 +144,19 @@
             </select>
             <button class="pick" type="button" [disabled]="!selectedSecond()" (click)="socket.resolveFestaTrade('', selectedSecond())">Confirmar</button>
           </article>
+        } @else {
+          <article class="festa">
+            <h1>No se pudo preparar la carta</h1>
+            <p>El servidor no ha enviado una acción para resolverla. Actualiza la partida; si continúa, el organizador debe actualizar el servidor Online.</p>
+            <button class="pick" type="button" [disabled]="refreshing()" (click)="refreshState()">{{ refreshing() ? 'Actualizando...' : 'Actualizar partida' }}</button>
+          </article>
         }
+      } @else {
+        <article class="festa">
+          <h1>Recuperando tu turno</h1>
+          <p>No se han recibido las acciones de tu turno.</p>
+          <button class="pick" type="button" [disabled]="refreshing()" (click)="refreshState()">{{ refreshing() ? 'Actualizando...' : 'Actualizar partida' }}</button>
+        </article>
       }
       @if (socket.error()) { <p class="error">{{ socket.error() }}</p> }
     </section>

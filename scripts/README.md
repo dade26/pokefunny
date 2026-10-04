@@ -1,5 +1,7 @@
 # Pokemon draft catalog
 
+`npx tsx scripts/check-online-cards.mjs http://127.0.0.1:4200` checks the Online controller against real engine snapshots for every FESTA card, plus legacy/missing controls. Run against `ng serve`; install Playwright Chromium and WebKit first with `npx playwright install chromium webkit`. It checks desktop Chromium and mobile WebKit and saves screenshots under `test-results/online-cards`.
+
 `npm run update:pokemon` regenerates `public/data/pokemon-catalog.v1.json`
 from the official [PokeAPI CSV dataset](https://github.com/PokeAPI/pokeapi/tree/master/data/v2/csv)
 and [sprite repository](https://github.com/PokeAPI/sprites).

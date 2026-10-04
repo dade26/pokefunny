@@ -13,7 +13,11 @@ const clientOrigin = process.env['CLIENT_ORIGIN'] ?? 'http://localhost:4200';
 
 const app = express();
 app.use(cors({ origin: clientOrigin, credentials: true }));
-app.get('/health', (_request, response) => response.json({ ok: true }));
+app.get('/health', (_request, response) => response.json({
+  ok: true,
+  gameEngineVersion: 2,
+  revision: process.env['RENDER_GIT_COMMIT'] ?? process.env['COMMIT_SHA'] ?? 'local',
+}));
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
