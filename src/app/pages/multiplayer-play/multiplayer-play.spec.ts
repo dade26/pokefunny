@@ -19,6 +19,7 @@ describe('Online card controller recovery', () => {
       playerState: signal<MultiplayerPlayerState | null>(initial), error: signal(''), connected: signal(true), deletedRoom: signal(''),
       roomCode: signal('TEST12'), reconnectPlayer: vi.fn().mockResolvedValue(true),
       disconnect: vi.fn(),
+      resolveFestaModifier: vi.fn().mockResolvedValue(true),
     };
     const router = { navigate: vi.fn().mockResolvedValue(true) };
     TestBed.configureTestingModule({
@@ -83,5 +84,41 @@ describe('Online card controller recovery', () => {
     expect(fixture.componentInstance.refreshing()).toBe(false);
     expect(socket.playerState()).toEqual(state);
     expect(controller().querySelector('button')!.disabled).toBe(false);
+  });
+
+  it.each(['item', 'ability', 'move'] as const)('searches %s names in both languages and submits the selected ID', async modifierKind => {
+    const { fixture, socket, controller } = setup({ ...state, controls: {
+      kind: 'festa-modifier', cardId: 'test-modifier', modifierKind, targetMode: 'choose', randomValue: false,
+      targets: [{ key: 'p1:0', playerName: 'David', pokemon: { id: 25, name: 'Pikachu', rawName: 'pikachu', types: ['Electric'], sprite: '', artwork: '' } }],
+      values: [{ id: 'lightball', name: 'Light Ball', es: 'Bola Luminosa' }, { id: 'quickclaw', name: 'Quick Claw', es: 'Garra Rápida' }],
+    } });
+    const search = controller().querySelector<HTMLInputElement>('input[type="search"]')!;
+    search.value = '  RAPIDA  ';
+    search.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect(controller().querySelectorAll('.modifier-options button')).toHaveLength(1);
+    expect(controller().querySelector('.modifier-options')!.textContent).toContain('Garra Rápida');
+    search.value = 'light ball';
+    search.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    (controller().querySelector('.modifier-options button') as HTMLButtonElement).click();
+    const target = controller().querySelector('select')!;
+    target.value = 'p1:0';
+    target.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(controller().querySelector<HTMLButtonElement>('.pick')!.disabled).toBe(false);
+    controller().querySelector<HTMLButtonElement>('.pick')!.click();
+    expect(socket.resolveFestaModifier).toHaveBeenCalledWith('p1:0', 'lightball');
+
+    search.value = 'no matches';
+    search.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect(controller().textContent).toContain('No hay resultados');
+    expect(controller().querySelector('.modifier-selection')!.textContent).toContain('Bola Luminosa');
+    socket.playerState.set({ ...state, controls: { kind: 'festa-revealed', cardId: 'next-card' } });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.modifierQuery()).toBe('');
+    expect(fixture.componentInstance.modifierValue()).toBe('');
+    expect(fixture.componentInstance.modifierTarget()).toBe('');
   });
 });

@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { getFestaCard } from '../../models/festa-cards';
@@ -26,6 +26,19 @@ export class MultiplayerPlay implements OnInit {
   readonly selectedSecond = signal('');
   readonly modifierTarget = signal('');
   readonly modifierValue = signal('');
+  readonly modifierQuery = signal('');
+  readonly visibleModifierValues = computed(() => {
+    const controls = this.state()?.controls;
+    if (controls?.kind !== 'festa-modifier') return [];
+    const query = this.normalizeSearch(this.modifierQuery());
+    return controls.values.filter(value =>
+      this.normalizeSearch(`${value.es ?? ''} ${value.name} ${value.id}`).includes(query));
+  });
+  readonly selectedModifierValue = computed(() => {
+    const controls = this.state()?.controls;
+    return controls?.kind === 'festa-modifier'
+      ? controls.values.find(value => value.id === this.modifierValue()) : undefined;
+  });
   readonly refreshing = signal(false);
   readonly advancing = signal(false);
   readonly resultPlayer = computed(() => this.state()?.draft?.players.find((player) => player.id === this.state()?.draft?.currentTurn?.playerId));
@@ -39,6 +52,26 @@ export class MultiplayerPlay implements OnInit {
     return draft?.players.find((player) => player.id === id) ?? null;
   });
   readonly requireNicknames = computed(() => this.state()?.draft?.requireNicknames ?? false);
+
+  constructor() {
+    let previousContext = '';
+    effect(() => {
+      const state = this.state();
+      const controls = state?.controls;
+      const context = JSON.stringify([state?.roomCode, state?.canAct, controls?.kind,
+        controls && 'cardId' in controls ? controls.cardId : '',
+        state?.draft?.currentRound, state?.draft?.currentTurnIndex]);
+      if (context === previousContext) return;
+      previousContext = context;
+      this.modifierQuery.set('');
+      this.modifierValue.set('');
+      this.modifierTarget.set('');
+    });
+  }
+
+  private normalizeSearch(value: string): string {
+    return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  }
 
   async ngOnInit(): Promise<void> {
     const roomCode = this.route.snapshot.paramMap.get('roomCode') ?? '';

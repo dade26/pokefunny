@@ -94,15 +94,28 @@
               </select>
             }
             @if (!controls.randomValue) {
-              <select [ngModel]="modifierValue()" (ngModelChange)="modifierValue.set($event)">
-                <option value="">{{ controls.modifierKind === 'item' ? 'Elige un objeto' : controls.modifierKind === 'ability' ? 'Elige una habilidad' : 'Elige un movimiento' }}</option>
-                @for (value of controls.values; track value.id) { <option [value]="value.id">{{ value.es || value.name }}</option> }
-              </select>
+              <label for="modifier-search">{{ controls.modifierKind === 'item' ? 'Buscar objeto' : controls.modifierKind === 'ability' ? 'Buscar habilidad' : 'Buscar movimiento' }}</label>
+              <input id="modifier-search" type="search" inputmode="search" autocomplete="off"
+                placeholder="Nombre en español o inglés" [ngModel]="modifierQuery()" (ngModelChange)="modifierQuery.set($event)" />
+              <div class="modifier-options" role="group" aria-label="Resultados de búsqueda">
+                @for (value of visibleModifierValues(); track value.id) {
+                  <button type="button" [class.selected]="modifierValue() === value.id"
+                    [attr.aria-pressed]="modifierValue() === value.id" (click)="modifierValue.set(value.id)">
+                    <span>{{ value.es || value.name }}</span>
+                    @if (value.es && value.es !== value.name) { <small>{{ value.name }}</small> }
+                  </button>
+                } @empty {
+                  <p role="status">No hay resultados. Prueba con otro nombre.</p>
+                }
+              </div>
+              @if (selectedModifierValue(); as selected) {
+                <p class="modifier-selection" role="status">Selección: <strong>{{ selected.es || selected.name }}</strong></p>
+              }
             } @else {
               <p>El objeto se elegirá al azar.</p>
             }
             <button class="pick" type="button"
-              [disabled]="controls.targetMode === 'choose' && !modifierTarget() || !controls.randomValue && !modifierValue()"
+              [disabled]="controls.targetMode === 'choose' && !modifierTarget() || !controls.randomValue && !selectedModifierValue()"
               (click)="socket.resolveFestaModifier(modifierTarget(), modifierValue())">Confirmar</button>
           </article>
         } @else if (controls.kind === 'festa-reroll') {

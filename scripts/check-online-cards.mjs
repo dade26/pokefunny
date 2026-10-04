@@ -55,6 +55,19 @@ for (const [browserType, width] of [[chromium, 1280], [webkit, 390]]) {
       await expect(controller.locator('button').first(), card.id).toBeVisible();
       assert(!/No se pudo preparar|Recuperando tu turno/.test(await controller.innerText()), card.id);
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Overflow: ${card.id}`);
+      if (snapshot.controls?.kind === 'festa-modifier' && !snapshot.controls.randomValue) {
+        const value = snapshot.controls.values[0];
+        const search = controller.locator('input[type="search"]');
+        await search.fill(value.name);
+        const choice = controller.locator('.modifier-options button').filter({ hasText: value.es || value.name }).first();
+        await expect(choice).toBeVisible();
+        await choice.click();
+        await expect(choice).toHaveAttribute('aria-pressed', 'true');
+        await expect(controller.locator('.modifier-selection')).toContainText(value.es || value.name);
+        await search.fill('zzzz-no-results');
+        await expect(controller.locator('.modifier-options')).toContainText('No hay resultados');
+        await page.screenshot({ path: `test-results/online-cards/search-${snapshot.controls.modifierKind}-${browserType.name()}-${width}.png`, fullPage: true });
+      }
       if (card.id === 'random-change-form') {
         await page.screenshot({ path: `test-results/online-cards/resolved-${browserType.name()}-${width}.png`, fullPage: true });
         assert.equal(snapshot.controls.kind, 'pick');
@@ -101,6 +114,15 @@ for (const [browserType, width] of [[chromium, 1280], [webkit, 390]]) {
     }, engine.hostState(hostGame));
     await page.locator('app-draft-order app-player-name img').first().evaluate(image => image.decode());
     await page.locator('app-team-list app-player-name img').last().evaluate(image => image.decode());
+    const orderBox = await page.locator('.order-column').boundingBox();
+    const stageBox = await page.locator('.stage').boundingBox();
+    const teamsBox = await page.locator('.teams-column').boundingBox();
+    if (width > 1000) {
+      assert(orderBox.x + orderBox.width <= stageBox.x, 'Order must be left of the turn');
+      assert(stageBox.x + stageBox.width <= teamsBox.x, 'Teams must be right of the turn');
+    } else {
+      assert(stageBox.y < orderBox.y && stageBox.y < teamsBox.y, 'Mobile must show the turn first');
+    }
     await page.getByRole('button', { name: 'Borrar partida', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Sí, borrar partida' })).toBeVisible();
     assert(!await page.evaluate(() => window.deletedRoom));

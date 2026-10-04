@@ -69,9 +69,8 @@
     } @else if (state.draft; as draft) {
       <section class="board" [class.finished]="state.phase === 'finished'">
         @if (state.phase !== 'finished') {
-          <aside>
+          <aside class="order-column">
             <app-draft-order [state]="draft" />
-            <app-team-list [state]="draft" [activePlayerId]="state.activePlayerId ?? ''" />
           </aside>
         }
         <section class="stage">
@@ -105,6 +104,11 @@
             </article>
           }
         </section>
+        @if (state.phase !== 'finished') {
+          <aside class="teams-column">
+            <app-team-list [state]="draft" [activePlayerId]="state.activePlayerId ?? ''" />
+          </aside>
+        }
       </section>
     }
   }

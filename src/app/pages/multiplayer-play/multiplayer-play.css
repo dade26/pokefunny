@@ -26,6 +26,12 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .choice-grid button { display: grid; place-items: center; gap: 6px; min-height: 132px; background: var(--surface, #fff); }
 .choice-grid img { width: 88px; height: 76px; object-fit: contain; }
 .festa { display: grid; gap: 14px; }
+.modifier-options { display: grid; gap: 8px; max-height: 32dvh; overflow-y: auto; padding: 4px; }
+.modifier-options button { display: grid; gap: 4px; text-align: left; padding: 10px 12px; background: var(--surface-muted, #f3f4f6); cursor: pointer; }
+.modifier-options button.selected { border-color: var(--error, #9b1c31); background: var(--hover, #e5eee8); }
+.modifier-options small { color: var(--muted, #64766c); font-weight: 500; }
+.modifier-selection { margin: 0; overflow-wrap: anywhere; }
+#modifier-search { font-size: 16px; }
 .error { color: var(--error, #9b1c31); font-weight: 900; }
 @media (max-width: 520px) {
   .play { padding: 10px; }
