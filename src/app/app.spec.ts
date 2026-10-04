@@ -92,6 +92,9 @@ describe('App', () => {
     expect(dropdown.querySelector('a[href="/ten-pick/drafts"]')?.textContent).toBe('My drafts');
     expect(dropdown.querySelector('a[href="/ten-pick-monotype"]')?.textContent).toBe('Ten Pick Monotype');
     expect(dropdown.querySelector('a[href="/ten-pick-festa"]')?.textContent).toBe('Ten Pick Festa');
+    const festa = dropdown.querySelector('a[href="/ten-pick-festa"]')!;
+    expect(festa.nextElementSibling?.getAttribute('href')).toBe('/join');
+    expect(festa.nextElementSibling?.textContent).toBe('Join a Game');
     expect(compiled.querySelector('nav a[href="/poke-gacha"]')?.textContent).toBe('PokeGacha');
   });
 });

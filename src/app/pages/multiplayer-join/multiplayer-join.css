@@ -1,8 +1,12 @@
 .join { min-height: calc(100dvh - 80px); display: grid; place-items: center; padding: 18px; }
-.join > a { position: fixed; top: 18px; left: 18px; color: var(--error, #8b1e2d); font-weight: 800; }
+.join > a { justify-self: start; color: var(--error, #8b1e2d); font-weight: 800; }
 section { width: min(440px, 100%); background: var(--surface, #fff); color: var(--text, #293631); border: 2px solid var(--border-strong, #111); border-radius: 8px; padding: 24px; box-shadow: 6px 6px 0 var(--shadow, #111); }
 span { color: var(--error, #8b1e2d); font-weight: 900; }
 label { display: grid; gap: 8px; font-weight: 900; }
+form { display: grid; gap: 8px; }
+.room-code { text-transform: uppercase; letter-spacing: .2em; font-weight: 900; }
+form p { margin: 0 0 12px; }
+input { min-width: 0; width: 100%; }
 input, button { min-height: 48px; border: 2px solid var(--border-strong, #111); border-radius: 8px; font: inherit; }
 input { padding: 0 12px; background: var(--surface, #fff); color: var(--text, #293631); }
 button { margin-top: 16px; width: 100%; background: #f7c948; color: #28220d; font-weight: 900; box-shadow: 3px 3px 0 var(--shadow, #111); }

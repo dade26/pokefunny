@@ -59,6 +59,11 @@ export const routes: Routes = [
     data: { title: 'Pokefunny Multiplayer Host', robots: 'noindex, follow' },
   },
   {
+    path: 'join',
+    loadComponent: () => import('./pages/multiplayer-join/multiplayer-join').then((module) => module.MultiplayerJoin),
+    data: { title: 'Join a Game | Pokefunny', robots: 'noindex, follow' },
+  },
+  {
     path: 'join/:roomCode',
     loadComponent: () => import('./pages/multiplayer-join/multiplayer-join').then((module) => module.MultiplayerJoin),
     data: { title: 'Join Pokefunny Multiplayer', robots: 'noindex, follow' },

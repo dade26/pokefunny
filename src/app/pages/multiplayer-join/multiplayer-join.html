@@ -1,12 +1,19 @@
 <main class="join">
-  <a routerLink="/ten-pick/multiplayer">Crear sala</a>
+  <a routerLink="/ten-pick">Ten Pick</a>
   <section>
-    <span>Sala {{ roomCode() }}</span>
-    <h1>Únete a la partida</h1>
-    <label>Nombre
-      <input maxlength="24" autocomplete="name" [ngModel]="name()" (ngModelChange)="name.set($event)" (keydown.enter)="join()" />
-    </label>
-    <button type="button" [disabled]="!name().trim() || joining()" (click)="join()">{{ joining() ? 'Entrando...' : 'Entrar' }}</button>
-    @if (socket.error()) { <p class="error">{{ socket.error() }}</p> }
+    <h1>Join a Game</h1>
+    <form (ngSubmit)="join()">
+      @if (manualCode()) {
+        <label for="room-code">{{ i18n.t('joinRoomCode') }}</label>
+        <input id="room-code" class="room-code" name="roomCode" maxlength="6" minlength="6" pattern="[A-Za-z0-9]{6}" autocomplete="off" autocapitalize="characters" spellcheck="false" required [ngModel]="roomCode()" (ngModelChange)="roomCode.set($event)" aria-describedby="code-hint" />
+        <p id="code-hint">{{ i18n.t('joinCodeHint') }}</p>
+      } @else {
+        <p><span>{{ i18n.t('joinRoomCode') }}: {{ roomCode() }}</span></p>
+      }
+      <label for="player-name">{{ i18n.t('joinPlayerName') }}</label>
+      <input id="player-name" name="playerName" maxlength="24" autocomplete="name" required [ngModel]="name()" (ngModelChange)="name.set($event)" />
+      <button type="submit" [disabled]="!validCode() || !name().trim() || joining()">{{ i18n.t(joining() ? 'joiningGame' : 'joinGameButton') }}</button>
+      @if (socket.error()) { <p class="error" role="alert">{{ socket.error() }}</p> }
+    </form>
   </section>
 </main>
