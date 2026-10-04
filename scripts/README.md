@@ -1,6 +1,6 @@
 # Pokemon draft catalog
 
-`npx tsx scripts/check-online-results.mjs http://127.0.0.1:4200` checks the ten-encounter result on the host and phones, Next restricted to the turn owner, and shared FESTA animations in desktop Chromium and mobile WebKit. It saves screenshots under `test-results/online-results`.
+`npx tsx scripts/check-online-results.mjs http://127.0.0.1:4200` checks the ten-encounter result on the host and phones, the host's chosen Pokemon and nickname sticker animation (including reduced motion), Next restricted to the turn owner, and shared FESTA animations in desktop Chromium and mobile WebKit. It saves screenshots under `test-results/online-results`.
 
 `npx tsx scripts/check-festa-abilities.mjs http://127.0.0.1:4200` checks both ability FESTA cards in mobile Chromium and WebKit against `ng serve`: the complete selection list, no free typing, Delphox sprites, saved abilities and online submission.
 

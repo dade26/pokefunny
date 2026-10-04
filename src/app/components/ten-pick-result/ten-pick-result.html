@@ -3,6 +3,21 @@
   <h2>{{ turn.selectedPokemon?.name }}</h2>
   <p class="sub">{{ i18n.t('encounter') }} {{ (turn.selectedIndex ?? 0) + 1 }} / {{ turn.options.length }}</p>
 
+  @if (celebratePick && turn.selectedPokemon; as selected) {
+    <div class="pick-celebration" role="status" aria-live="polite">
+      <span class="picked-badge">{{ i18n.t('picked') }}</span>
+      <div class="chosen-pokemon">
+        <img class="chosen-art" [src]="selected.artwork || selected.sprite" [alt]="selected.name" decoding="async" />
+        @if (selected.nickname; as nickname) {
+          <span class="nickname-label">
+            <small>{{ i18n.t('draftNickname') }}</small>
+            <strong>{{ nickname }}</strong>
+          </span>
+        }
+      </div>
+    </div>
+  }
+
   <div class="options">
     @for (pokemon of turn.options; track pokemon.id; let index = $index) {
       <article class="option" [class.picked]="pokemon.id === turn.selectedPokemon?.id" [style.animation-delay.ms]="index * 30">

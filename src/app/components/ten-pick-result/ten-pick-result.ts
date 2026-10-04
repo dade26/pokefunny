@@ -17,6 +17,7 @@ export class TenPickResult {
   @Input() finalDraft = false;
   @Input() showNext = true;
   @Input() nextDisabled = false;
+  @Input() celebratePick = false;
   @Output() next = new EventEmitter<void>();
 
   statusFor(pokemon: Pokemon, index: number): string {

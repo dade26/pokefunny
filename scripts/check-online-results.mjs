@@ -19,7 +19,7 @@ for (const [browserType, width] of [[chromium, 1280], [webkit, 390]]) {
     room.draft = { ...room.draft, draftOrder: ['p1', 'p2'], currentRound: 2, currentTurnIndex: 0,
       currentTurn: { ...room.draft.currentTurn, playerId: 'p1' } };
     const resultId = engine.optionId(room.draft.currentTurn, 0);
-    await engine.pick(room, 'p1', resultId, '', 'pick');
+    await engine.pick(room, 'p1', resultId, 'Capitán', 'pick');
     const page = await browser.newPage({ viewport: { width, height: 900 } });
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -44,9 +44,24 @@ for (const [browserType, width] of [[chromium, 1280], [webkit, 390]]) {
     await show('host', engine.hostState(room));
     await expect(page.locator('app-ten-pick-result .option')).toHaveCount(10);
     await expect(page.locator('app-ten-pick-result button')).toHaveCount(0);
+    await expect(page.locator('.nickname-label strong')).toHaveText('Capitán');
+    assert.notEqual(await page.locator('.chosen-art').evaluate(element => getComputedStyle(element).animationName), 'none');
+    assert.notEqual(await page.locator('.nickname-label').evaluate(element => getComputedStyle(element).animationName), 'none');
+    await page.locator('.nickname-label').evaluate(async element => { await Promise.all(element.getAnimations().map(animation => animation.finished)); });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Host result overflow');
     await page.screenshot({ path: `test-results/online-results/host-${width}.png`, fullPage: true });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await show('host', engine.hostState(room));
+    await expect(page.locator('.nickname-label strong')).toHaveText('Capitán');
+    assert.equal(await page.locator('.nickname-label').evaluate(element => getComputedStyle(element).animationName), 'none');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    const noNickname = structuredClone(engine.hostState(room));
+    delete noNickname.draft.currentTurn.selectedPokemon.nickname;
+    await show('host', noNickname);
+    await expect(page.locator('.chosen-art')).toBeVisible();
+    await expect(page.locator('.nickname-label')).toHaveCount(0);
     await show('player', await engine.playerState(room, room.players[0]));
+    await expect(page.locator('.pick-celebration')).toHaveCount(0);
     await expect(page.locator('app-ten-pick-result .option')).toHaveCount(10);
     await page.locator('app-ten-pick-result button').click();
     assert.equal(await page.evaluate(() => window.advancedTurn), resultId);
@@ -72,6 +87,6 @@ for (const [browserType, width] of [[chromium, 1280], [webkit, 390]]) {
       await page.screenshot({ path: `test-results/online-results/animation-${role}-${width}.png`, fullPage: true });
     }
     assert.deepEqual(errors, []);
-    console.log(`${browserType.name()} ${width}px: ten encounters on host and phones, owner-only Next, synchronized animated result passed`);
+    console.log(`${browserType.name()} ${width}px: chosen Pokemon and nickname sticker, reduced motion, ten encounters, owner-only Next and FESTA animation passed`);
   } finally { await browser.close(); }
 }

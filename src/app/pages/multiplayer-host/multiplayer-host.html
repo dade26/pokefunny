@@ -88,7 +88,7 @@
               <p>El jugador activo resuelve la carta desde su dispositivo.</p>
             </article>
           } @else if (draft.currentTurn?.finished) {
-            <app-ten-pick-result [showNext]="false" [turn]="draft.currentTurn!" [playerName]="activePlayer()?.name ?? 'Jugador'" [favoritePokemon]="activePlayer()?.favoritePokemon" />
+            <app-ten-pick-result [celebratePick]="true" [showNext]="false" [turn]="draft.currentTurn!" [playerName]="activePlayer()?.name ?? 'Jugador'" [favoritePokemon]="activePlayer()?.favoritePokemon" />
             <p>El jugador avanza al siguiente turno desde su m&#243;vil.</p>
           } @else if (currentPokemon(); as pokemon) {
             <article class="watch-card">

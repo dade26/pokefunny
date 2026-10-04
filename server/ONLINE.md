@@ -2,6 +2,8 @@
 
 ## Resultados y animaciones FESTA
 
+En el host, el Pokémon elegido aparece destacado con una animación. Si tiene mote, su etiqueta entra después y se pega sobre la imagen. La etiqueta permanece visible junto al resumen del turno; con movimiento reducido se muestra directamente.
+
 Tras elegir un Pokémon, el host y los móviles muestran los diez encuentros del turno. El resultado permanece visible hasta que su jugador pulsa el botón para continuar desde el móvil; el host y los demás jugadores solo lo ven. El resumen también aparece antes de terminar la partida.
 
 Al resolverse una carta FESTA se muestra su resultado durante tres segundos, sincronizado en el host y los móviles. El servidor bloquea nuevas acciones durante la animación y reanuda el turno al terminar. Las reconexiones recuperan el resumen o la animación vigente. Requiere actualizar la web y el servidor (motor Online versión 3).
