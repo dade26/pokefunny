@@ -19,9 +19,31 @@ export interface MultiplayerPlayerSummary {
   teamSize: number;
 }
 
+export interface MultiplayerFestaParticipant {
+  id: string;
+  name: string;
+  favoritePokemon?: string;
+}
+
+export interface MultiplayerFestaDrawCandidate {
+  name: string;
+  pokemon?: Pokemon;
+  player?: MultiplayerFestaParticipant;
+}
+
+export interface MultiplayerFestaDraw {
+  kind: 'rival' | 'pokemon' | 'item' | 'form';
+  candidates: MultiplayerFestaDrawCandidate[];
+  selected: MultiplayerFestaDrawCandidate;
+}
+
 export interface MultiplayerFestaAnimation {
   cardId: string;
   endsAt: number;
+  kind?: 'rival' | 'resolved';
+  draws?: MultiplayerFestaDraw[];
+  choosingPlayer?: MultiplayerFestaParticipant;
+  affectedPlayer?: MultiplayerFestaParticipant;
   pokemon: Pokemon[];
   message: string;
 }

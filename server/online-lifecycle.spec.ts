@@ -115,11 +115,15 @@ describe('Online room lifecycle over Socket.IO', () => {
     }
     const snapshot = await command(host, 'reconnectHost', { roomCode: created.roomCode, hostToken: created.hostToken });
     const active = connections.get(snapshot.state.activePlayerId)!;
-    const hostAnimation = nextEvent(host, 'roomState', state => !!state.festaAnimation);
-    const phoneAnimation = nextEvent(first, 'privatePlayerState', state => !!state.festaAnimation);
+    const hostAnimation = nextEvent(host, 'roomState', state => !!state.festaAnimation && state.festaAnimation.kind !== 'rival');
+    const phoneAnimation = nextEvent(first, 'privatePlayerState', state => !!state.festaAnimation && state.festaAnimation.kind !== 'rival');
     const start = Date.now();
     await command(active.socket, 'startFestaResolution', { actionId: 'start-festa' });
-    const resolving = await command(host, 'reconnectHost', { roomCode: created.roomCode, hostToken: created.hostToken });
+    let resolving = await command(host, 'reconnectHost', { roomCode: created.roomCode, hostToken: created.hostToken });
+    if (resolving.state.festaAnimation?.kind === 'rival') {
+      await nextEvent(host, 'roomState', state => !state.festaAnimation);
+      resolving = await command(host, 'reconnectHost', { roomCode: created.roomCode, hostToken: created.hostToken });
+    }
     if (resolving.state.draft.activeFestaCard) {
       const resolver = connections.get(resolving.state.activePlayerId)!;
       const mobile = await command(resolver.socket, 'joinRoom', { roomCode: created.roomCode, playerToken: resolver.token });

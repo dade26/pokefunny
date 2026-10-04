@@ -1,7 +1,28 @@
 <section class="resolution" role="status" aria-live="polite">
-  <h1>¡Carta FESTA resuelta!</h1>
+  <h1>{{ animation().kind === 'rival' ? (rolling() ? 'Sorteando rival...' : '¡Rival elegido!') : (rolling() ? 'Sorteo FESTA...' : '¡Carta FESTA resuelta!') }}</h1>
   @if (card(); as resolvedCard) {
     <div class="resolved-card"><app-festa-card [card]="resolvedCard" [compact]="true" /></div>
+  }
+  <div class="draws">
+    @for (draw of animation().draws ?? []; track $index) {
+      @let candidate = preview(draw);
+      <div class="random-draw" [class.rolling]="rolling()" [class.revealed]="!rolling()" [attr.aria-live]="rolling() ? 'off' : 'polite'">
+        <small>{{ rolling() ? 'Sorteando...' : drawLabel(draw) }}</small>
+        @if (candidate.pokemon; as pokemon) { <img [src]="pokemon.artwork || pokemon.sprite" [alt]="pokemon.name" /> }
+        @if (candidate.player; as player) {
+          <strong><app-player-name [name]="player.name" [favoritePokemon]="player.favoritePokemon" /></strong>
+        }
+        @if (draw.kind !== 'rival') { <strong>{{ candidate.name }}</strong> }
+      </div>
+    }
+  </div>
+  @if (!rolling()) {
+  @if (animation().choosingPlayer; as chooser) {
+    @if (animation().affectedPlayer; as affected) {
+      <p class="chooser-info"><app-player-name [name]="chooser.name" [favoritePokemon]="chooser.favoritePokemon" />
+        {{ animation().kind === 'rival' ? 'elige el Pokémon para' : 'ha resuelto la carta para' }}
+        <app-player-name [name]="affected.name" [favoritePokemon]="affected.favoritePokemon" />.</p>
+    }
   }
   <div class="recipients">
     @for (pokemon of animation().pokemon; track $index) {
@@ -13,6 +34,7 @@
       </figure>
     }
   </div>
-  <p>{{ animation().message }}</p>
+  @if (animation().kind !== 'rival') { <p>{{ animation().message }}</p> }
+  }
   <div class="progress" aria-hidden="true"><span></span></div>
 </section>

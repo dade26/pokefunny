@@ -218,6 +218,7 @@ export class MultiplayerGameEngine {
       : entries.find((entry) => entry.id === rawValue || entry.name === rawValue);
     if (!value) throw new MultiplayerGameError('Elige un valor válido para esta carta.');
     const parsed = this.parsePick(target.key);
+    room.festaResultTarget = { cardId: card!.id, key: target.key };
     const players = draft.players.map((player) => player.id === parsed.playerId
       ? { ...player, team: player.team.map((pokemon, index) => index !== parsed.index ? pokemon
         : rule.kind === 'item' ? { ...pokemon, heldItem: { id: value.id, name: value.name } }
@@ -281,6 +282,7 @@ export class MultiplayerGameEngine {
     const players = draft.players.map((candidate) => candidate.id === playerId
       ? { ...candidate, lastPickIndex: teamIndex, team: candidate.team.map((pokemon, index) => index === teamIndex ? received : pokemon) }
       : candidate);
+    room.festaResultTarget = { cardId: active.cardId, key: `${playerId}:${teamIndex}` };
     room.draft = this.withHistory({ ...draft, players, activeFestaCard: undefined }, `${player.name} rerolled ${oldPokemon.name} into ${replacement.name}.`);
     this.bump(room);
     this.markAction(room, actionId);
@@ -463,14 +465,81 @@ export class MultiplayerGameEngine {
     this.markAction(room, actionId);
   }
 
-  animateResolvedFesta(room: GameRoom, before: DraftState): boolean {
+  async animateResolvedFesta(room: GameRoom, before: DraftState): Promise<boolean> {
     const cardId = before.activeFestaCard?.cardId;
-    if (!cardId || room.draft?.activeFestaCard || !room.draft) return false;
+    const after = room.draft;
+    if (!cardId || !after) return false;
+    const participant = (id?: string) => {
+      const player = before.players.find((player) => player.id === id);
+      return player ? { id: player.id, name: player.name, favoritePokemon: player.favoritePokemon } : undefined;
+    };
+    const active = after.activeFestaCard;
+    if (active) {
+      // Reveal the server's actual rival before handing them the controls.
+      if (before.activeFestaCard?.phase !== 'revealed' || !active.rivalPlayerId) return false;
+      const rival = participant(active.rivalPlayerId)!;
+      const affected = participant(active.affectedPlayerId)!;
+      room.festaAnimation = { cardId, kind: 'rival', endsAt: Date.now() + 3000, pokemon: [],
+        choosingPlayer: rival, affectedPlayer: affected, message: `${rival.name} elige el Pok\u00e9mon para ${affected.name}.`,
+        draws: [{ kind: 'rival', candidates: before.players.filter((player) => player.id !== affected.id)
+          .map((player) => ({ name: player.name, player: participant(player.id) })), selected: { name: rival.name, player: rival } }],
+      };
+      this.bump(room);
+      return true;
+    }
     const previous = new Map(before.players.flatMap((player) => player.team.map((pokemon, index) => [`${player.id}:${index}`, pokemon] as const)));
-    const pokemon = room.draft.players.flatMap((player) => player.team.filter((member, index) =>
-      JSON.stringify(previous.get(`${player.id}:${index}`)) !== JSON.stringify(member)));
-    room.festaAnimation = { cardId, endsAt: Date.now() + 3000, pokemon,
-      message: room.draft.history?.at(-1)?.message ?? 'Carta resuelta',
+    const changed = after.players.flatMap((player) => player.team.flatMap((pokemon, index) =>
+      JSON.stringify(previous.get(`${player.id}:${index}`)) !== JSON.stringify(pokemon) ? [{ key: `${player.id}:${index}`, player, pokemon }] : []));
+    const draws: NonNullable<GameRoom['festaAnimation']>['draws'] = [];
+    const card = getFestaCard(cardId);
+    const rule = card ? festaModifierRule(card.effect) : undefined;
+    const resultTarget = room.festaResultTarget;
+    room.festaResultTarget = undefined;
+    const selected = resultTarget?.cardId === cardId
+      ? after.players.flatMap((player) => player.team.flatMap((pokemon, index) =>
+        resultTarget.key === `${player.id}:${index}` ? [{ key: resultTarget.key, player, pokemon }] : []))[0]
+      : changed[0];
+    // Choosing the existing item or ability still has a real random recipient.
+    if (selected && !changed.some((pick) => pick.key === selected.key)) changed.push(selected);
+    // Hold player actions while the local catalogs prepare the shared draw.
+    room.festaAnimation = { cardId, kind: 'resolved', endsAt: Date.now() + 3000,
+      pokemon: changed.map((pick) => pick.pokemon), message: after.history?.at(-1)?.message ?? 'Carta resuelta',
+    };
+    const candidate = (pick: { pokemon: Pokemon; playerName: string; key: string }) => ({
+      name: pick.pokemon.name, pokemon: pick.pokemon, player: participant(this.parsePick(pick.key).playerId),
+    });
+    if (selected && rule?.target === 'random') {
+      const targets = this.modifierTargets(before, card!.effect);
+      const winner = targets.find((target) => target.key === selected.key);
+      if (winner) draws.push({ kind: 'pokemon', candidates: targets.map(candidate), selected: candidate(winner) });
+    }
+    if (selected && rule?.randomItem) {
+      const heldItem = selected.pokemon.heldItem;
+      const name = typeof heldItem === 'string' ? heldItem : heldItem?.name;
+      if (name) draws.push({ kind: 'item', candidates: (await this.modifierValues('item')).map((item) => ({ name: item.name })), selected: { name } });
+    }
+    if (selected && ['reveal-zoroark', 'reveal-ditto', 'random-change-form'].includes(cardId)) {
+      const targets = cardId === 'random-change-form' ? await this.formTargets(before, true)
+        : this.currentPlayer(before).team.map((pokemon, index) => ({ key: `${this.currentPlayer(before).id}:${index}`, playerName: this.currentPlayer(before).name, pokemon }));
+      const winner = targets.find((target) => target.key === selected.key);
+      if (winner) draws.push({ kind: 'pokemon', candidates: targets.map(candidate), selected: candidate(winner) });
+    }
+    if (selected && ['change-form', 'random-change-form'].includes(cardId)) {
+      const original = previous.get(selected.key);
+      const { Dex } = await import('@pkmn/dex');
+      if (original) draws.push({ kind: 'form', candidates: this.formAlternatives(await this.catalog(), original, before, Dex)
+        .map((entry) => ({ name: this.toPokemon(entry).name, pokemon: this.toPokemon(entry) })),
+        selected: { name: selected.pokemon.name, pokemon: selected.pokemon },
+      });
+    }
+    if (selected && cardId === 'forced-reroll') {
+      draws.push({ kind: 'pokemon', candidates: (before.currentTurn?.options ?? []).map((pokemon) => ({ name: pokemon.name, pokemon })),
+        selected: { name: selected.pokemon.name, pokemon: selected.pokemon, player: participant(selected.player.id) },
+      });
+    }
+    room.festaAnimation = { cardId, kind: 'resolved', endsAt: Date.now() + 3000, pokemon: changed.map((pick) => pick.pokemon), draws,
+      choosingPlayer: participant(before.activeFestaCard?.resolvingPlayerId), affectedPlayer: participant(selected?.player.id ?? before.activeFestaCard?.affectedPlayerId),
+      message: after.history?.at(-1)?.message ?? 'Carta resuelta',
     };
     this.bump(room);
     return true;
@@ -631,6 +700,7 @@ export class MultiplayerGameEngine {
     const player = draft.players.find((candidate) => candidate.id === playerId);
     const previous = player?.team[index];
     if (!player || !previous) throw new MultiplayerGameError('Ese Pokémon ya no existe.');
+    if (draft.activeFestaCard) room.festaResultTarget = { cardId: draft.activeFestaCard.cardId, key: `${playerId}:${index}` };
     const players = draft.players.map((candidate) => candidate.id === playerId
       ? { ...candidate, team: candidate.team.map((pokemon, teamIndex) => teamIndex === index ? replacement : pokemon) }
       : candidate);

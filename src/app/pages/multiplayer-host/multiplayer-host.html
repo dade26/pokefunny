@@ -85,7 +85,13 @@
             <article class="watch-card">
               <h1>Turno de <app-player-name [name]="activePlayer()?.name ?? ''" [favoritePokemon]="activePlayer()?.favoritePokemon" /></h1>
               <app-festa-card [card]="card" />
-              <p>El jugador activo resuelve la carta desde su dispositivo.</p>
+              @if (draft.activeFestaCard.rivalPlayerId) {
+                <p class="chooser-info"><app-player-name [name]="activePlayer()?.name ?? ''" [favoritePokemon]="activePlayer()?.favoritePokemon" />
+                  elige el Pok&#233;mon para <app-player-name [name]="festaAffectedPlayer()?.name ?? ''" [favoritePokemon]="festaAffectedPlayer()?.favoritePokemon" />.</p>
+                <p>Esperando la elecci&#243;n del rival desde su dispositivo.</p>
+              } @else {
+                <p>El jugador activo resuelve la carta desde su dispositivo.</p>
+              }
             </article>
           } @else if (draft.currentTurn?.finished) {
             <app-ten-pick-result [celebratePick]="true" [showNext]="false" [turn]="draft.currentTurn!" [playerName]="activePlayer()?.name ?? 'Jugador'" [favoritePokemon]="activePlayer()?.favoritePokemon" />

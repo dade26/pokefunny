@@ -16,7 +16,7 @@ const app = express();
 app.use(cors({ origin: clientOrigin, credentials: true }));
 app.get('/health', (_request, response) => response.json({
   ok: true,
-  gameEngineVersion: 3,
+  gameEngineVersion: 4,
   revision: process.env['RENDER_GIT_COMMIT'] ?? process.env['COMMIT_SHA'] ?? 'local',
 }));
 
@@ -309,7 +309,7 @@ async function playerCommand(
     if (!player) throw new MultiplayerGameError('Sesión de jugador inválida.');
     const before = room.draft;
     await command(room, player);
-    const animated = before ? engine.animateResolvedFesta(room, before) : false;
+    const animated = before ? await engine.animateResolvedFesta(room, before) : false;
     callback?.({ ok: true });
     await emitRoom(room);
     if (animated) {

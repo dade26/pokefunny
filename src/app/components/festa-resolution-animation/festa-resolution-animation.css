@@ -9,7 +9,15 @@ figcaption { font-weight: 800; }
 p { margin: 0; max-width: 100%; overflow-wrap: anywhere; }
 .progress { width: min(100%, 360px); height: 6px; overflow: hidden; border-radius: 6px; background: var(--border, #a5b4ab); }
 .progress span { display: block; width: 100%; height: 100%; background: var(--success-border, #43824c); transform-origin: left; animation: countdown 3s linear forwards; }
+.draws { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; width: 100%; }
+.random-draw { display: grid; justify-items: center; gap: 8px; width: min(300px, 100%); box-sizing: border-box; min-height: 100px; padding: 16px; border: 2px solid var(--border-strong, #344b40); border-radius: 6px; background: var(--surface, #fff); overflow-wrap: anywhere; }
+.random-draw small { color: var(--muted, #64766c); font-weight: 700; }
+.random-draw strong { font-size: 20px; max-width: 100%; }
+.random-draw.rolling { animation: draw-roll 130ms ease-in-out infinite alternate; }
+.random-draw.revealed { border-color: var(--success-border, #43824c); }
+.chooser-info { font-size: 18px; font-weight: 800; }
+@keyframes draw-roll { from { transform: translateY(-3px); } to { transform: translateY(3px); } }
 @keyframes card-celebrate { from { transform: rotate(-3deg) scale(.96); } to { transform: rotate(3deg) scale(1); } }
 @keyframes recipient-reveal { from { opacity: 0; transform: translateY(20px) scale(.7); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes countdown { to { transform: scaleX(0); } }
-@media (prefers-reduced-motion: reduce) { .resolved-card, figure, .progress span { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .resolved-card, figure, .progress span, .random-draw.rolling { animation: none; } }

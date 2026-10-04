@@ -390,7 +390,7 @@ describe('MultiplayerGameEngine', () => {
     const before = game.draft!;
     const startedAt = Date.now();
     await engine.resolveModifier(game, 'p1', '', 'wonderguard', 'resolve');
-    expect(engine.animateResolvedFesta(game, before)).toBe(true);
+    expect(await engine.animateResolvedFesta(game, before)).toBe(true);
     expect(game.festaAnimation!.endsAt).toBeGreaterThanOrEqual(startedAt + 3000);
     expect(game.festaAnimation!.pokemon[0].abilityOverride).toBe('Wonder Guard');
     const mobile = await engine.playerState(game, game.players[0]);
@@ -517,6 +517,61 @@ describe('MultiplayerGameEngine', () => {
     expect(game.draft.players[0].team).toHaveLength(2);
     expect(game.draft.players[0].team[0].name).toBe('Bulbasaur');
     expect(game.draft.players[0].team[1].name).not.toBe('Charmander');
+  });
+
+  it.each(['opponent-first-stage', 'opponent-fully-evolved', 'opponent-minor-legendary'])('shares the actual rival draw before enabling the chosen rival for %s', async (cardId) => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom(cardId);
+    game.players.push({ id: 'p3', token: 't3', name: 'Third', connected: true });
+    game.draft!.players.push({ id: 'p3', name: 'Third', favoritePokemon: '25', team: [pokemon(25)] });
+    const before = game.draft!;
+    await engine.startFestaResolution(game, 'p1', 'start');
+    const selectedId = game.draft!.activeFestaCard!.rivalPlayerId;
+    expect(await engine.animateResolvedFesta(game, before)).toBe(true);
+    const draw = game.festaAnimation!.draws![0];
+    expect(game.festaAnimation!.kind).toBe('rival');
+    expect(draw.candidates.map((entry) => entry.player!.id)).toEqual(['p2', 'p3']);
+    expect(draw.selected.player!.id).toBe(selectedId);
+    expect(game.festaAnimation!.affectedPlayer!.id).toBe('p1');
+    const rival = game.players.find((player) => player.id === selectedId)!;
+    const mobile = await engine.playerState(game, rival);
+    expect(mobile.festaAnimation).toEqual(engine.hostState(game).festaAnimation);
+    expect(mobile.canAct).toBe(false);
+    expect(mobile.controls).toBeUndefined();
+    await expect(engine.startFestaResolution(game, 'p1', 'retry')).rejects.toThrow('animaci');
+    engine.finishFestaAnimation(game);
+    expect(game.draft!.activeFestaCard!.rivalPlayerId).toBe(selectedId);
+    expect((await engine.playerState(game, rival)).controls?.kind).toBe('festa-pokemon-choice');
+    expect((await engine.playerState(game, game.players[0])).canAct).toBe(false);
+  });
+
+  it.each(['ability-rival-any', 'ability-random', 'item-random-own', 'item-random-all'])('shares eligible random candidates and the actual result for %s', async (cardId) => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom(cardId);
+    await engine.startFestaResolution(game, 'p1', 'start');
+    const before = game.draft!;
+    const controls = (await engine.playerState(game, game.players[0])).controls;
+    if (controls?.kind !== 'festa-modifier') throw new Error('Missing modifier');
+    await engine.resolveModifier(game, 'p1', controls.targets[0].key, controls.values[0]?.id ?? '', 'resolve');
+    await engine.animateResolvedFesta(game, before);
+    const draw = game.festaAnimation!.draws![0];
+    expect(draw.candidates.length).toBeGreaterThan(0);
+    expect(draw.candidates.some((entry) => entry.name === draw.selected.name)).toBe(true);
+    if (cardId === 'ability-rival-any') expect(draw.candidates.every((entry) => entry.player!.id === 'p2')).toBe(true);
+    if (cardId === 'item-random-own') expect(draw.kind).toBe('item');
+    else expect(draw.kind).toBe('pokemon');
+  });
+
+  it('animates the actual recipient even when the assigned ability stays the same', async () => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom('ability-rival-any');
+    game.draft!.players[1].team[0].abilityOverride = 'Wonder Guard';
+    await engine.startFestaResolution(game, 'p1', 'start');
+    const before = game.draft!;
+    await engine.resolveModifier(game, 'p1', '', 'wonderguard', 'resolve');
+    await engine.animateResolvedFesta(game, before);
+    expect(game.festaAnimation!.draws![0].selected.player!.id).toBe('p2');
+    expect(game.festaAnimation!.pokemon[0].abilityOverride).toBe('Wonder Guard');
   });
 
   it('gives a rival the controls for rival-choice FESTA cards', async () => {

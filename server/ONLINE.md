@@ -2,11 +2,13 @@
 
 ## Resultados y animaciones FESTA
 
+Los sorteos FESTA se ven en el host y los móviles: rival, Pokémon destinatario, objeto, forma y reroll. La animación recorre candidatos y termina mostrando el resultado real del servidor. En las cartas de Rival, primero se sortea quién elige; al terminar los tres segundos, ese rival recibe los controles y el host muestra quién elige el Pokémon para quién. Reconectarse conserva el mismo rival y el mismo resultado.
+
 En el host, el Pokémon elegido aparece destacado con una animación. Si tiene mote, su etiqueta entra después y se pega sobre la imagen. La etiqueta permanece visible junto al resumen del turno; con movimiento reducido se muestra directamente.
 
 Tras elegir un Pokémon, el host y los móviles muestran los diez encuentros del turno. El resultado permanece visible hasta que su jugador pulsa el botón para continuar desde el móvil; el host y los demás jugadores solo lo ven. El resumen también aparece antes de terminar la partida.
 
-Al resolverse una carta FESTA se muestra su resultado durante tres segundos, sincronizado en el host y los móviles. El servidor bloquea nuevas acciones durante la animación y reanuda el turno al terminar. Las reconexiones recuperan el resumen o la animación vigente. Requiere actualizar la web y el servidor (motor Online versión 3).
+Al resolverse una carta FESTA se muestra su resultado durante tres segundos, sincronizado en el host y los móviles. El servidor bloquea nuevas acciones durante la animación y reanuda el turno al terminar. Las reconexiones recuperan el resumen o la animación vigente. Requiere actualizar la web y el servidor (motor Online versión 4).
 
 ## Borrar una partida y mostrar favoritos
 
@@ -20,7 +22,7 @@ Cada móvil envía su Pokémon favorito al entrar o reconectarse. Su icono acomp
 
 La web y el backend se despliegan por separado. Hacer push o publicar la web no actualiza necesariamente el proceso de Render. Tras cambiar el motor Online, despliega también el último commit de `main` en el servicio `pokefunny.onrender.com`.
 
-`https://pokefunny.onrender.com/health` debe incluir `gameEngineVersion: 3` y `revision` con el commit desplegado. Si solo responde `{"ok":true}`, sigue ejecutando una versión antigua. Esa versión puede enviar `festa-wait` al jugador activo al resolver cartas de transformación u objetos, dejando la partida bloqueada.
+`https://pokefunny.onrender.com/health` debe incluir `gameEngineVersion: 4` y `revision` con el commit desplegado. Si solo responde `{"ok":true}`, sigue ejecutando una versión antigua. Esa versión puede enviar `festa-wait` al jugador activo al resolver cartas de transformación u objetos, dejando la partida bloqueada.
 
 Comprueba en Render que el servicio usa la rama `main`, instala con `npm ci` y arranca con `npm run start:server`. El reinicio elimina las salas en memoria, por lo que las partidas anteriores deben crearse de nuevo.
 

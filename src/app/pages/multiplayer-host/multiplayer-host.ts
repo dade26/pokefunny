@@ -46,6 +46,11 @@ export class MultiplayerHost implements OnInit {
     const id = this.room()?.activePlayerId;
     return draft?.players.find((player) => player.id === id) ?? null;
   });
+  readonly festaAffectedPlayer = computed(() => {
+    const draft = this.room()?.draft;
+    const id = draft?.activeFestaCard?.affectedPlayerId ?? draft?.currentTurn?.playerId;
+    return draft?.players.find((player) => player.id === id) ?? null;
+  });
   readonly activeFestaCard = computed(() => {
     const cardId = this.room()?.draft?.activeFestaCard?.cardId;
     return cardId ? getFestaCard(cardId) ?? null : null;
