@@ -94,6 +94,8 @@ export class TenPick implements OnInit {
   readonly selectedTradeSecond = signal<string | null>(null);
   readonly festaItems = signal<FestaCatalogEntry[]>([]);
   readonly festaMoves = signal<FestaCatalogEntry[]>([]);
+  readonly festaAbilities = signal<FestaCatalogEntry[]>([]);
+  readonly festaAbilityQuery = signal('');
   readonly festaItemQuery = signal('');
   readonly festaMoveQuery = signal('');
   readonly festaTargetKey = signal<string | null>(null);
@@ -379,7 +381,7 @@ export class TenPick implements OnInit {
   async confirmFestaModifier(): Promise<void> {
     const rule = this.activeModifierRule();
     if (!rule || this.service.loadingTurn() || this.festaTargetRolling()) return;
-    const value = rule.kind === 'item' ? this.festaItemQuery() : this.festaMoveQuery();
+    const value = rule.kind === 'item' ? this.festaItemQuery() : rule.kind === 'ability' ? this.festaAbilityQuery() : this.festaMoveQuery();
     const target = this.parseTradeKey(this.festaTargetKey());
     try {
       if (rule.target === 'random' && !this.state()?.activeFestaCard?.target) {
@@ -522,6 +524,7 @@ export class TenPick implements OnInit {
     this.selectedTradeSecond.set(null);
     this.festaItemQuery.set('');
     this.festaMoveQuery.set('');
+    this.festaAbilityQuery.set('');
     this.festaTargetKey.set(null);
     this.festaModifierError.set(null);
     this.draftNickname.set('');
@@ -538,6 +541,8 @@ export class TenPick implements OnInit {
       await this.tenPickService.prepareFestaModifier();
       if (this.destroyRef.destroyed || this.state()?.activeFestaCard?.cardId !== active?.cardId) return;
       this.festaItems.set(items);
+      this.festaAbilities.set(catalog.abilities);
+      if (active?.modifierValue && this.activeModifierRule()?.kind === 'ability') this.festaAbilityQuery.set(active.modifierValue);
       if (active?.modifierValue) this.festaItemQuery.set(active.modifierValue);
       if (this.activeModifierRule()?.kind === 'item' && this.activeModifierRule()?.target === 'random') {
         this.pokemonService.preloadArtwork(this.festaModifierTargets().map((target) => target.pokemon));

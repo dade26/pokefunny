@@ -1,7 +1,7 @@
 <section class="result">
   <p class="eyebrow">@if (favoritePokemon) { <app-player-name [favoritePokemon]="favoritePokemon" /> }{{ i18n.t('pickedBy', { name: playerName }) }}</p>
   <h2>{{ turn.selectedPokemon?.name }}</h2>
-  <p class="sub">{{ i18n.t('encounter') }} {{ (turn.selectedIndex ?? 0) + 1 }} / 10</p>
+  <p class="sub">{{ i18n.t('encounter') }} {{ (turn.selectedIndex ?? 0) + 1 }} / {{ turn.options.length }}</p>
 
   <div class="options">
     @for (pokemon of turn.options; track pokemon.id; let index = $index) {
@@ -16,7 +16,9 @@
     }
   </div>
 
-  <button type="button" (click)="next.emit()">
-    {{ i18n.t(finalDraft ? 'finalTeamsButton' : 'nextTurn') }}
-  </button>
+  @if (showNext) {
+    <button type="button" [disabled]="nextDisabled" (click)="next.emit()">
+      {{ i18n.t(finalDraft ? 'finalTeamsButton' : 'nextTurn') }}
+    </button>
+  }
 </section>

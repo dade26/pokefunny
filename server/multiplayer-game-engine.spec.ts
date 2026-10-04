@@ -113,8 +113,8 @@ describe('MultiplayerGameEngine', () => {
     expect(game.draft!.players.map((player) => player.team.length)).toEqual([
       originalSizes[0] + (consumesPick ? 1 : 0), originalSizes[1],
     ]);
-    expect(game.draft!.currentTurn?.playerId).toBe(consumesPick ? 'p2' : 'p1');
-    expect((await engine.playerState(game, game.players[consumesPick ? 1 : 0])).controls?.kind).toBe('pick');
+    expect(game.draft!.currentTurn?.playerId).toBe('p1');
+    expect((await engine.playerState(game, game.players[0])).controls?.kind).toBe(consumesPick ? 'turn-result' : 'pick');
   });
 
   it.each(['trade-last', 'trade-any', 'opponent-first-stage', 'item-random-rival'])('does not lock a solo game with %s', async (cardId) => {
@@ -214,6 +214,29 @@ describe('MultiplayerGameEngine', () => {
     expect(game.draft!.players[0].team[0].heldItem).toBeUndefined();
   });
 
+  it.each(['ability-rival-any', 'ability-random'])('offers all abilities and validates %s online', async (cardId) => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom(cardId);
+    await engine.startFestaResolution(game, 'p1', 'start');
+    const turn = game.draft!.currentTurn;
+    const controls = (await engine.playerState(game, game.players[0])).controls;
+    if (controls?.kind !== 'festa-modifier') throw new Error('Missing modifier');
+    expect(controls.modifierKind).toBe('ability');
+    expect(controls.values.length).toBeGreaterThan(300);
+    expect(controls.values.some((entry) => entry.id === 'wonderguard')).toBe(true);
+    expect(controls.values.some((entry) => entry.id === 'levitate')).toBe(true);
+    if (cardId === 'ability-rival-any') expect(controls.targets.every((target) => target.key.startsWith('p2:'))).toBe(true);
+    await expect(engine.resolveModifier(game, 'p1', '', 'invented ability', 'invalid')).rejects.toThrow();
+    expect(game.draft!.activeFestaCard?.cardId).toBe(cardId);
+    await engine.resolveModifier(game, 'p1', '', 'wonderguard', 'valid');
+    const changed = game.draft!.players.flatMap((player) => player.team).filter((member) => member.abilityOverride);
+    expect(changed).toHaveLength(1);
+    expect(changed[0].abilityOverride).toBe('Wonder Guard');
+    if (cardId === 'ability-rival-any') expect(game.draft!.players[0].team[0].abilityOverride).toBeUndefined();
+    expect(game.draft!.currentTurn).toEqual(turn);
+    expect(game.draft!.activeFestaCard).toBeUndefined();
+  });
+
   it('adds required form items to online Pokemon and excludes them from item targets', async () => {
     const engine = new MultiplayerGameEngine();
     const mega = (engine as unknown as { toPokemon(entry: object): Pokemon }).toPokemon({
@@ -281,6 +304,7 @@ describe('MultiplayerGameEngine', () => {
       expect(draft.currentTurn!.options).toHaveLength(10);
       expect(draft.currentTurn!.options.every((pokemon) => pokemon.types.some((type) => type.toLowerCase() === active.monotype))).toBe(true);
       await engine.pick(game, active.id, optionId(engine, draft), '', `mono-${turn}`);
+      await engine.nextTurn(game, active.id, optionId(engine, game.draft!), `next-mono-${turn}`);
     }
     expect(game.phase).toBe('finished');
     for (const player of game.draft!.players) {
@@ -319,14 +343,75 @@ describe('MultiplayerGameEngine', () => {
       .rejects.toThrow('obligatorio');
   });
 
+  it('keeps all ten encounters for the host and phones until only their owner advances', async () => {
+    const engine = new MultiplayerGameEngine();
+    const game = room();
+    game.draft = forceTurn(await engine.createInitialDraft(game), 'p1');
+    const initial = game.draft.currentTurn!;
+    await expect(engine.nextTurn(game, 'p1', optionId(engine, game.draft), 'early')).rejects.toThrow();
+    await engine.skip(game, 'p1', optionId(engine, game.draft), 'skip');
+    await engine.pick(game, 'p1', optionId(engine, game.draft!), '', 'pick');
+    expect(game.draft!.currentTurn!.options).toEqual(initial.options);
+    expect(game.draft!.currentTurn!.selectedIndex).toBe(1);
+    expect(engine.hostState(game).draft!.currentTurn!.finished).toBe(true);
+    const owner = await engine.playerState(game, game.players[0]);
+    const other = await engine.playerState(game, game.players[1]);
+    expect(owner.canAct).toBe(true);
+    expect(owner.controls?.kind).toBe('turn-result');
+    expect(other.canAct).toBe(false);
+    expect(other.draft!.currentTurn!.options).toHaveLength(10);
+    await expect(engine.nextTurn(game, 'p2', optionId(engine, game.draft!), 'wrong-player')).rejects.toThrow();
+    await expect(engine.nextTurn(game, 'p1', 'stale-turn', 'stale')).rejects.toThrow();
+    const resultId = optionId(engine, game.draft!);
+    await engine.nextTurn(game, 'p1', resultId, 'next');
+    expect(game.draft!.currentTurn!.finished).toBe(false);
+    await expect(engine.nextTurn(game, 'p1', resultId, 'duplicate')).rejects.toThrow();
+  });
+
+  it('keeps the final result visible until the final player confirms it', async () => {
+    const engine = new MultiplayerGameEngine();
+    const game = room();
+    game.setup = { ...game.setup, teamSize: 1 };
+    game.players = [game.players[0]];
+    game.draft = await engine.createInitialDraft(game);
+    await engine.pick(game, 'p1', optionId(engine, game.draft), '', 'pick');
+    expect(game.phase).not.toBe('finished');
+    expect((await engine.playerState(game, game.players[0])).controls).toMatchObject({ kind: 'turn-result', finalDraft: true });
+    expect(game.draft!.currentTurn!.options).toHaveLength(10);
+    await engine.nextTurn(game, 'p1', optionId(engine, game.draft!), 'next');
+    expect(game.phase).toBe('finished');
+    expect(game.draft!.finished).toBe(true);
+  });
+
+  it('synchronizes a three-second FESTA result and blocks commands until it ends', async () => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom('ability-rival-any');
+    await engine.startFestaResolution(game, 'p1', 'start');
+    const before = game.draft!;
+    const startedAt = Date.now();
+    await engine.resolveModifier(game, 'p1', '', 'wonderguard', 'resolve');
+    expect(engine.animateResolvedFesta(game, before)).toBe(true);
+    expect(game.festaAnimation!.endsAt).toBeGreaterThanOrEqual(startedAt + 3000);
+    expect(game.festaAnimation!.pokemon[0].abilityOverride).toBe('Wonder Guard');
+    const mobile = await engine.playerState(game, game.players[0]);
+    expect(mobile.festaAnimation).toEqual(engine.hostState(game).festaAnimation);
+    expect(mobile.canAct).toBe(false);
+    expect(mobile.controls).toBeUndefined();
+    await expect(engine.skip(game, 'p1', optionId(engine, game.draft!), 'skip')).rejects.toThrow('animaci');
+    engine.finishFestaAnimation(game);
+    expect((await engine.playerState(game, game.players[0])).controls?.kind).toBe('pick');
+  });
+
   it('advances snake order correctly', async () => {
     const engine = new MultiplayerGameEngine();
     const game = room();
     game.draft = await engine.createInitialDraft(game);
     game.draft = { ...game.draft, draftOrder: ['p1', 'p2'], currentRound: 0, currentTurnIndex: 0, currentTurn: { ...game.draft.currentTurn!, playerId: 'p1' } };
     await engine.pick(game, 'p1', optionId(engine, game.draft), '', 'p1-r1');
+    await engine.nextTurn(game, 'p1', optionId(engine, game.draft!), 'next-p1-r1');
     expect(game.draft!.currentTurn?.playerId).toBe('p2');
     await engine.pick(game, 'p2', optionId(engine, game.draft!), '', 'p2-r1');
+    await engine.nextTurn(game, 'p2', optionId(engine, game.draft!), 'next-p2-r1');
     expect(game.draft!.currentRound).toBe(1);
     expect(game.draft!.currentTurn?.playerId).toBe('p2');
   });
@@ -353,7 +438,9 @@ describe('MultiplayerGameEngine', () => {
     player.connected = true;
     const state = await engine.playerState(game, player);
     expect(state.myTeam).toHaveLength(1);
-    expect(state.activePlayerId).toBe('p2');
+    expect(state.activePlayerId).toBe('p1');
+    expect(state.controls?.kind).toBe('turn-result');
+    expect(state.draft?.currentTurn?.options).toHaveLength(10);
   });
 
   it('synchronizes FESTA trades between teams', async () => {

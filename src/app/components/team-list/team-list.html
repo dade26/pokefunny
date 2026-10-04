@@ -30,6 +30,7 @@
                   }
                   @if (!tournamentView || state.mode === 'festa') {
                   <div class="move-stickers">
+                    @if (player.team[slot].abilityOverride; as ability) { <span class="move-sticker">{{ i18n.t('festaAbility') }}: {{ ability }}</span> }
                     @for (move of player.team[slot].moveStickers ?? []; track $index) { <span class="move-sticker">{{ move }}</span> }
                   </div>
                   }

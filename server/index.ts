@@ -16,7 +16,7 @@ const app = express();
 app.use(cors({ origin: clientOrigin, credentials: true }));
 app.get('/health', (_request, response) => response.json({
   ok: true,
-  gameEngineVersion: 2,
+  gameEngineVersion: 3,
   revision: process.env['RENDER_GIT_COMMIT'] ?? process.env['COMMIT_SHA'] ?? 'local',
 }));
 
@@ -134,6 +134,13 @@ io.on('connection', (socket) => {
       await engine.pick(room, player.id, String(payload?.optionId ?? ''), String(payload?.nickname ?? ''), String(payload?.actionId ?? ''));
       await rooms.save(room);
       console.log(`[room ${room.roomCode}] pick by ${player.name}`);
+    });
+  });
+
+  socket.on('nextTurn', async (payload, callback) => {
+    await playerCommand(socket, callback, async (room, player) => {
+      await engine.nextTurn(room, player.id, String(payload?.turnId ?? ''), String(payload?.actionId ?? ''));
+      await rooms.save(room);
     });
   });
 
@@ -300,9 +307,21 @@ async function playerCommand(
     if (socket.data.role !== 'player') throw new MultiplayerGameError('El host no puede realizar acciones de jugador.');
     const player = room.players.find((candidate) => candidate.id === socket.data.playerId && candidate.socketId === socket.id);
     if (!player) throw new MultiplayerGameError('Sesión de jugador inválida.');
+    const before = room.draft;
     await command(room, player);
+    const animated = before ? engine.animateResolvedFesta(room, before) : false;
     callback?.({ ok: true });
     await emitRoom(room);
+    if (animated) {
+      setTimeout(() => {
+        void (async () => {
+          if (await rooms.get(room.roomCode) !== room) return;
+          engine.finishFestaAnimation(room);
+          await rooms.save(room);
+          await emitRoom(room);
+        })().catch((error) => console.error('FESTA animation failed', error));
+      }, 3000);
+    }
   } catch (error) {
     replyError(callback, error);
   }

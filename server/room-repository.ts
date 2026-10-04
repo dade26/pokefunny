@@ -1,5 +1,5 @@
 import { DraftState, Pokemon } from '../src/app/models/pokemon.model';
-import { MultiplayerRoomPhase, MultiplayerSetup } from '../src/app/models/multiplayer/multiplayer.model';
+import { MultiplayerFestaAnimation, MultiplayerRoomPhase, MultiplayerSetup } from '../src/app/models/multiplayer/multiplayer.model';
 
 export interface RoomPlayer {
   id: string;
@@ -24,6 +24,7 @@ export interface GameRoom {
   createdAt: number;
   updatedAt: number;
   lastEmptyAt?: number;
+  festaAnimation?: MultiplayerFestaAnimation;
   festaChoices?: { cardId: string; choices: Pokemon[] };
 }
 

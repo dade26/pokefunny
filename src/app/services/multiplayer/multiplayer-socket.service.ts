@@ -55,6 +55,7 @@ export class MultiplayerSocketService {
     this.socket.on('roomState', (state: MultiplayerRoomState) => {
       if (this.deletedRoom() === state.roomCode) return;
       this.restoreDraftImages(state.draft);
+      state.festaAnimation?.pokemon.forEach((pokemon) => this.restorePokemonImage(pokemon));
       this.roomState.set(state);
     });
     this.socket.on('privatePlayerState', (state: MultiplayerPlayerState) => {
@@ -170,6 +171,10 @@ export class MultiplayerSocketService {
     return this.command('pickPokemon', { optionId, nickname, actionId: crypto.randomUUID() });
   }
 
+  nextTurn(turnId: string): Promise<void> {
+    return this.command('nextTurn', { turnId, actionId: crypto.randomUUID() });
+  }
+
   skipPokemon(optionId: string): Promise<void> {
     return this.command('skipPokemon', { optionId, actionId: crypto.randomUUID() });
   }
@@ -244,6 +249,7 @@ export class MultiplayerSocketService {
 
   private restorePlayerImages(state: MultiplayerPlayerState): void {
     this.restoreDraftImages(state.draft);
+    state.festaAnimation?.pokemon.forEach((pokemon) => this.restorePokemonImage(pokemon));
     state.myTeam.forEach((pokemon) => this.restorePokemonImage(pokemon));
     const controls = state.controls;
     if (controls?.kind === 'pick') this.restorePokemonImage(controls.option);

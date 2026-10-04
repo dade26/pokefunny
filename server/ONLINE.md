@@ -1,5 +1,11 @@
 # Modo online
 
+## Resultados y animaciones FESTA
+
+Tras elegir un Pokémon, el host y los móviles muestran los diez encuentros del turno. El resultado permanece visible hasta que su jugador pulsa el botón para continuar desde el móvil; el host y los demás jugadores solo lo ven. El resumen también aparece antes de terminar la partida.
+
+Al resolverse una carta FESTA se muestra su resultado durante tres segundos, sincronizado en el host y los móviles. El servidor bloquea nuevas acciones durante la animación y reanuda el turno al terminar. Las reconexiones recuperan el resumen o la animación vigente. Requiere actualizar la web y el servidor (motor Online versión 3).
+
 ## Borrar una partida y mostrar favoritos
 
 En el móvil, «Salir de la partida» está arriba y desconecta el dispositivo. Se conserva la sesión guardada para volver a entrar en la misma sala y recuperar el equipo. Durante la partida, los picks y sus acciones aparecen antes que los Pokémon del equipo.
@@ -12,7 +18,7 @@ Cada móvil envía su Pokémon favorito al entrar o reconectarse. Su icono acomp
 
 La web y el backend se despliegan por separado. Hacer push o publicar la web no actualiza necesariamente el proceso de Render. Tras cambiar el motor Online, despliega también el último commit de `main` en el servicio `pokefunny.onrender.com`.
 
-`https://pokefunny.onrender.com/health` debe incluir `gameEngineVersion: 2` y `revision` con el commit desplegado. Si solo responde `{"ok":true}`, sigue ejecutando una versión antigua. Esa versión puede enviar `festa-wait` al jugador activo al resolver cartas de transformación u objetos, dejando la partida bloqueada.
+`https://pokefunny.onrender.com/health` debe incluir `gameEngineVersion: 3` y `revision` con el commit desplegado. Si solo responde `{"ok":true}`, sigue ejecutando una versión antigua. Esa versión puede enviar `festa-wait` al jugador activo al resolver cartas de transformación u objetos, dejando la partida bloqueada.
 
 Comprueba en Render que el servicio usa la rama `main`, instala con `npm ci` y arranca con `npm run start:server`. El reinicio elimina las salas en memoria, por lo que las partidas anteriores deben crearse de nuevo.
 

@@ -91,6 +91,8 @@ export const FESTA_CARDS: FestaCard[] = [
     ['item-random-group', 'festaItemRandomGroup'],
     ['move-rival-any', 'festaMoveRivalAny'],
     ['move-random', 'festaMoveRandom'],
+    ['ability-rival-any', 'festaAbilityRivalAny'],
+    ['ability-random', 'festaAbilityRandom'],
   ] as const).map(([effect, key]) => ({
     id: effect, effect, name: effect === 'item-random-all' ? 'A Gift for... anyone!?' : effect, description: effect,
     nameKey: `${key}Name`, descriptionKey: `${key}Description`, consumesPick: false,

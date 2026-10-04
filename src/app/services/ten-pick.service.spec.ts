@@ -24,6 +24,7 @@ describe('TenPickService saved drafts', () => {
     pokemonService.getPokemonCatalog.mockResolvedValue([]);
     pokemonService.getFestaCatalog.mockResolvedValue({
       items: [{ id: 'leftovers', name: 'Leftovers', es: 'Restos' }, { id: 'choiceband', name: 'Choice Band', es: 'Cinta Elegida' }],
+      abilities: [{ id: 'levitate', name: 'Levitate', es: 'Levitacion' }, { id: 'wonderguard', name: 'Wonder Guard', es: 'Superguarda' }],
       moves: [{ id: 'tackle', name: 'Tackle', es: 'Placaje' }, { id: 'surf', name: 'Surf', es: 'Surf' }],
     });
     pokemonService.getDetail.mockResolvedValue({ moves: [{ move: { name: 'tackle' } }] });
@@ -225,6 +226,26 @@ describe('TenPickService saved drafts', () => {
     expect(service.state()!.players[1 - (teamIndex as number)].team[0].heldItem).toBeUndefined();
     expect(service.state()!.currentTurn).toEqual(turn);
     expect(service.state()!.activeFestaCard).toBeUndefined();
+  });
+
+  it.each(['ability-rival-any', 'ability-random'])('validates, locks and persists the chosen ability for %s', async (cardId) => {
+    await beginModifier(cardId);
+    const original = service.state()!;
+    expect(await service.chooseRandomFestaModifierTarget('invented ability')).toBeNull();
+    expect(service.state()).toBe(original);
+    const chosen = await service.chooseRandomFestaModifierTarget('Superguarda');
+    expect(chosen).not.toBeNull();
+    if (cardId === 'ability-rival-any') expect(chosen!.playerId).toBe(original.players[1].id);
+    expect(service.state()!.activeFestaCard!.modifierValue).toBe('Wonder Guard');
+    expect(await service.resolveFestaModifier('Levitate')).toBe(true);
+    const updated = service.state()!;
+    expect(updated.players.flatMap((player) => player.team).filter((pokemon) => pokemon.abilityOverride)).toHaveLength(1);
+    expect(updated.players.find((player) => player.id === chosen!.playerId)!.team[chosen!.index].abilityOverride).toBe('Wonder Guard');
+    expect(updated.currentTurn).toEqual(original.currentTurn);
+    expect(updated.activeFestaCard).toBeUndefined();
+    const reloaded = new TenPickService({ getRandomOptions } as unknown as PokemonPoolService, pokemonService as never, new StorageService());
+    reloaded.openDraft(service.activeDraftId()!);
+    expect(reloaded.state()!.players).toEqual(updated.players);
   });
 
   it('gives Items for Everyone only to the chosen rival Pokemon', async () => {

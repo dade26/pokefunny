@@ -15,6 +15,7 @@ export interface Pokemon {
   nickname?: string;
   heldItem?: FestaHeldItem | string;
   moveStickers?: string[];
+  abilityOverride?: string;
 }
 
 export interface FestaHeldItem {
@@ -63,7 +64,9 @@ export type FestaEffectType =
   | 'item-chosen-random'
   | 'item-random-group'
   | 'move-rival-any'
-  | 'move-random';
+  | 'move-random'
+  | 'ability-rival-any'
+  | 'ability-random';
 
 export interface FestaCard {
   id: string;

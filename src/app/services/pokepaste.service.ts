@@ -33,7 +33,8 @@ export class PokepasteService {
       const abilitySlot = [...detail.abilities]
         .sort((a, b) => Number(a.is_hidden) - Number(b.is_hidden) || a.slot - b.slot)[0];
       const baseAbility = transformationItem ? exportSpecies.abilities['0'] : undefined;
-      const ability = Dex.abilities.get(baseAbility || abilitySlot?.ability.name || '');
+      const ability = Dex.abilities.get(pokemon.abilityOverride || baseAbility || abilitySlot?.ability.name || '');
+      if (pokemon.abilityOverride && !ability.exists) throw new PokepasteError('unknownAbility', pokemon.name);
       const fixedGender = exportSpecies.gender === 'M' || exportSpecies.gender === 'F'
         ? exportSpecies.gender
         : /-female(?:-|$)/.test(detail.name) ? 'F' : /-male(?:-|$)/.test(detail.name) ? 'M' : '';

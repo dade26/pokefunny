@@ -8,7 +8,7 @@ export interface FestaTarget {
 }
 
 export interface FestaModifierRule {
-  kind: 'item' | 'move';
+  kind: 'item' | 'move' | 'ability';
   scope: 'own' | 'rivals' | 'all';
   target: 'choose' | 'random';
   randomItem?: boolean;
@@ -25,6 +25,8 @@ const RULES: Partial<Record<FestaEffectType, FestaModifierRule>> = {
   'item-random-group': { kind: 'item', scope: 'rivals', target: 'choose', randomItem: true },
   'move-rival-any': { kind: 'move', scope: 'rivals', target: 'random' },
   'move-random': { kind: 'move', scope: 'all', target: 'random' },
+  'ability-rival-any': { kind: 'ability', scope: 'rivals', target: 'random' },
+  'ability-random': { kind: 'ability', scope: 'all', target: 'random' },
 };
 
 export function festaModifierRule(effect: FestaEffectType): FestaModifierRule | undefined {
@@ -40,6 +42,7 @@ export interface FestaCatalogEntry {
 export interface FestaCatalog {
   items: FestaCatalogEntry[];
   moves: FestaCatalogEntry[];
+  abilities: FestaCatalogEntry[];
 }
 
 export function normalizeFestaName(name: string): string {

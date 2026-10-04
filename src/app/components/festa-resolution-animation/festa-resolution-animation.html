@@ -1,0 +1,18 @@
+<section class="resolution" role="status" aria-live="polite">
+  <h1>¡Carta FESTA resuelta!</h1>
+  @if (card(); as resolvedCard) {
+    <div class="resolved-card"><app-festa-card [card]="resolvedCard" [compact]="true" /></div>
+  }
+  <div class="recipients">
+    @for (pokemon of animation().pokemon; track $index) {
+      <figure>
+        <img [src]="pokemon.artwork || pokemon.sprite" [alt]="pokemon.name" />
+        <figcaption>{{ pokemon.name }}</figcaption>
+        @if (pokemon.abilityOverride) { <strong>{{ pokemon.abilityOverride }}</strong> }
+        @if (pokemon.heldItem; as item) { <span>{{ $any(item).name || item }}</span> }
+      </figure>
+    }
+  </div>
+  <p>{{ animation().message }}</p>
+  <div class="progress" aria-hidden="true"><span></span></div>
+</section>

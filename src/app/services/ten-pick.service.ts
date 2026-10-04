@@ -307,6 +307,7 @@ export class TenPickService {
       const replacement = withFixedFormItem({
         ...pokemon,
         ...(previous.nickname ? { nickname: previous.nickname } : {}),
+        ...(previous.abilityOverride ? { abilityOverride: previous.abilityOverride } : {}),
         ...(previous.moveStickers ? { moveStickers: [...previous.moveStickers] } : {}),
         ...(!fixedFormItem(previous) && previous.heldItem ? { heldItem: previous.heldItem } : {}),
         ...(previous.shiny ? {
@@ -389,6 +390,10 @@ export class TenPickService {
         if (!item) return false;
         text = item.name;
         heldItem = { id: item.id, name: item.name };
+      } else if (rule.kind === 'ability') {
+        const ability = catalog.abilities.find((entry) => [entry.id, entry.name, entry.es].some((name) => normalizeFestaName(name) === normalizeFestaName(text)));
+        if (!ability) return false;
+        text = ability.name;
       } else if (rule.learnable) {
         const move = catalog.moves.find((move) => [move.id, move.name, move.es].some((name) => normalizeFestaName(name) === normalizeFestaName(text)));
         const detail = await this.pokemonService.getDetail(targets[0].pokemon.id);
@@ -398,6 +403,7 @@ export class TenPickService {
       const players = state.players.map((player) => ({ ...player, team: player.team.map((pokemon, index) => {
         if (!targets.some((pick) => pick.playerId === player.id && pick.index === index)) return pokemon;
         return rule.kind === 'item' ? { ...pokemon, heldItem }
+          : rule.kind === 'ability' ? { ...pokemon, abilityOverride: text }
           : { ...pokemon, moveStickers: [...(pokemon.moveStickers ?? []), text] };
       }) }));
       this.commit(this.withHistory({ ...state, players, activeFestaCard: undefined },
@@ -429,6 +435,10 @@ export class TenPickService {
         if (!item) return null;
         text = item.name;
         heldItem = { id: item.id, name: item.name };
+      } else if (rule.kind === 'ability') {
+        const ability = catalog.abilities.find((entry) => [entry.id, entry.name, entry.es].some((name) => normalizeFestaName(name) === normalizeFestaName(text)));
+        if (!ability) return null;
+        text = ability.name;
       } else if (rule.learnable) {
         const move = catalog.moves.find((move) => [move.id, move.name, move.es].some((name) => normalizeFestaName(name) === normalizeFestaName(text)));
         if (!move) return null;

@@ -75,6 +75,79 @@ describe('Online room lifecycle over Socket.IO', () => {
     await command(host, 'deleteRoom', { roomCode: created.roomCode, hostToken: created.hostToken });
   });
 
+  it('shows all encounters on both devices and accepts Next only from the phone', async () => {
+    const host = client(), player = client();
+    const created = await command(host, 'createRoom', { ...setup, teamSize: 1 });
+    const joined = await command(player, 'joinRoom', { roomCode: created.roomCode, name: 'Player' });
+    const playing = nextEvent(player, 'privatePlayerState', state => state.controls?.kind === 'pick');
+    await command(host, 'startGame', { roomCode: created.roomCode, hostToken: created.hostToken });
+    const initial = await playing;
+    const hostResult = nextEvent(host, 'roomState', state => state.draft?.currentTurn?.finished);
+    const phoneResult = nextEvent(player, 'privatePlayerState', state => state.controls?.kind === 'turn-result');
+    expect((await command(player, 'pickPokemon', { optionId: initial.controls.turnId, actionId: 'pick' })).ok).toBe(true);
+    const [publicState, privateState] = await Promise.all([hostResult, phoneResult]);
+    expect(publicState.draft.currentTurn.options).toHaveLength(10);
+    expect(privateState.draft.currentTurn.options).toEqual(publicState.draft.currentTurn.options);
+    expect(publicState.phase).toBe('playing');
+    expect((await command(host, 'nextTurn', { turnId: privateState.controls.turnId })).ok).toBe(false);
+    const rejoined = await command(player, 'joinRoom', { roomCode: created.roomCode, playerToken: joined.playerToken });
+    expect(rejoined.state.controls.kind).toBe('turn-result');
+    const finished = nextEvent(host, 'roomState', state => state.phase === 'finished');
+    expect((await command(player, 'nextTurn', { turnId: privateState.controls.turnId, actionId: 'next' })).ok).toBe(true);
+    expect((await finished).draft.finished).toBe(true);
+    await command(host, 'deleteRoom', { roomCode: created.roomCode, hostToken: created.hostToken });
+  });
+
+  it('broadcasts the FESTA animation to host and phones, then resumes after three seconds', async () => {
+    const host = client(), first = client(), second = client();
+    const created = await command(host, 'createRoom', { ...setup, mode: 'festa', festaChance: 100, teamSize: 3 });
+    const a = await command(first, 'joinRoom', { roomCode: created.roomCode, name: 'A' });
+    const b = await command(second, 'joinRoom', { roomCode: created.roomCode, name: 'B' });
+    await command(host, 'startGame', { roomCode: created.roomCode, hostToken: created.hostToken });
+    const connections = new Map([[a.playerId, { socket: first, token: a.playerToken }], [b.playerId, { socket: second, token: b.playerToken }]]);
+    for (let index = 0; index < 2; index++) {
+      const snapshot = await command(host, 'reconnectHost', { roomCode: created.roomCode, hostToken: created.hostToken });
+      const active = connections.get(snapshot.state.activePlayerId)!;
+      const mobile = await command(active.socket, 'joinRoom', { roomCode: created.roomCode, playerToken: active.token });
+      await command(active.socket, 'pickPokemon', { optionId: mobile.state.controls.turnId, actionId: `pick-${index}` });
+      const result = await command(active.socket, 'joinRoom', { roomCode: created.roomCode, playerToken: active.token });
+      await command(active.socket, 'nextTurn', { turnId: result.state.controls.turnId, actionId: `next-${index}` });
+    }
+    const snapshot = await command(host, 'reconnectHost', { roomCode: created.roomCode, hostToken: created.hostToken });
+    const active = connections.get(snapshot.state.activePlayerId)!;
+    const hostAnimation = nextEvent(host, 'roomState', state => !!state.festaAnimation);
+    const phoneAnimation = nextEvent(first, 'privatePlayerState', state => !!state.festaAnimation);
+    const start = Date.now();
+    await command(active.socket, 'startFestaResolution', { actionId: 'start-festa' });
+    const resolving = await command(host, 'reconnectHost', { roomCode: created.roomCode, hostToken: created.hostToken });
+    if (resolving.state.draft.activeFestaCard) {
+      const resolver = connections.get(resolving.state.activePlayerId)!;
+      const mobile = await command(resolver.socket, 'joinRoom', { roomCode: created.roomCode, playerToken: resolver.token });
+      const controls = mobile.state.controls;
+      const actionId = 'resolve-festa';
+      switch (controls.kind) {
+        case 'festa-pokemon-choice': await command(resolver.socket, 'resolveFestaPokemon', { pokemonId: controls.choices[0].id, actionId }); break;
+        case 'festa-form-choice': await command(resolver.socket, 'resolveFestaTransformation', { target: controls.targets[0].key, actionId }); break;
+        case 'festa-modifier': await command(resolver.socket, 'resolveFestaModifier', { target: controls.targets[0].key, value: controls.values[0]?.id ?? '', actionId }); break;
+        case 'festa-reroll': await command(resolver.socket, 'resolveFestaReroll', { teamIndex: 0, actionId }); break;
+        case 'festa-trade-any': await command(resolver.socket, 'resolveFestaTrade', { first: `${a.playerId}:0`, second: `${b.playerId}:0`, actionId }); break;
+        case 'festa-trade-last': {
+          const rivalId = [...connections.keys()].find(id => id !== resolving.state.activePlayerId);
+          await command(resolver.socket, 'resolveFestaTrade', { first: '', second: `${rivalId}:0`, actionId }); break;
+        }
+        default: throw new Error(`Unexpected FESTA controls ${controls.kind}`);
+      }
+    }
+    const [publicState, privateState] = await Promise.all([hostAnimation, phoneAnimation]);
+    expect(privateState.festaAnimation).toEqual(publicState.festaAnimation);
+    expect(privateState.canAct).toBe(false);
+    expect((await command(active.socket, 'skipPokemon', {})).ok).toBe(false);
+    const resumed = nextEvent(host, 'roomState', state => !state.festaAnimation);
+    await resumed;
+    expect(Date.now() - start).toBeGreaterThanOrEqual(2900);
+    await command(host, 'deleteRoom', { roomCode: created.roomCode, hostToken: created.hostToken });
+  }, 10000);
+
   it('allows only the host to delete an active room and notifies everyone', async () => {
     const host = client(), player = client();
     const created = await command(host, 'createRoom', setup);

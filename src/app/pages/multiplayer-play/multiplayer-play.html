@@ -29,7 +29,14 @@
     </header>
 
     <section class="controller">
-      @if (player.phase === 'lobby') {
+      @if (player.festaAnimation; as animation) {
+        <app-festa-resolution-animation [animation]="animation" />
+      } @else if (player.draft?.currentTurn?.finished) {
+        <app-ten-pick-result [turn]="player.draft!.currentTurn!" [playerName]="resultPlayer()?.name ?? 'Jugador'" [favoritePokemon]="resultPlayer()?.favoritePokemon"
+          [showNext]="player.canAct && player.controls?.kind === 'turn-result'" [nextDisabled]="advancing() || !socket.connected()"
+          [finalDraft]="finalResult()"
+          (next)="advanceResult()" />
+      } @else if (player.phase === 'lobby') {
         <h1>Esperando al host...</h1>
       } @else if (player.phase === 'finished') {
         <h1>Tu equipo final</h1>
@@ -77,7 +84,7 @@
           </article>
         } @else if (controls.kind === 'festa-modifier') {
           <article class="festa">
-            <h1>{{ controls.modifierKind === 'item' ? 'Objeto FESTA' : 'Movimiento FESTA' }}</h1>
+            <h1>{{ controls.modifierKind === 'item' ? 'Objeto FESTA' : controls.modifierKind === 'ability' ? 'Habilidad FESTA' : 'Movimiento FESTA' }}</h1>
             @if (controls.targetMode === 'choose') {
               <select [ngModel]="modifierTarget()" (ngModelChange)="modifierTarget.set($event)">
                 <option value="">Elige un Pokémon</option>
@@ -88,8 +95,8 @@
             }
             @if (!controls.randomValue) {
               <select [ngModel]="modifierValue()" (ngModelChange)="modifierValue.set($event)">
-                <option value="">{{ controls.modifierKind === 'item' ? 'Elige un objeto' : 'Elige un movimiento' }}</option>
-                @for (value of controls.values; track value.id) { <option [value]="value.id">{{ value.name }}</option> }
+                <option value="">{{ controls.modifierKind === 'item' ? 'Elige un objeto' : controls.modifierKind === 'ability' ? 'Elige una habilidad' : 'Elige un movimiento' }}</option>
+                @for (value of controls.values; track value.id) { <option [value]="value.id">{{ value.es || value.name }}</option> }
               </select>
             } @else {
               <p>El objeto se elegirá al azar.</p>

@@ -6,11 +6,13 @@ import { Player } from '../../models/pokemon.model';
 import { MultiplayerSocketService } from '../../services/multiplayer/multiplayer-socket.service';
 import { TeamList } from '../../components/team-list/team-list';
 import { FestaCard as FestaCardView } from '../../components/festa-card/festa-card';
+import { TenPickResult } from '../../components/ten-pick-result/ten-pick-result';
+import { FestaResolutionAnimation } from '../../components/festa-resolution-animation/festa-resolution-animation';
 import { PlayerName } from '../../components/player-name/player-name';
 
 @Component({
   selector: 'app-multiplayer-play',
-  imports: [FormsModule, RouterLink, TeamList, FestaCardView, PlayerName],
+  imports: [FormsModule, RouterLink, TeamList, FestaCardView, PlayerName, TenPickResult, FestaResolutionAnimation],
   templateUrl: './multiplayer-play.html',
   styleUrl: './multiplayer-play.css',
 })
@@ -25,6 +27,8 @@ export class MultiplayerPlay implements OnInit {
   readonly modifierTarget = signal('');
   readonly modifierValue = signal('');
   readonly refreshing = signal(false);
+  readonly advancing = signal(false);
+  readonly resultPlayer = computed(() => this.state()?.draft?.players.find((player) => player.id === this.state()?.draft?.currentTurn?.playerId));
   readonly activeCard = computed(() => {
     const id = this.state()?.draft?.activeFestaCard?.cardId;
     return id ? getFestaCard(id) ?? null : null;
@@ -65,6 +69,24 @@ export class MultiplayerPlay implements OnInit {
   async resolveFestaReroll(teamIndex: number): Promise<void> {
     await this.socket.resolveFestaReroll(teamIndex, this.nickname());
     this.nickname.set('');
+  }
+
+  finalResult(): boolean {
+    const controls = this.state()?.controls;
+    return controls?.kind === 'turn-result' && controls.finalDraft;
+  }
+
+  advanceResult(): void {
+    const controls = this.state()?.controls;
+    if (controls?.kind === 'turn-result') void this.nextTurn(controls.turnId);
+  }
+
+  async nextTurn(turnId: string): Promise<void> {
+    if (this.advancing()) return;
+    this.advancing.set(true);
+    try { await this.socket.nextTurn(turnId); }
+    catch { /* The socket service displays the error and keeps the result visible. */ }
+    finally { this.advancing.set(false); }
   }
 
   async refreshState(): Promise<void> {

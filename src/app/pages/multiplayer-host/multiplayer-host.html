@@ -75,7 +75,9 @@
           </aside>
         }
         <section class="stage">
-          @if (state.phase === 'finished') {
+          @if (state.festaAnimation; as animation) {
+            <app-festa-resolution-animation [animation]="animation" />
+          } @else if (state.phase === 'finished') {
             <h1>Equipos finales</h1>
             <app-team-list [state]="draft" [allowExport]="true" />
             <a class="primary" [routerLink]="savedDraftUrl()">Consultar partida y crear torneo</a>
@@ -86,7 +88,8 @@
               <p>El jugador activo resuelve la carta desde su dispositivo.</p>
             </article>
           } @else if (draft.currentTurn?.finished) {
-            <app-ten-pick-result [turn]="draft.currentTurn!" [playerName]="activePlayer()?.name ?? 'Jugador'" [favoritePokemon]="activePlayer()?.favoritePokemon" />
+            <app-ten-pick-result [showNext]="false" [turn]="draft.currentTurn!" [playerName]="activePlayer()?.name ?? 'Jugador'" [favoritePokemon]="activePlayer()?.favoritePokemon" />
+            <p>El jugador avanza al siguiente turno desde su m&#243;vil.</p>
           } @else if (currentPokemon(); as pokemon) {
             <article class="watch-card">
               <h1>Turno de <app-player-name [name]="activePlayer()?.name ?? ''" [favoritePokemon]="activePlayer()?.favoritePokemon" /></h1>

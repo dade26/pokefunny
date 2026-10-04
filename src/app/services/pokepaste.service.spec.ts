@@ -70,6 +70,18 @@ describe('PokepasteService', () => {
     expect(text).toBe(`${exportedName} (M)\nAbility: Intimidate`);
   });
 
+  it('exports the FESTA ability in place of the default, including transformed species', async () => {
+    const text = await TestBed.inject(PokepasteService).createText([
+      { ...team[0], abilityOverride: 'Wonder Guard' },
+      { ...team[2], abilityOverride: 'Levitate' },
+    ]);
+    expect(text).toBe('Darkrai\nAbility: Wonder Guard\n\nVenusaur @ Venusaurite\nAbility: Levitate');
+  });
+
+  it('rejects an unknown assigned ability', async () => {
+    await expect(TestBed.inject(PokepasteService).createText([{ ...team[0], abilityOverride: 'invented ability' }])).rejects.toMatchObject({ key: 'unknownAbility' });
+  });
+
   it('includes shiny status without changing normal exports', async () => {
     const text = await TestBed.inject(PokepasteService).createText([
       { ...team[0], shiny: true }, team[1],

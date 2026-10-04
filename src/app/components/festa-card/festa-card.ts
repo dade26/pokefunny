@@ -25,6 +25,8 @@ const FESTA_CARD_COVERS: Record<FestaEffectType, { id: number; name: string }> =
   'item-random-group': { id: 225, name: 'Delibird' },
   'move-rival-any': { id: 235, name: 'Smeargle' },
   'move-random': { id: 235, name: 'Smeargle' },
+  'ability-rival-any': { id: 655, name: 'Delphox' },
+  'ability-random': { id: 655, name: 'Delphox' },
 };
 
 @Component({

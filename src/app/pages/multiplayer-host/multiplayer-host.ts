@@ -9,11 +9,12 @@ import { TeamList } from '../../components/team-list/team-list';
 import { TenPickResult } from '../../components/ten-pick-result/ten-pick-result';
 import { FestaCard as FestaCardView } from '../../components/festa-card/festa-card';
 import { TenPickService } from '../../services/ten-pick.service';
+import { FestaResolutionAnimation } from '../../components/festa-resolution-animation/festa-resolution-animation';
 import { PlayerName } from '../../components/player-name/player-name';
 
 @Component({
   selector: 'app-multiplayer-host',
-  imports: [FormsModule, RouterLink, DraftOrder, TeamList, TenPickResult, FestaCardView, PlayerName],
+  imports: [FormsModule, RouterLink, DraftOrder, TeamList, TenPickResult, FestaCardView, PlayerName, FestaResolutionAnimation],
   templateUrl: './multiplayer-host.html',
   styleUrl: './multiplayer-host.css',
 })

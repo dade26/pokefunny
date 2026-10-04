@@ -15,6 +15,8 @@ export class TenPickResult {
   @Input({ required: true }) playerName!: string;
   @Input() favoritePokemon?: string;
   @Input() finalDraft = false;
+  @Input() showNext = true;
+  @Input() nextDisabled = false;
   @Output() next = new EventEmitter<void>();
 
   statusFor(pokemon: Pokemon, index: number): string {

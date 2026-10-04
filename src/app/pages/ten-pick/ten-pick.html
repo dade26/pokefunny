@@ -258,6 +258,13 @@
                           </select>
                         </label>
                       }
+                    } @else if (rule.kind === 'ability') {
+                      <label>{{ i18n.t('festaAbility') }}
+                        <select class="festa-item-select" [disabled]="!!draft.activeFestaCard.modifierValue || service.loadingTurn()" [ngModel]="festaAbilityQuery()" (ngModelChange)="festaAbilityQuery.set($event)">
+                          <option value="" disabled>{{ i18n.t('festaAbility') }}</option>
+                          @for (ability of festaAbilities(); track ability.id) { <option [value]="ability.name">{{ festaCatalogLabel(ability) }}</option> }
+                        </select>
+                      </label>
                     } @else {
                       <label>{{ i18n.t('festaMove') }}
                         <input list="festa-moves" maxlength="80" autocomplete="off" [ngModel]="festaMoveQuery()" (ngModelChange)="festaMoveQuery.set($event)" />
@@ -268,7 +275,7 @@
                     }
 
                     <button class="pick" type="button"
-                      [disabled]="service.loadingTurn() || festaTargetRolling() || festaCatalogLoading() || (rule.target === 'choose' && !festaTargetKey()) || (rule.randomItem && rule.kind === 'item' && !draft.activeFestaCard.item) || (!rule.randomItem && rule.kind === 'item' && !festaItemQuery().trim()) || (rule.kind === 'move' && !festaMoveQuery().trim())"
+                      [disabled]="service.loadingTurn() || festaTargetRolling() || festaCatalogLoading() || (rule.target === 'choose' && !festaTargetKey()) || (rule.randomItem && rule.kind === 'item' && !draft.activeFestaCard.item) || (!rule.randomItem && rule.kind === 'item' && !festaItemQuery().trim()) || (rule.kind === 'move' && !festaMoveQuery().trim()) || (rule.kind === 'ability' && !festaAbilityQuery())"
                       (click)="confirmFestaModifier()">{{ i18n.t('festaConfirm') }}</button>
                   }
                 </div>

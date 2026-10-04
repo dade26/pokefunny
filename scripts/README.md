@@ -1,5 +1,9 @@
 # Pokemon draft catalog
 
+`npx tsx scripts/check-online-results.mjs http://127.0.0.1:4200` checks the ten-encounter result on the host and phones, Next restricted to the turn owner, and shared FESTA animations in desktop Chromium and mobile WebKit. It saves screenshots under `test-results/online-results`.
+
+`npx tsx scripts/check-festa-abilities.mjs http://127.0.0.1:4200` checks both ability FESTA cards in mobile Chromium and WebKit against `ng serve`: the complete selection list, no free typing, Delphox sprites, saved abilities and online submission.
+
 `npx tsx scripts/check-online-cards.mjs http://127.0.0.1:4200` checks the Online controller against real engine snapshots for every FESTA card, plus legacy/missing controls. Run against `ng serve`; install Playwright Chromium and WebKit first with `npx playwright install chromium webkit`. It checks desktop Chromium and mobile WebKit and saves screenshots under `test-results/online-cards`.
 
 `npm run update:pokemon` regenerates `public/data/pokemon-catalog.v1.json`

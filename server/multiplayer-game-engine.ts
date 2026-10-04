@@ -37,7 +37,7 @@ export class MultiplayerGameError extends Error {
 
 export class MultiplayerGameEngine {
   private catalogRequest?: Promise<CatalogEntry[]>;
-  private festaCatalogRequest?: Promise<{ items: { id: string; name: string }[]; moves: { id: string; name: string }[] }>;
+  private festaCatalogRequest?: Promise<{ items: { id: string; name: string }[]; moves: { id: string; name: string }[]; abilities: { id: string; name: string }[] }>;
 
   async createInitialDraft(room: GameRoom): Promise<DraftState> {
     const participants = room.players.filter((player) => player.connected);
@@ -221,6 +221,7 @@ export class MultiplayerGameEngine {
     const players = draft.players.map((player) => player.id === parsed.playerId
       ? { ...player, team: player.team.map((pokemon, index) => index !== parsed.index ? pokemon
         : rule.kind === 'item' ? { ...pokemon, heldItem: { id: value.id, name: value.name } }
+          : rule.kind === 'ability' ? { ...pokemon, abilityOverride: value.name }
           : { ...pokemon, moveStickers: [...(pokemon.moveStickers ?? []), value.name] }) }
       : player);
     room.draft = this.withHistory({ ...draft, players, activeFestaCard: undefined },
@@ -352,6 +353,7 @@ export class MultiplayerGameEngine {
       draft,
       activePlayerId: draft ? draft.activeFestaCard?.resolvingPlayerId ?? this.currentPlayer(draft).id : undefined,
       stateVersion: room.stateVersion,
+      festaAnimation: room.festaAnimation,
       joinUrl: origin ? `${origin}/join/${room.roomCode}` : undefined,
     };
   }
@@ -369,8 +371,9 @@ export class MultiplayerGameEngine {
       myTeam: draftPlayer?.team ?? [],
       draft,
       activePlayerId: draft ? draft.activeFestaCard?.resolvingPlayerId ?? this.currentPlayer(draft).id : undefined,
-      canAct: !!draft && this.canPlayerAct(draft, player.id),
+      canAct: !!draft && !room.festaAnimation && this.canPlayerAct(draft, player.id),
       stateVersion: room.stateVersion,
+      festaAnimation: room.festaAnimation,
       controls: draft ? await this.controlsFor(room, player.id) : undefined,
     };
   }
@@ -381,7 +384,7 @@ export class MultiplayerGameEngine {
 
   private async controlsFor(room: GameRoom, playerId: string): Promise<MultiplayerPlayerState['controls']> {
     const draft = room.draft;
-    if (!draft || draft.finished) return undefined;
+    if (!draft || draft.finished || room.festaAnimation) return undefined;
     const active = draft.activeFestaCard;
     if (active) {
       const card = getFestaCard(active.cardId);
@@ -412,7 +415,8 @@ export class MultiplayerGameEngine {
       return { kind: 'festa-wait', cardId: active.cardId };
     }
     const turn = draft.currentTurn;
-    if (!turn || turn.finished || turn.playerId !== playerId) return undefined;
+    if (!turn || turn.playerId !== playerId) return undefined;
+    if (turn.finished) return { kind: 'turn-result', turnId: this.optionId(turn, turn.currentIndex), finalDraft: this.withFinishedFlag(draft).finished };
     return {
       kind: 'pick',
       turnId: this.optionId(turn, turn.currentIndex),
@@ -429,25 +433,52 @@ export class MultiplayerGameEngine {
         ? draft.currentTurn?.playerId === playerId
         : draft.activeFestaCard.resolvingPlayerId === playerId;
     }
-    return draft.currentTurn?.playerId === playerId && !draft.currentTurn.finished;
+    return !draft.finished && draft.currentTurn?.playerId === playerId;
   }
 
   private async afterTurnResult(room: GameRoom, draft: DraftState): Promise<DraftState> {
+    // Keep the ten encounters visible until their owner advances from the phone.
+    this.bump(room);
+    return draft;
+  }
+
+  async nextTurn(room: GameRoom, playerId: string, turnId: string, actionId?: string): Promise<void> {
+    this.assertUniqueAction(room, actionId);
+    const draft = this.requireDraft(room);
+    const turn = this.requirePlayerTurn(draft, playerId);
+    if (!turn.finished || draft.activeFestaCard || turnId !== this.optionId(turn, turn.currentIndex)) {
+      throw new MultiplayerGameError('No puedes avanzar este turno.');
+    }
     const finishedDraft = this.withFinishedFlag(draft);
     if (finishedDraft.finished) {
       room.phase = 'finished';
-      this.bump(room);
-      return { ...finishedDraft, currentTurn: undefined };
+      room.draft = { ...finishedDraft, currentTurn: undefined };
+    } else {
+      const next = this.nextPosition(draft);
+      room.draft = await this.withPreparedTurn({ ...draft,
+        currentRound: next.round, currentTurnIndex: next.turnIndex, currentTurn: undefined,
+      });
     }
-    const next = this.nextPosition(finishedDraft);
-    const advanced = await this.withPreparedTurn({
-      ...finishedDraft,
-      currentRound: next.round,
-      currentTurnIndex: next.turnIndex,
-      currentTurn: undefined,
-    });
     this.bump(room);
-    return advanced;
+    this.markAction(room, actionId);
+  }
+
+  animateResolvedFesta(room: GameRoom, before: DraftState): boolean {
+    const cardId = before.activeFestaCard?.cardId;
+    if (!cardId || room.draft?.activeFestaCard || !room.draft) return false;
+    const previous = new Map(before.players.flatMap((player) => player.team.map((pokemon, index) => [`${player.id}:${index}`, pokemon] as const)));
+    const pokemon = room.draft.players.flatMap((player) => player.team.filter((member, index) =>
+      JSON.stringify(previous.get(`${player.id}:${index}`)) !== JSON.stringify(member)));
+    room.festaAnimation = { cardId, endsAt: Date.now() + 3000, pokemon,
+      message: room.draft.history?.at(-1)?.message ?? 'Carta resuelta',
+    };
+    this.bump(room);
+    return true;
+  }
+
+  finishFestaAnimation(room: GameRoom): void {
+    room.festaAnimation = undefined;
+    this.bump(room);
   }
 
   private async withPreparedTurn(draft: DraftState): Promise<DraftState> {
@@ -586,6 +617,7 @@ export class MultiplayerGameEngine {
       ...this.toPokemon(replacementEntry),
       ...(previous.nickname ? { nickname: previous.nickname } : {}),
       ...(previous.moveStickers ? { moveStickers: [...previous.moveStickers] } : {}),
+      ...(previous.abilityOverride ? { abilityOverride: previous.abilityOverride } : {}),
       ...(!fixedFormItem(previous) && previous.heldItem ? { heldItem: previous.heldItem } : {}),
       ...(previous.shiny ? { shiny: true } : {}),
     });
@@ -616,15 +648,16 @@ export class MultiplayerGameEngine {
       .filter(({ pokemon }) => rule.kind !== 'item' || !fixedFormItem(pokemon));
   }
 
-  private festaCatalog(): Promise<{ items: { id: string; name: string }[]; moves: { id: string; name: string }[] }> {
+  private festaCatalog(): Promise<{ items: { id: string; name: string }[]; moves: { id: string; name: string }[]; abilities: { id: string; name: string }[] }> {
     this.festaCatalogRequest ??= readFile(join(process.cwd(), 'public', 'data', 'festa-catalog.v1.json'), 'utf8')
       .then((raw) => JSON.parse(raw));
     return this.festaCatalogRequest;
   }
 
-  private async modifierValues(kind: 'item' | 'move'): Promise<{ id: string; name: string }[]> {
+  private async modifierValues(kind: 'item' | 'move' | 'ability'): Promise<{ id: string; name: string }[]> {
     const catalog = await this.festaCatalog();
     if (kind === 'move') return catalog.moves;
+    if (kind === 'ability') return catalog.abilities;
     const { Dex } = await import('@pkmn/dex');
     return catalog.items.filter((entry) => {
       const item = Dex.items.get(entry.id);
@@ -736,6 +769,7 @@ export class MultiplayerGameEngine {
   }
 
   private assertUniqueAction(room: GameRoom, actionId?: string): void {
+    if (room.festaAnimation) throw new MultiplayerGameError('Espera a que termine la animaci\u00f3n FESTA.');
     if (actionId && room.processedActions.includes(actionId)) {
       throw new MultiplayerGameError('Esta acción ya fue procesada.');
     }
