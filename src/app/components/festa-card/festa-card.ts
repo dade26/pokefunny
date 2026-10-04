@@ -19,7 +19,6 @@ const FESTA_CARD_COVERS: Record<FestaEffectType, { id: number; name: string }> =
   'item-random-opponent': { id: 944, name: 'Shroodle' },
   'item-chosen-random': { id: 958, name: 'Tinkatuff' },
   'item-random-group': { id: 225, name: 'Delibird' },
-  'move-rival-learnable': { id: 129, name: 'Magikarp' },
   'move-rival-any': { id: 235, name: 'Smeargle' },
   'move-random': { id: 235, name: 'Smeargle' },
 };

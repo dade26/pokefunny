@@ -81,7 +81,6 @@ export const FESTA_CARDS: FestaCard[] = [
     ['item-random-opponent', 'festaItemRandomOpponent'],
     ['item-chosen-random', 'festaItemChosenRandom'],
     ['item-random-group', 'festaItemRandomGroup'],
-    ['move-rival-learnable', 'festaMoveRivalLearnable'],
     ['move-rival-any', 'festaMoveRivalAny'],
     ['move-random', 'festaMoveRandom'],
   ] as const).map(([effect, key]) => ({

@@ -23,7 +23,6 @@ const RULES: Partial<Record<FestaEffectType, FestaModifierRule>> = {
   'item-random-opponent': { kind: 'item', scope: 'rivals', target: 'choose', randomItem: true },
   'item-chosen-random': { kind: 'item', scope: 'own', target: 'random' },
   'item-random-group': { kind: 'item', scope: 'rivals', target: 'choose', randomItem: true },
-  'move-rival-learnable': { kind: 'move', scope: 'rivals', target: 'random', learnable: true },
   'move-rival-any': { kind: 'move', scope: 'rivals', target: 'random' },
   'move-random': { kind: 'move', scope: 'all', target: 'random' },
 };

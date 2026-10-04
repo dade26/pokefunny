@@ -94,7 +94,7 @@ export class TenPick implements OnInit {
   readonly visibleFestaMoves = computed(() => this.filterCatalog(this.festaMoves(), this.festaMoveQuery()).slice(0, 80));
   readonly filteredFestaChoices = computed(() => {
     const query = this.festaQuery().trim().toLowerCase();
-    return this.festaChoices().filter((pokemon) => !query || pokemon.name.toLowerCase().includes(query)).slice(0, 80);
+    return this.festaChoices().filter((pokemon) => !query || pokemon.name.toLowerCase().includes(query));
   });
   readonly allPickedPokemon = computed(() => {
     const state = this.state();

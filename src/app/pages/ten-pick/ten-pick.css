@@ -59,7 +59,7 @@ h2 { margin: 0; font-size: 28px; overflow-wrap: anywhere; max-width: 100%; }
 .festa-loading { min-height: 160px; }
 .festa-resolution { width: 100%; display: grid; justify-items: center; gap: 18px; }
 .festa-resolution > input { max-width: 460px; }
-.festa-grid { width: 100%; max-height: 430px; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; padding: 4px; }
+.festa-grid { width: 100%; max-height: min(64vh, 640px); min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; padding: 4px 4px 18px; scroll-padding-bottom: 18px; }
 .festa-grid.compact { max-height: 360px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .festa-pokemon { min-height: 132px; display: grid; justify-items: center; align-content: center; gap: 8px; padding: 10px; box-shadow: none; }
 .festa-pokemon.selected { border-color: #c9363d; outline: 3px solid rgba(201,54,61,.22); }

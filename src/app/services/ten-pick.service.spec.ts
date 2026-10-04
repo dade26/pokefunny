@@ -144,16 +144,6 @@ describe('TenPickService saved drafts', () => {
     expect(service.state()!.currentTurn).toEqual(before.currentTurn);
   });
 
-  it('rejects unlearnable moves and accepts Spanish names as a saved sticker', async () => {
-    await beginModifier('move-rival-learnable');
-    expect(await service.resolveFestaModifier('Surf')).toBe(false);
-    expect(service.state()!.activeFestaCard).toBeDefined();
-    expect(await service.resolveFestaModifier('Placaje')).toBe(true);
-    expect(service.state()!.players[1].team[0].moveStickers).toEqual(['Placaje']);
-    service.openDraft(service.activeDraftId()!);
-    expect(service.state()!.players[1].team[0].moveStickers).toEqual(['Placaje']);
-  });
-
   it.each(['move-rival-any', 'move-random'])('stores free text for %s without changing its moves or encounter', async (cardId) => {
     await beginModifier(cardId);
     const turn = service.state()!.currentTurn;
@@ -379,10 +369,23 @@ describe('TenPickService saved drafts', () => {
       { id: 1, name: 'bulbasaur' }, { id: 2, name: 'ivysaur' },
       { id: 3, name: 'venusaur' }, { id: 4, name: 'charmander' },
       { id: 6, name: 'charizard' }, { id: 128, name: 'tauros' },
+      { id: 10162, name: 'ponyta-galar', family: 'chain:32' },
+      { id: 10163, name: 'rapidash-galar', family: 'chain:32' },
     ]);
     pokemonService.getPokemon.mockImplementation(async (id: number) => ({ ...options[0], id }));
     const choices = await service.getFestaPokemonChoices('fully-evolved');
-    expect(choices.map((pokemon) => pokemon.id)).toEqual([3, 6, 128]);
+    expect(choices.map((pokemon) => pokemon.id)).toEqual([3, 6, 128, 10163]);
+  });
+
+  it('offers regional first-stage Pokemon when they start an evolutionary line', async () => {
+    pokemonService.getPokemonCatalog.mockResolvedValue([
+      { id: 77, name: 'ponyta', family: 'chain:32' }, { id: 78, name: 'rapidash', family: 'chain:32' },
+      { id: 10162, name: 'ponyta-galar', family: 'chain:32' },
+      { id: 10163, name: 'rapidash-galar', family: 'chain:32' },
+    ]);
+    pokemonService.getPokemon.mockImplementation(async (id: number) => ({ ...options[0], id }));
+    const choices = await service.getFestaPokemonChoices('first-stage');
+    expect(choices.map((pokemon) => pokemon.id)).toEqual([77, 10162]);
   });
 
   it('assigns a random rival when resolving an opponent choice card', async () => {

@@ -57,7 +57,6 @@ export type FestaEffectType =
   | 'item-random-opponent'
   | 'item-chosen-random'
   | 'item-random-group'
-  | 'move-rival-learnable'
   | 'move-rival-any'
   | 'move-random';
 

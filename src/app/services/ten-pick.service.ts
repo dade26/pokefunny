@@ -215,7 +215,7 @@ export class TenPickService {
     if (!state || active?.phase !== 'resolving' || !card || !festaModifierRule(card.effect)?.randomItem || active.item) return;
     const items = await this.getAssignableFestaItems();
     if (this.state() !== state || !items.length) return;
-    const item = items[Math.floor(Math.random() * items.length)];
+    const item = items[this.randomCryptoIndex(items.length)];
     this.commit({ ...state, activeFestaCard: { ...active, item } });
   }
 
@@ -710,9 +710,10 @@ export class TenPickService {
     }
     return entries
       .filter((entry) => {
-        if (entry.id >= 10000 || (familyCounts.get(entry.family) ?? 0) < 2) return false;
+        if (entry.id >= 10000 && !this.isRegionalForm(entry.name)) return false;
+        if ((familyCounts.get(entry.family) ?? 0) < 2) return false;
         const species = Dex.species.get(entry.name);
-        return species.exists && !species.prevo && (species.evos?.length ?? 0) > 0 && species.num === entry.id;
+        return species.exists && !species.prevo && (species.evos?.length ?? 0) > 0;
       })
       .map((entry) => entry.id);
   }
@@ -731,10 +732,27 @@ export class TenPickService {
     const { Dex } = await import('@pkmn/dex');
     const entries = await this.pokemonService.getPokemonCatalog();
     return entries.filter((entry) => {
-      if (entry.id >= 10000) return false;
+      if (entry.id >= 10000 && !this.isRegionalForm(entry.name)) return false;
       const species = Dex.species.get(entry.name);
-      return species.exists && (species.evos?.length ?? 0) === 0 && species.num === entry.id;
+      return species.exists && (species.evos?.length ?? 0) === 0;
     }).map((entry) => entry.id);
+  }
+
+  private isRegionalForm(name: string): boolean {
+    return /-(galar|hisui|paldea)(?:-|$)/.test(name);
+  }
+
+  private randomCryptoIndex(length: number): number {
+    if (length <= 1) return 0;
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+      const bucketSize = Math.floor(0x100000000 / length) * length;
+      const value = new Uint32Array(1);
+      do {
+        crypto.getRandomValues(value);
+      } while (value[0] >= bucketSize);
+      return value[0] % length;
+    }
+    return Math.floor(Math.random() * length);
   }
 
   private commit(state: DraftState): void {
