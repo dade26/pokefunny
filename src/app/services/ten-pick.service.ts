@@ -1,11 +1,14 @@
 import { Injectable, signal } from '@angular/core';
 import { FESTA_CARDS, getFestaCard, pickRandomActiveFestaCard } from '../models/festa-cards';
-import { ALL_GENERATIONS, DraftSetup, DraftState, FestaEffectType, FestaHeldItem, FestaPokemonChoiceKind, Player, Pokemon, SavedDraft, TenPickTurn } from '../models/pokemon.model';
+import { ALL_GENERATIONS, BANNED_POKEMON_ID, DraftSetup, DraftState, FestaEffectType, FestaHeldItem, FestaPokemonChoiceKind, Player, Pokemon, SavedDraft, TenPickTurn } from '../models/pokemon.model';
 import { assignMonotypes } from '../models/monotype';
 import { InsufficientPoolError, PokemonPoolService } from './pokemon-pool.service';
-import { PokemonService } from './pokemon.service';
+import { PokemonCatalogEntry, PokemonService } from './pokemon.service';
 import { StorageService } from './storage.service';
 import { festaModifierRule, FestaTarget, normalizeFestaName } from '../models/festa-modifiers';
+import { fixedFormItem, withFixedFormItem } from '../models/fixed-form-items';
+import { createTournament } from '../models/tournament';
+import { createSwissTournament, SwissTournament } from '../models/swiss';
 
 const FESTA_DISABLED_CARDS_STORAGE_KEY = 'pokefunny.festa.disabledCards';
 
@@ -19,6 +22,8 @@ export class TenPickService {
   readonly festaCards = FESTA_CARDS;
   readonly disabledFestaCardIds = signal<string[]>(this.loadDisabledFestaCardIds());
   private turnRequest = 0;
+  private readonly formGroups = signal(new Map<number, PokemonCatalogEntry[]>());
+  private formsRequest?: Promise<void>;
   private prefetchedTurn: { key: string; request: number; promise: Promise<TenPickTurn> } | null = null;
 
   constructor(
@@ -44,6 +49,10 @@ export class TenPickService {
     const draftOrder = this.shuffle(players.map((player) => player.id));
 
     const initialState: DraftState = {
+      ...(setup.competition?.format === 'swiss'
+        ? { swissTournament: createSwissTournament(players.map((player) => player.id), setup.competition.rounds) }
+        : setup.competition?.format === 'single-elimination'
+          ? { tournament: await createTournament(players.map((player) => player.id)) } : {}),
       mode: setup.mode ?? 'normal',
       players,
       draftOrder,
@@ -66,10 +75,16 @@ export class TenPickService {
 
   async ensureTurn(): Promise<void> {
     const state = this.state();
-    if (!state || state.finished || state.activeFestaCard || this.loadingTurn()) {
+    if (!state || state.finished || this.loadingTurn()) {
       return;
     }
-    if (state.currentTurn) {
+    if (state.currentTurn || state.activeFestaCard) {
+      if (state.mode === 'festa') {
+        this.loadingTurn.set(true);
+        try { await this.prepareFestaForms(); }
+        catch { this.error.set('Could not load Pokemon forms.'); }
+        finally { this.loadingTurn.set(false); }
+      }
       return;
     }
 
@@ -136,7 +151,7 @@ export class TenPickService {
       return;
     }
 
-    const selectedPokemon = this.withNickname(turn.options[turn.currentIndex], nickname, state);
+    const selectedPokemon = this.withNickname(withFixedFormItem(turn.options[turn.currentIndex]), nickname, state);
     if (!selectedPokemon) return;
     const players = state.players.map((player) =>
       player.id === turn.playerId ? { ...player, lastPickIndex: player.team.length, team: [...player.team, selectedPokemon] } : player,
@@ -163,6 +178,10 @@ export class TenPickService {
     const state = this.state();
     if (!state?.activeFestaCard || state.activeFestaCard.phase === 'resolving') return;
     const card = getFestaCard(state.activeFestaCard.cardId);
+    if (card && this.isFestaTransformation(card.effect) && !this.getFestaTransformationTargets(state, card.effect).length) {
+      this.resolveFestaNoEffect('No eligible Pokemon for this Festa Card.');
+      return;
+    }
     const rule = card ? festaModifierRule(card.effect) : undefined;
     if (rule) {
       const targets = this.getFestaModifierTargets(state);
@@ -195,6 +214,110 @@ export class TenPickService {
         : await this.getFirstStagePokemonIds();
     const choices = await Promise.all(ids.map((id) => this.pokemonService.getPokemon(id).catch(() => null)));
     return choices.filter((pokemon): pokemon is Pokemon => Boolean(pokemon));
+  }
+
+  isFestaTransformation(effect: FestaEffectType): boolean {
+    return ['reveal-zoroark', 'reveal-ditto', 'change-form', 'random-change-form'].includes(effect);
+  }
+
+  async prepareFestaForms(): Promise<void> {
+    if (!this.formsRequest) {
+      this.formsRequest = (async () => {
+        const entries = await this.pokemonService.getPokemonCatalog();
+        const { Dex } = await import('@pkmn/dex');
+        const bases = entries.filter((entry) => entry.id < 10000).sort((a, b) => b.name.length - a.name.length);
+        const speciesGroups = new Map<number, PokemonCatalogEntry[]>();
+        for (const entry of entries) {
+          if (entry.id === BANNED_POKEMON_ID || entry.name.startsWith('koraidon-') || entry.name.startsWith('miraidon-')) continue;
+          const species = Dex.species.get(entry.name);
+          // Fall back to catalog base names for forms newer than the installed Dex.
+          const number = species.exists ? species.num : bases.find((base) => entry.name === base.name || entry.name.startsWith(`${base.name}-`))?.id;
+          if (!number) continue;
+          const group = speciesGroups.get(number) ?? [];
+          group.push(entry);
+          speciesGroups.set(number, group);
+        }
+        const groups = new Map<number, PokemonCatalogEntry[]>();
+        for (const group of speciesGroups.values()) {
+          for (const entry of group) groups.set(entry.id, group);
+        }
+        this.formGroups.set(groups);
+      })().catch((error) => { this.formsRequest = undefined; throw error; });
+    }
+    return this.formsRequest;
+  }
+
+  getFestaFormAlternatives(pokemon: Pokemon, state = this.state()): PokemonCatalogEntry[] {
+    return (this.formGroups().get(pokemon.id) ?? []).filter((entry) => entry.id !== pokemon.id
+      && (state?.filters?.mega !== false || !/-mega(?:-|$)/.test(entry.name))
+      && (state?.filters?.gigantamax === true || !entry.name.endsWith('-gmax'))
+      && (state?.filters?.generations ?? ALL_GENERATIONS).includes(entry.generation));
+  }
+
+  getFestaTransformationTargets(state = this.state(), effect?: FestaEffectType): FestaTarget[] {
+    effect ??= state?.activeFestaCard ? getFestaCard(state.activeFestaCard.cardId)?.effect : undefined;
+    if (!state || !effect || !this.isFestaTransformation(effect)) return [];
+    const actor = this.getCurrentPlayer(state);
+    return state.players.filter((player) => effect === 'random-change-form' || player.id === actor.id)
+      .flatMap((player) => player.team.map((pokemon, index) => ({ playerId: player.id, player, pokemon, index })))
+      .filter((target) => effect === 'change-form' || effect === 'random-change-form'
+        ? this.getFestaFormAlternatives(target.pokemon, state).length > 0 : true);
+  }
+
+  async prepareFestaTransformation(selected?: { playerId: string; index: number }): Promise<FestaTarget | null> {
+    const state = this.state();
+    const active = state?.activeFestaCard;
+    const card = active ? getFestaCard(active.cardId) : undefined;
+    if (!state || active?.phase !== 'resolving' || !card || !this.isFestaTransformation(card.effect) || this.loadingTurn()) return null;
+    this.loadingTurn.set(true);
+    try {
+      await this.prepareFestaForms();
+      const targets = this.getFestaTransformationTargets(state);
+      if (active.target && active.replacement) {
+        return targets.find((target) => target.playerId === active.target!.playerId && target.index === active.target!.index) ?? null;
+      }
+      const target = card.effect === 'change-form'
+        ? targets.find((target) => target.playerId === selected?.playerId && target.index === selected?.index)
+        : targets[Math.floor(Math.random() * targets.length)];
+      if (!target) return null;
+      const alternatives = this.getFestaFormAlternatives(target.pokemon, state);
+      const id = card.effect === 'reveal-zoroark' ? 571 : card.effect === 'reveal-ditto' ? 132
+        : alternatives[Math.floor(Math.random() * alternatives.length)]?.id;
+      if (id === undefined) return null;
+      const pokemon = await this.pokemonService.getPokemon(id);
+      const previous = target.pokemon;
+      const replacement = withFixedFormItem({
+        ...pokemon,
+        ...(previous.nickname ? { nickname: previous.nickname } : {}),
+        ...(previous.moveStickers ? { moveStickers: [...previous.moveStickers] } : {}),
+        ...(!fixedFormItem(previous) && previous.heldItem ? { heldItem: previous.heldItem } : {}),
+        ...(previous.shiny ? {
+          shiny: true, sprite: pokemon.shinySprite || pokemon.sprite,
+          artwork: pokemon.shinyArtwork || pokemon.shinySprite || pokemon.artwork,
+        } : {}),
+      });
+      const requiredItem = fixedFormItem(replacement);
+      if (requiredItem) replacement.heldItem = requiredItem;
+      if (this.state() !== state) return null;
+      this.commit({ ...state, activeFestaCard: { ...active, target: { playerId: target.playerId, index: target.index }, replacement } });
+      return target;
+    } finally { this.loadingTurn.set(false); }
+  }
+
+  confirmFestaTransformation(): boolean {
+    const state = this.state();
+    const active = state?.activeFestaCard;
+    const card = active ? getFestaCard(active.cardId) : undefined;
+    if (!state || active?.phase !== 'resolving' || !active.target || !active.replacement || !card || !this.isFestaTransformation(card.effect) || this.loadingTurn()) return false;
+    const { target, replacement } = active;
+    const player = state.players.find((player) => player.id === target.playerId);
+    const previous = player?.team[target.index];
+    if (!player || !previous) return false;
+    const players = state.players.map((player) => player.id === target.playerId
+      ? { ...player, team: player.team.map((pokemon, index) => index === target.index ? replacement : pokemon) } : player);
+    this.commit(this.withHistory({ ...state, players, activeFestaCard: undefined },
+      `${player.name}: ${previous.name} -> ${replacement.name}.`));
+    return true;
   }
 
   getFestaModifierTargets(state = this.state()): FestaTarget[] {
@@ -320,7 +443,7 @@ export class TenPickService {
     try {
       const pokemon = await this.pokemonService.getPokemon(pokemonId);
       if (this.state() !== state) return;
-      const receivedPokemon = this.withNickname(pokemon, nickname, state);
+      const receivedPokemon = this.withNickname(withFixedFormItem(pokemon), nickname, state);
       if (!receivedPokemon) return;
       const player = this.getCurrentPlayer(state);
       const rival = this.getFestaRival(state);
@@ -386,7 +509,7 @@ export class TenPickService {
     if (!oldPokemon) return;
     const remainingTeam = player.team.filter((_, index) => index !== teamIndex);
     if (remainingTeam.some((pokemon) => pokemon.id === newPokemon.id)) return;
-    const receivedPokemon = this.withNickname(newPokemon, nickname, state);
+    const receivedPokemon = this.withNickname(withFixedFormItem(newPokemon), nickname, state);
     if (!receivedPokemon) return;
     const players = state.players.map((current) => current.id === player.id
       ? { ...current, lastPickIndex: teamIndex, team: current.team.map((pokemon, index) => index === teamIndex ? receivedPokemon : pokemon) }
@@ -497,6 +620,16 @@ export class TenPickService {
     return true;
   }
 
+  saveTournament(tournament: import('../models/tournament').TournamentState, expectedState: DraftState): void {
+    if (this.state() !== expectedState || !expectedState.finished) return;
+    this.commit({ ...expectedState, tournament, swissTournament: undefined });
+  }
+
+  saveSwissTournament(swissTournament: SwissTournament, expectedState: DraftState): void {
+    if (this.state() !== expectedState || !expectedState.finished) return;
+    this.commit({ ...expectedState, swissTournament, tournament: undefined });
+  }
+
   deleteDraft(id: string): void {
     const drafts = this.drafts().filter((draft) => draft.id !== id);
     this.storageService.saveDrafts(drafts);
@@ -552,8 +685,7 @@ export class TenPickService {
   }
 
   private canReceiveFestaItem(pokemon: Pokemon): boolean {
-    const rawName = (pokemon.rawName ?? pokemon.name).toLowerCase();
-    return !rawName.includes('-mega') && !pokemon.name.toLowerCase().includes(' mega');
+    return !fixedFormItem(pokemon);
   }
 
   async getAssignableFestaItems() {
@@ -613,6 +745,7 @@ export class TenPickService {
   }
 
   private async createTurn(state: DraftState): Promise<TenPickTurn> {
+    if (state.mode === 'festa') await this.prepareFestaForms();
     const player = this.getCurrentPlayer(state);
     const blockedIds = player.team.map((pokemon) => pokemon.id);
     const options = player.monotype
@@ -661,7 +794,9 @@ export class TenPickService {
     if (chance <= 0 || Math.random() >= chance / 100) return false;
     const card = pickRandomActiveFestaCard(FESTA_CARDS
       .map((candidate) => candidate.id)
-      .filter((cardId) => this.isFestaCardEnabled(cardId)));
+      .filter((cardId) => this.isFestaCardEnabled(cardId))
+      .filter((cardId) => !this.isFestaTransformation(getFestaCard(cardId)!.effect)
+        || this.getFestaTransformationTargets(state, getFestaCard(cardId)!.effect).length > 0));
     if (!card) return false;
     this.commit(this.withHistory({
       ...state,

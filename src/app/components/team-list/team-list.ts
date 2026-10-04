@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { LucideCopy, LucideFileText, LucideX } from '@lucide/angular';
 import { DraftState, FestaHeldItem, Player, Pokemon, typeIcon } from '../../models/pokemon.model';
 import { PokepasteError, PokepasteService } from '../../services/pokepaste.service';
+import { fixedFormItem } from '../../models/fixed-form-items';
+import { ItemSpriteService } from '../../services/item-sprite.service';
 
 interface PasteState {
   loading: boolean;
@@ -20,6 +22,7 @@ interface PasteState {
   imports: [FormsModule, LucideCopy, LucideFileText, LucideX],
   templateUrl: './team-list.html',
   styleUrl: './team-list.css',
+  host: { '[class.tournament-team]': 'tournamentView' },
 })
 export class TeamList {
   readonly i18n = inject(LanguageService);
@@ -27,7 +30,10 @@ export class TeamList {
   @Input({ required: true }) state!: DraftState;
   @Input() activePlayerId = '';
   @Input() allowExport = false;
+  @Input() playerId = '';
+  @Input() tournamentView = false;
   private readonly pokepaste = inject(PokepasteService);
+  readonly itemSprites = inject(ItemSpriteService);
   readonly pastes = signal<Record<string, PasteState>>({});
 
   async preparePaste(player: Player): Promise<void> {
@@ -77,7 +83,7 @@ export class TeamList {
     const playersById = new Map(this.state.players.map((player) => [player.id, player]));
     return this.state.draftOrder
       .map((playerId) => playersById.get(playerId))
-      .filter((player): player is Player => player !== undefined);
+      .filter((player): player is Player => player !== undefined && (!this.playerId || player.id === this.playerId));
   }
 
   slots(): number[] {
@@ -85,18 +91,17 @@ export class TeamList {
   }
 
   itemName(pokemon: Pokemon): string {
-    const item = pokemon.heldItem;
+    const item = this.displayItem(pokemon);
     return typeof item === 'string' ? item : item?.name ?? '';
   }
 
   itemImage(pokemon: Pokemon): string {
-    const item = pokemon.heldItem as FestaHeldItem | string | undefined;
-    return typeof item === 'object' && item?.id
-      ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${this.itemSpriteSlug(item.name)}.png`
-      : '';
+    return this.itemSprites.image(this.displayItem(pokemon));
   }
 
-  private itemSpriteSlug(name: string): string {
-    return name.toLowerCase().replace(/['.]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  private displayItem(pokemon: Pokemon): FestaHeldItem | string | undefined {
+    return this.tournamentView && this.state.mode !== 'festa'
+      ? fixedFormItem(pokemon)
+      : pokemon.heldItem ?? fixedFormItem(pokemon);
   }
 }

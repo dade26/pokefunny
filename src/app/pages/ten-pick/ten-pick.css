@@ -51,6 +51,12 @@ h2 { margin: 0; font-size: 28px; overflow-wrap: anywhere; max-width: 100%; }
 .final-pick { margin: 16px 0 0; display: flex; justify-content: center; gap: 10px; padding: 10px; border: 1px solid var(--warning-border, #c3a63a); background: var(--warning, #fff3bd); font-size: 13px; }
 .complete { animation: reveal 350ms ease both; }
 .complete app-team-list { display: block; margin-top: 28px; }
+.tournament-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border, #b9c9be); }
+.saved-champion { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 16px; overflow-wrap: anywhere; }
+.tournament-summary svg { width: 20px; height: 20px; flex-shrink: 0; }
+.saved-champion svg { color: #967322; }
+.tournament-link { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; max-width: 100%; padding: 10px 16px; border: 2px solid #90232c; border-radius: 4px; background: #c9363d; color: #fff; font-size: 14px; font-weight: 700; text-decoration: none; }
+.tournament-link:hover { background: #af2c35; }
 .actions { justify-content: flex-start; margin-top: 28px; }
 .loading { display: grid; place-content: center; min-height: 420px; text-align: center; gap: 20px; }
 .loading:not(.error)::before { content: ''; width: 32px; height: 32px; justify-self: center; border: 6px solid #c9363d; border-radius: 50%; animation: pulse 1s ease infinite; }

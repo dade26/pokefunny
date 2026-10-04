@@ -27,3 +27,14 @@ conversion does not change their ownership.
 
 `node scripts/check-draft-loading.mjs http://127.0.0.1:4202` exercises both modes
 with external data and Pokemon artwork blocked and verifies that local images render.
+
+## Held item images
+
+`npm run update:item-images` refreshes `public/data/item-sprites.v1.json` from
+the [PokeAPI item sprite directory](https://github.com/PokeAPI/sprites/tree/master/sprites/items).
+For items without a PokeAPI sprite, it reads the [Showdown item metadata](https://play.pokemonshowdown.com/data/items.js)
+and extracts the corresponding 24px icon from [Showdown's item sheet](https://play.pokemonshowdown.com/sprites/itemicons-sheet.png)
+into `public/images/items/v1/`. The metadata is parsed as syntax, never executed.
+The manifest records these sources. Commit the manifest and generated PNGs together.
+PokeAPI sprites are preferred; local fallbacks cover newer items such as Ogerpon masks
+and Mega Stones. Unknown or failed images display the item name instead.

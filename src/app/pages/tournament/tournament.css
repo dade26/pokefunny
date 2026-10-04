@@ -1,0 +1,4 @@
+.tournament-page { max-width: 1160px; margin: 0 auto; padding: 24px 16px 48px; }
+.back-link { display: inline-flex; gap: 8px; align-items: center; min-height: 44px; margin-bottom: 16px; color: var(--text, #293631); font-size: 14px; }
+.back-link svg { width: 18px; height: 18px; }
+app-tournament-bracket { display: block; }

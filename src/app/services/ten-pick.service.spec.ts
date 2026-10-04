@@ -21,6 +21,7 @@ describe('TenPickService saved drafts', () => {
   beforeEach(() => {
     localStorage.clear();
     getRandomOptions = vi.fn().mockResolvedValue(options);
+    pokemonService.getPokemonCatalog.mockResolvedValue([]);
     pokemonService.getFestaCatalog.mockResolvedValue({
       items: [{ id: 'leftovers', name: 'Leftovers', es: 'Restos' }, { id: 'choiceband', name: 'Choice Band', es: 'Cinta Elegida' }],
       moves: [{ id: 'tackle', name: 'Tackle', es: 'Placaje' }, { id: 'surf', name: 'Surf', es: 'Surf' }],
@@ -37,6 +38,23 @@ describe('TenPickService saved drafts', () => {
     vi.restoreAllMocks();
   });
 
+  it('creates and persists the manually chosen Swiss competition before drafting', async () => {
+    const id = await service.startDraft({ playerNames: ['A', 'B', 'C', 'D'], teamSize: 6,
+      competition: { format: 'swiss', rounds: 2 } });
+    expect(service.state()?.swissTournament?.roundLimit).toBe(2);
+    expect(service.state()?.tournament).toBeUndefined();
+    const saved = new StorageService().loadDrafts().find((draft) => draft.id === id)!;
+    expect(saved.state.swissTournament).toEqual(service.state()?.swissTournament);
+    expect(saved.state.finished).toBe(false);
+  });
+
+  it('allows manual single elimination for a non-ideal number of players', async () => {
+    await service.startDraft({ playerNames: ['A', 'B', 'C'], teamSize: 6,
+      competition: { format: 'single-elimination' } });
+    expect(service.state()?.tournament?.data.participant).toHaveLength(3);
+    expect(service.state()?.swissTournament).toBeUndefined();
+  });
+
   async function beginModifier(cardId: string) {
     await service.startDraft({ playerNames: ['Own', 'Rival'], teamSize: 6, mode: 'festa', festaChance: 0 });
     await service.ensureTurn();
@@ -48,6 +66,135 @@ describe('TenPickService saved drafts', () => {
     });
     service.startFestaResolution();
   }
+
+  const formCatalog = [
+    { id: 1, name: 'bulbasaur', generation: 1 },
+    { id: 2, name: 'ivysaur', generation: 1 },
+    { id: 3, name: 'venusaur', generation: 1 },
+    { id: 10033, name: 'venusaur-mega', generation: 1 },
+    { id: 10195, name: 'venusaur-gmax', generation: 1 },
+    { id: 52, name: 'meowth', generation: 1 },
+    { id: 10107, name: 'meowth-alola', generation: 7 },
+    { id: 10161, name: 'meowth-galar', generation: 8 },
+    { id: 10200, name: 'meowth-gmax', generation: 1 },
+    { id: 132, name: 'ditto', generation: 1 },
+    { id: 571, name: 'zoroark', generation: 5 },
+  ];
+
+  function mockFormCatalog() {
+    pokemonService.getPokemonCatalog.mockResolvedValue(formCatalog);
+    pokemonService.getPokemon.mockImplementation(async (id: number) => ({
+      ...options[0], id, name: formCatalog.find((entry) => entry.id === id)!.name,
+      rawName: formCatalog.find((entry) => entry.id === id)!.name,
+      shinySprite: `shiny-${id}`, shinyArtwork: `shiny-art-${id}`,
+    }));
+  }
+
+  it.each([['reveal-zoroark', 571], ['reveal-ditto', 132]])('transforms a random own Pokemon with %s without consuming the pick', async (cardId, id) => {
+    mockFormCatalog();
+    await beginModifier(cardId as string);
+    const state = service.state()!;
+    service.state.set({ ...state, requireNicknames: true, players: state.players.map((player, index) => index === 0
+      ? { ...player, team: [{ ...player.team[0], nickname: 'Buddy', shiny: true, moveStickers: ['Surf'], heldItem: { id: 'leftovers', name: 'Leftovers' } }, options[4]] } : player) });
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const target = await service.prepareFestaTransformation();
+    expect(target?.playerId).toBe(state.players[0].id);
+    expect(service.state()!.players[0].team[0].id).toBe(1);
+    expect(service.state()!.activeFestaCard?.replacement).toMatchObject({
+      id, nickname: 'Buddy', shiny: true, artwork: `shiny-art-${id}`, moveStickers: ['Surf'], heldItem: { id: 'leftovers', name: 'Leftovers' },
+    });
+    expect(service.confirmFestaTransformation()).toBe(true);
+    expect(service.state()!.currentTurn).toEqual(state.currentTurn);
+    expect(service.state()!.players[0].team).toHaveLength(2);
+    expect(service.state()!.players[0].team[1]).toEqual(options[4]);
+    expect(service.state()!.players[1]).toEqual(state.players[1]);
+    expect(service.state()!.activeFestaCard).toBeUndefined();
+    expect(service.confirmFestaTransformation()).toBe(false);
+  });
+
+  it('offers only other forms of the same species and obeys Mega and Gigantamax filters', async () => {
+    mockFormCatalog();
+    await beginModifier('change-form');
+    const state = service.state()!;
+    const meowth = { ...options[0], id: 10161 };
+    expect(service.getFestaFormAlternatives(meowth).map((entry) => entry.id)).toEqual([52, 10107]);
+    expect(service.getFestaFormAlternatives(meowth, { ...state, filters: { ...state.filters!, gigantamax: true } }).map((entry) => entry.id)).toEqual([52, 10107, 10200]);
+    expect(service.getFestaFormAlternatives({ ...options[0], id: 3 }, { ...state, filters: { ...state.filters!, mega: false } })).toEqual([]);
+    expect(service.getFestaFormAlternatives(options[0])).toEqual([]);
+  });
+
+  it('forces the only eligible Mega Venusaur back to normal and removes its fixed item', async () => {
+    mockFormCatalog();
+    await beginModifier('change-form');
+    const state = service.state()!;
+    service.state.set({ ...state, activeFestaCard: { cardId: 'change-form', phase: 'resolving' }, players: state.players.map((player, index) => index === 0
+      ? { ...player, team: [options[0], { ...options[2], id: 10033, rawName: 'venusaur-mega', heldItem: { id: 'venusaurite', name: 'Venusaurite' } }] } : player) });
+    const targets = service.getFestaTransformationTargets();
+    expect(targets).toHaveLength(1);
+    expect(targets[0].index).toBe(1);
+    expect(await service.prepareFestaTransformation({ playerId: state.players[1].id, index: 0 })).toBeNull();
+    expect(await service.prepareFestaTransformation(targets[0])).not.toBeNull();
+    expect(service.state()!.activeFestaCard?.replacement?.id).toBe(3);
+    expect(service.confirmFestaTransformation()).toBe(true);
+    expect(service.state()!.players[0].team[1].heldItem).toBeUndefined();
+  });
+
+  it('equips the fixed item when changing into Mega Venusaur', async () => {
+    mockFormCatalog();
+    await beginModifier('change-form');
+    const state = service.state()!;
+    service.state.set({ ...state, activeFestaCard: { cardId: 'change-form', phase: 'resolving' }, players: state.players.map((player, index) => index === 0
+      ? { ...player, team: [{ ...options[2], rawName: 'venusaur', heldItem: { id: 'leftovers', name: 'Leftovers' } }] } : player) });
+    await service.prepareFestaTransformation({ playerId: state.players[0].id, index: 0 });
+    expect(service.state()!.activeFestaCard?.replacement?.heldItem).toEqual({ id: 'venusaurite', name: 'Venusaurite' });
+  });
+
+  it('changes a random eligible rival Pokemon and preserves the drawn result on reopening', async () => {
+    mockFormCatalog();
+    await beginModifier('random-change-form');
+    const state = service.state()!;
+    service.state.set({ ...state, activeFestaCard: { cardId: 'random-change-form', phase: 'resolving' }, players: state.players.map((player, index) => index === 1
+      ? { ...player, team: [{ ...options[0], id: 10161 }] } : player) });
+    const target = await service.prepareFestaTransformation();
+    expect(target?.playerId).toBe(state.players[1].id);
+    const replacement = service.state()!.activeFestaCard?.replacement;
+    const reloaded = new TenPickService({ getRandomOptions } as unknown as PokemonPoolService, pokemonService as never, new StorageService());
+    reloaded.openDraft(service.activeDraftId()!);
+    expect(await reloaded.prepareFestaTransformation()).toMatchObject({ playerId: target!.playerId, index: target!.index });
+    expect(reloaded.state()!.activeFestaCard?.replacement).toEqual(replacement);
+    expect(reloaded.confirmFestaTransformation()).toBe(true);
+    expect(reloaded.state()!.players[1].team[0]).toEqual(replacement);
+    expect(reloaded.state()!.players[0]).toEqual(state.players[0]);
+  });
+
+  it('loads form eligibility before resolving a reopened revealed card', async () => {
+    mockFormCatalog();
+    await beginModifier('change-form');
+    const state = service.state()!;
+    service.state.set({ ...state, players: state.players.map((player, index) => index === 0
+      ? { ...player, team: [{ ...options[0], id: 10033 }] } : player), activeFestaCard: { cardId: 'change-form', phase: 'revealed' } });
+    new StorageService().saveDrafts([{ id: service.activeDraftId()!, state: service.state()!, createdAt: '', updatedAt: '' }]);
+    const reloaded = new TenPickService({ getRandomOptions } as unknown as PokemonPoolService, pokemonService as never, new StorageService());
+    reloaded.openDraft(service.activeDraftId()!);
+    await reloaded.ensureTurn();
+    reloaded.startFestaResolution();
+    expect(reloaded.state()?.activeFestaCard?.phase).toBe('resolving');
+    expect(reloaded.getFestaTransformationTargets()).toHaveLength(1);
+  });
+
+  it.each(['change-form', 'random-change-form'])('never draws %s when no eligible Pokemon exists', async (cardId) => {
+    mockFormCatalog();
+    for (const card of service.festaCards.filter((card) => card.id !== cardId)) service.toggleFestaCard(card.id);
+    await service.startDraft({ playerNames: ['Solo'], teamSize: 6, mode: 'festa', festaChance: 100 });
+    const state = service.state()!;
+    service.state.set({ ...state, players: state.players.map((player) => ({ ...player, team: [options[0]] })) });
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    await service.ensureTurn();
+    expect(service.state()?.activeFestaCard).toBeUndefined();
+    service.state.set({ ...service.state()!, players: service.state()!.players.map((player) => ({ ...player, team: [{ ...options[0], id: 10161 }] })) });
+    service.skip();
+    expect(service.state()?.activeFestaCard?.cardId).toBe(cardId);
+  });
 
   it.each([
     ['item-random-rival', 1], ['item-chosen-rival', 1], ['item-random-own', 0],
@@ -150,6 +297,45 @@ describe('TenPickService saved drafts', () => {
     expect(await service.resolveFestaModifier('Mi movimiento')).toBe(true);
     expect(service.state()!.players.flatMap((player) => player.team).filter((pokemon) => pokemon.moveStickers?.includes('Mi movimiento'))).toHaveLength(1);
     expect(service.state()!.currentTurn).toEqual(turn);
+  });
+
+  it('adds fixed form items when Pokemon that require them join a team', async () => {
+    const megaVenusaur = { ...options[0], id: 10033, name: 'Venusaur Mega', rawName: 'venusaur-mega' };
+    getRandomOptions.mockResolvedValue([megaVenusaur, ...options.slice(1)]);
+    await service.startDraft({ playerNames: ['Solo'], teamSize: 6 });
+    await service.ensureTurn();
+    service.pick();
+    expect(service.state()?.players[0].team[0].heldItem).toEqual({ id: 'venusaurite', name: 'Venusaurite' });
+  });
+
+  it('blocks Festa items from Pokemon whose form requires a held item', async () => {
+    await beginModifier('item-chosen-rival');
+    const state = service.state()!;
+    const zacianCrowned = { ...options[3], id: 10188, name: 'Zacian Crowned', rawName: 'zacian-crowned' };
+    service.state.set({ ...state, players: state.players.map((player, index) =>
+      index === 1 ? { ...player, team: [zacianCrowned, options[4]] } : player,
+    ) });
+    expect(service.getFestaModifierTargets().map((target) => target.pokemon.rawName ?? target.pokemon.name)).toEqual([options[4].name]);
+    expect(await service.resolveFestaModifier('Restos', { playerId: state.players[1].id, index: 0 })).toBe(false);
+    expect(await service.resolveFestaModifier('Restos', { playerId: state.players[1].id, index: 1 })).toBe(true);
+    expect(service.state()?.players[1].team[0].heldItem).toBeUndefined();
+    expect(service.state()?.players[1].team[1].heldItem).toEqual({ id: 'leftovers', name: 'Leftovers' });
+  });
+
+  it('keeps fixed form items on Festa choices and forced rerolls', async () => {
+    const zacianCrowned = { ...options[4], id: 10188, name: 'Zacian Crowned', rawName: 'zacian-crowned' };
+    await service.startDraft({ playerNames: ['Solo'], teamSize: 6, mode: 'festa', festaChance: 0 });
+    await service.ensureTurn();
+    service.state.set({ ...service.state()!, activeFestaCard: { cardId: 'first-stage', phase: 'resolving' } });
+    pokemonService.getPokemon.mockResolvedValue(zacianCrowned);
+    await service.resolveFestaPokemonChoice(zacianCrowned.id);
+    expect(service.state()?.players[0].team[0].heldItem).toEqual({ id: 'rustedsword', name: 'Rusted Sword' });
+
+    const primalKyogre = { ...options[5], id: 10077, name: 'Kyogre Primal', rawName: 'kyogre-primal' };
+    service.state.set({ ...service.state()!, activeFestaCard: { cardId: 'forced-reroll', phase: 'resolving' } });
+    getRandomOptions.mockResolvedValue([primalKyogre]);
+    service.confirmForcedReroll(0, (await service.previewForcedReroll(0))!);
+    expect(service.state()?.players[0].team[0].heldItem).toEqual({ id: 'blueorb', name: 'Blue Orb' });
   });
 
   it('rejects item targets outside the allowed team and resumes when no target exists', async () => {

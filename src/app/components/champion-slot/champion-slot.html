@@ -1,0 +1,16 @@
+<div class="champion-slot" aria-live="polite">
+  @if (player(); as winner) {
+    <button class="champion" type="button" (click)="openTeam.emit(winner)" [title]="i18n.t('teamOf', { name: winner.name })">
+      <span class="champion-label">{{ i18n.t('tournamentChampion') }}:</span>
+      <span class="champion-identity">
+        @if (winner.team[0]; as pokemon) { <img [src]="pokemon.sprite || pokemon.artwork" alt="" loading="lazy" /> }
+        <span class="crowned-name">
+          <svg lucideCrown class="crown" aria-hidden="true"></svg>
+          <span class="champion-name">{{ winner.name }}</span>
+        </span>
+      </span>
+    </button>
+  } @else {
+    <div class="champion-placeholder">{{ i18n.t('tournamentWaiting') }}</div>
+  }
+</div>

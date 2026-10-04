@@ -48,6 +48,10 @@ export type FestaEffectType =
   | 'opponent-minor-legendary'
   | 'opponent-fully-evolved'
   | 'forced-reroll'
+  | 'reveal-zoroark'
+  | 'reveal-ditto'
+  | 'change-form'
+  | 'random-change-form'
   | 'trade-any'
   | 'trade-last'
   | 'item-random-rival'
@@ -77,6 +81,7 @@ export interface ActiveFestaCard {
   target?: { playerId: string; index: number };
   item?: FestaHeldItem;
   modifierValue?: string;
+  replacement?: Pokemon;
 }
 
 export interface DraftHistoryEvent {
@@ -86,6 +91,8 @@ export interface DraftHistoryEvent {
 }
 
 export interface DraftState {
+  swissTournament?: import('./swiss').SwissTournament;
+  tournament?: import('./tournament').TournamentState;
   mode?: DraftMode;
   filters?: DraftFilters;
   festaChance?: number;
@@ -102,6 +109,7 @@ export interface DraftState {
 }
 
 export interface DraftSetup {
+  competition?: import('./competition').CompetitionSettings;
   mode?: DraftMode;
   festaChance?: number;
   requireNicknames?: boolean;

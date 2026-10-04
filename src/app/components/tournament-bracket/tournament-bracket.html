@@ -1,0 +1,96 @@
+@if (state().players.length >= 2) {
+  <section class="tournament" [attr.aria-label]="i18n.t('tournament')" [attr.aria-busy]="busy()">
+    <header class="tournament-header">
+      <div>
+        <h1><svg lucideTrophy aria-hidden="true"></svg>{{ i18n.t(state().swissTournament ? 'swissFormat' : 'tournament') }}</h1>
+        @if (state().swissTournament; as swiss) {
+          <p>{{ i18n.t('tournamentSummary', { players: state().players.length, matches: (state().players.length - state().players.length % 2) / 2 * swiss.roundLimit }) }}</p>
+        } @else if (tournament()) {
+          <p>{{ i18n.t('tournamentSummary', { players: state().players.length, matches: state().players.length - 1 }) }}</p>
+        }
+      </div>
+      <div class="controls">
+        @if (tournament(); as bracket) {
+          <button type="button" class="icon-button" (click)="undo()" [disabled]="busy() || !bracket.undo.length" [title]="i18n.t('tournamentUndo')" [attr.aria-label]="i18n.t('tournamentUndo')"><svg lucideUndo2 aria-hidden="true"></svg></button>
+        }
+        @if (tournament() || state().swissTournament) {
+          <button type="button" class="icon-button" (click)="confirmingRedraw.set(true); configuring.set(false)" [disabled]="busy()" [title]="i18n.t('redrawTournament')" [attr.aria-label]="i18n.t('redrawTournament')"><svg lucideShuffle aria-hidden="true"></svg></button>
+          <button type="button" class="icon-button" (click)="configuring.set(true); confirmingRedraw.set(false)" [disabled]="busy()" [title]="i18n.t('changeCompetitionFormat')" [attr.aria-label]="i18n.t('changeCompetitionFormat')"><svg lucideSettings2 aria-hidden="true"></svg></button>
+        }
+      </div>
+    </header>
+    @if (confirmingRedraw()) {
+      <div class="redraw-confirm" role="alert">
+        <p>{{ i18n.t('redrawQuestion') }}</p>
+        <button type="button" (click)="draw()" [disabled]="busy()"><svg lucideShuffle aria-hidden="true"></svg>{{ i18n.t('confirmRedraw') }}</button>
+        <button type="button" (click)="confirmingRedraw.set(false)" [disabled]="busy()">{{ i18n.t('cancel') }}</button>
+      </div>
+    }
+    @if (error()) { <p class="error" role="alert">{{ i18n.t('tournamentError') }}</p> }
+    @if (!tournament() && !state().swissTournament || configuring()) {
+      @if (configuring()) {
+        <p>{{ i18n.t('competitionReplace') }}</p>
+        <button type="button" (click)="configuring.set(false)" [disabled]="busy()">{{ i18n.t('cancel') }}</button>
+      }
+      <app-competition-setup [playerCount]="state().players.length" [initialRounds]="state().swissTournament?.roundLimit" [disabled]="busy()" (create)="draw($event)" />
+    }
+    @if (state().swissTournament) {
+      <app-swiss-board [state]="state()" (openTeam)="openTeam($event)" />
+    }
+    @if (tournament()) {
+      <div class="progress" aria-live="polite">
+        <span>{{ i18n.t('tournamentProgress', { done: completed(), total: state().players.length - 1 }) }}</span>
+      </div>
+      <div class="bracket-scroll" tabindex="0" [attr.aria-label]="i18n.t('tournament')">
+        <div class="bracket">
+          @for (round of rounds(); track round.id; let index = $index) {
+            <section class="round" [class.final-round]="index === rounds().length - 1">
+              <h3>{{ roundName(index) }}</h3>
+              <div class="round-matches" [style.min-height.px]="rounds()[0].matches.length * 144">
+                @for (match of round.matches; track match.id) {
+                  <div class="match-holder">
+                    <article class="match" [class.resolved]="winner(match)" [class.ready]="match.status === 2">
+                      @for (opponent of [match.opponent1, match.opponent2]; track $index) {
+                        @let trainer = player(opponent);
+                        <div class="opponent" [class.won]="opponent?.result === 'win'" [class.lost]="opponent?.result === 'loss'">
+                          @if (trainer) {
+                            <button type="button" class="trainer" (click)="openTeam(trainer)" [title]="i18n.t('teamOf', { name: trainer.name })">
+                              @if (trainer.team[0]; as pokemon) { <img [src]="pokemon.sprite || pokemon.artwork" alt="" loading="lazy" /> }
+                              <span>{{ trainer.name }}</span>
+                            </button>
+                            @if (match.status === 2 && opponent?.id != null) {
+                              <button type="button" class="icon-button win-button" (click)="chooseWinner(match.id, opponent!.id!)" [disabled]="busy()" [title]="i18n.t('tournamentWinner', { name: trainer.name })" [attr.aria-label]="i18n.t('tournamentWinner', { name: trainer.name })"><svg lucideTrophy aria-hidden="true"></svg></button>
+                            } @else if (opponent?.result === 'win') { <svg lucideTrophy class="winner-icon" aria-hidden="true"></svg> }
+                          } @else {
+                            <span class="placeholder">{{ i18n.t(opponent === null ? 'tournamentBye' : 'tournamentWaiting') }}</span>
+                          }
+                        </div>
+                      }
+                    </article>
+                  </div>
+                }
+              </div>
+            </section>
+          }
+          <section class="round champion-round">
+            <h3>{{ i18n.t('tournamentChampion') }}</h3>
+            <div class="round-matches" [style.min-height.px]="rounds()[0].matches.length * 144">
+              <div class="champion-holder">
+                <app-champion-slot [player]="champion()" (openTeam)="openTeam($event)" />
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    }
+  </section>
+}
+<dialog #teamDialog (cancel)="selectedPlayer.set(null)" (click)="backdrop($event)" aria-labelledby="tournament-team-title">
+  @if (selectedPlayer(); as player) {
+    <div class="dialog-header">
+      <h2 id="tournament-team-title">{{ i18n.t('teamOf', { name: player.name }) }}</h2>
+      <button type="button" class="icon-button" (click)="closeTeam()" [title]="i18n.t('closeTeam')" [attr.aria-label]="i18n.t('closeTeam')" autofocus><svg lucideX aria-hidden="true"></svg></button>
+    </div>
+    <app-team-list [state]="state()" [playerId]="player.id" [tournamentView]="true" />
+  }
+</dialog>

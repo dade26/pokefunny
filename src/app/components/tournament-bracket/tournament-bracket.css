@@ -1,0 +1,44 @@
+:host { display: block; min-width: 0; --t-border: var(--border, #b9c9be); --t-strong: var(--border-strong, #344b40); --t-surface: var(--surface, #fff); --t-text: var(--text, #293631); --t-muted: var(--muted, #64766c); }
+.tournament { border-block: 2px solid var(--t-border); padding: 24px 0; margin-bottom: 28px; }
+.tournament-header, .controls, .progress, .dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+h1, h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 22px; }
+.tournament-header p { margin: 8px 0 0; font-size: 13px; color: var(--t-muted); }
+svg { width: 20px; height: 20px; flex-shrink: 0; }
+button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 2px solid var(--t-strong); border-radius: 4px; background: var(--t-surface); color: var(--t-text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+button:hover:not(:disabled) { background: var(--hover, #e5eee8); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button:focus-visible, .bracket-scroll:focus-visible { outline: 3px solid #c9363d; outline-offset: 3px; }
+.icon-button { width: 44px; min-width: 44px; padding: 0; }
+.progress { margin-top: 18px; font-size: 13px; flex-wrap: wrap; }
+.winner-icon { color: #ae862a; }
+.bracket-scroll { overflow-x: auto; padding: 24px 2px 12px; }
+.bracket { display: flex; gap: 36px; width: max-content; min-width: 100%; }
+.round { width: 248px; flex: 1 0 248px; }
+h3 { margin: 0 0 10px; font-size: 13px; color: var(--t-muted); text-transform: uppercase; }
+.round-matches { display: grid; grid-auto-rows: 1fr; }
+.match-holder { display: flex; align-items: center; position: relative; }
+.match { position: relative; width: 100%; border: 2px solid var(--t-border); border-radius: 4px; background: var(--t-surface); z-index: 1; }
+.match.ready { border-color: var(--t-strong); }
+.round:not(:last-child) .match::after { content: ''; position: absolute; left: 100%; top: 50%; width: 20px; border-top: 2px solid var(--t-border); }
+.round:not(:first-child) .match::before { content: ''; position: absolute; right: 100%; top: 50%; width: 20px; border-top: 2px solid var(--t-border); }
+.round:not(.final-round) .match-holder:nth-child(odd)::after { content: ''; position: absolute; right: -20px; top: 50%; height: 100%; border-right: 2px solid var(--t-border); }
+.champion-holder { display: flex; align-items: center; position: relative; }
+.champion-holder::before { content: ''; position: absolute; right: 100%; top: 50%; width: 20px; border-top: 2px solid var(--t-border); }
+.opponent { display: flex; align-items: center; gap: 6px; min-height: 53px; padding: 4px 6px; }
+.opponent + .opponent { border-top: 1px solid var(--t-border); }
+.opponent.won { background: var(--surface-muted, #e0e9e2); }
+.opponent.lost .trainer { opacity: .6; }
+.trainer { flex: 1; min-width: 0; justify-content: start; padding: 0; border: 0; background: transparent; text-align: left; }
+.trainer img { width: 40px; height: 40px; object-fit: contain; image-rendering: pixelated; flex-shrink: 0; }
+.trainer span { overflow-wrap: anywhere; }
+.win-button { border: 0; color: #967322; }
+.winner-icon { margin: 0 12px; }
+.placeholder { color: var(--t-muted); font-size: 12px; padding: 10px; }
+.redraw-confirm { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 16px; padding: 12px 0; border-block: 1px solid var(--t-border); }
+.redraw-confirm p { flex-basis: 100%; margin: 0; font-size: 14px; }
+.error { color: var(--error, #a72932); font-size: 14px; }
+dialog { width: min(760px, calc(100% - 24px)); max-height: calc(100dvh - 32px); margin: auto; padding: 24px; border: 2px solid var(--t-strong); border-radius: 6px; background: var(--t-surface); color: var(--t-text); overflow-y: auto; }
+dialog::backdrop { background: rgb(0 0 0 / .65); }
+.dialog-header { margin-bottom: 24px; }
+.dialog-header h2 { overflow-wrap: anywhere; font-size: 20px; }
+@media (max-width: 640px) { .tournament-header { flex-wrap: wrap; } h1, h2 { font-size: 20px; } dialog { padding: 16px; } .dialog-header h2 { font-size: 17px; } }

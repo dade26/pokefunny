@@ -1,0 +1,55 @@
+<div class="swiss-toolbar">
+  <strong aria-live="polite">{{ i18n.t('swissRoundProgress', { current: currentRound().number, total: tournament().roundLimit }) }}</strong>
+  <button type="button" class="icon-button" (click)="undo()" [disabled]="busy() || !tournament().undo.length" [title]="i18n.t('swissUndo')" [attr.aria-label]="i18n.t('swissUndo')"><svg lucideUndo2 aria-hidden="true"></svg></button>
+</div>
+@if (error()) { <p class="error" role="alert">{{ i18n.t('tournamentError') }}</p> }
+@if (finished()) {
+  <div class="swiss-champion" aria-live="polite">
+    <span>{{ i18n.t('swissCompleted') }}</span>
+    <app-champion-slot [player]="player(standings()[0].playerId)" (openTeam)="openTeam.emit($event)" />
+  </div>
+}
+<div class="round-tabs" role="tablist" [attr.aria-label]="i18n.t('swissFormat')">
+  @for (round of tournament().rounds; track round.number) {
+    <button type="button" role="tab" [attr.aria-selected]="visibleRound().number === round.number" [attr.aria-controls]="'swiss-round-' + round.number" (click)="viewingRound.set(round.number)">{{ i18n.t('round', { count: round.number }) }}</button>
+  }
+</div>
+<div class="swiss-matches" role="tabpanel" [id]="'swiss-round-' + visibleRound().number" [attr.aria-label]="i18n.t('round', { count: visibleRound().number })">
+  @for (match of visibleRound().matches; track match.id) {
+    <article class="swiss-match" [class.bye-match]="!match.player2">
+      @for (id of [match.player1, match.player2]; track $index) {
+        @if (id) {
+          @let trainer = player(id);
+          <div class="opponent" [class.won]="match.winnerId === id">
+            <button type="button" class="trainer" (click)="openTeam.emit(trainer)" [title]="i18n.t('teamOf', { name: trainer.name })">
+              @if (trainer.team[0]; as pokemon) { <img [src]="pokemon.sprite || pokemon.artwork" alt="" loading="lazy" /> }
+              <span>{{ trainer.name }}</span>
+            </button>
+            @if (!match.winnerId && match.player2 && visibleRound().number === currentRound().number) {
+              <button type="button" class="icon-button win-button" (click)="chooseWinner(match.id, id)" [disabled]="busy()" [title]="i18n.t('tournamentWinner', { name: trainer.name })" [attr.aria-label]="i18n.t('tournamentWinner', { name: trainer.name })"><svg lucideTrophy aria-hidden="true"></svg></button>
+            } @else if (match.winnerId === id) { <svg lucideTrophy class="winner-icon" aria-hidden="true"></svg> }
+          </div>
+        } @else { <span class="bye-label">{{ i18n.t('swissBye') }}</span> }
+      }
+      @if (match.rematch) { <p class="rematch">{{ i18n.t('swissRematch') }}</p> }
+    </article>
+  }
+</div>
+@if (!finished()) {
+  <div class="round-actions"><button type="button" (click)="nextRound()" [disabled]="busy() || !canAdvance()"><svg lucideArrowRight aria-hidden="true"></svg>{{ i18n.t('swissNextRound') }}</button></div>
+}
+<section class="standings">
+  <h3>{{ i18n.t('swissStandings') }}</h3>
+  <div class="standings-scroll" tabindex="0" [attr.aria-label]="i18n.t('swissStandings')">
+    <table>
+      <thead><tr><th scope="col">#</th><th scope="col">{{ i18n.t('swissTrainer') }}</th><th scope="col">{{ i18n.t('swissPoints') }}</th><th scope="col">{{ i18n.t('swissWins') }}</th><th scope="col">{{ i18n.t('swissLosses') }}</th><th scope="col">{{ i18n.t('swissByes') }}</th><th scope="col">{{ i18n.t('swissDirect') }}</th><th scope="col">{{ i18n.t('swissBuchholz') }}</th><th scope="col">{{ i18n.t('swissLottery') }}</th></tr></thead>
+      <tbody>
+        @for (row of standings(); track row.playerId; let index = $index) {
+          <tr><td>{{ index + 1 }}</td><th scope="row"><button type="button" class="standing-player" (click)="openTeam.emit(player(row.playerId))">{{ player(row.playerId).name }}</button></th><td class="points">{{ row.points }}</td><td>{{ row.wins }}</td><td>{{ row.losses }}</td><td>{{ row.byes }}</td><td>{{ row.headToHead ?? '-' }}</td><td>{{ row.buchholz }}</td><td>{{ row.lottery }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <p>{{ i18n.t('swissScoring') }}</p>
+  <p>{{ i18n.t('swissTiebreaks') }}</p>
+</section>

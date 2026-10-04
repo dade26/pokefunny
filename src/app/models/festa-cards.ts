@@ -1,6 +1,14 @@
 import { FestaCard } from './pokemon.model';
 
 export const FESTA_CARDS: FestaCard[] = [
+  ...([
+    ['reveal-zoroark', 'It was Zoroark!?', 'Replace a random Pokemon on your team with Zoroark.', 'festaZoroark'],
+    ['reveal-ditto', 'It was Ditto!?', 'Replace a random Pokemon on your team with Ditto.', 'festaDitto'],
+    ['change-form', 'Form Change', 'Choose one of your Pokemon to change into a random different available form.', 'festaChangeForm'],
+    ['random-change-form', 'Who is this?', 'A random eligible Pokemon from any team changes into a different available form.', 'festaRandomChangeForm'],
+  ] as const).map(([effect, name, description, key]) => ({
+    id: effect, effect, name, description, nameKey: `${key}Name`, descriptionKey: `${key}Description`, consumesPick: false,
+  })),
   {
     id: 'first-stage',
     name: 'First-stage Pokemon',

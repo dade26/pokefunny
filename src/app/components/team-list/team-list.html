@@ -18,19 +18,21 @@
             <div class="slot">
               @if (player.team[slot]) {
                 <div class="pokemon-frame">
-                  @if (player.team[slot].nickname) {
+                  @if ((!tournamentView || state.mode === 'festa') && player.team[slot].nickname) {
                     <span class="nickname-sticker">{{ player.team[slot].nickname }}</span>
                   }
                   <img class="pokemon-art" [src]="player.team[slot].artwork || player.team[slot].sprite" [alt]="player.team[slot].name" loading="lazy" decoding="async" />
                   @if (itemName(player.team[slot])) {
                     <span class="held-item" [title]="itemName(player.team[slot])">
-                      @if (itemImage(player.team[slot])) { <img [src]="itemImage(player.team[slot])" [alt]="itemName(player.team[slot])" loading="lazy" /> }
+                      @if (itemImage(player.team[slot]); as image) { <img [src]="image" [alt]="itemName(player.team[slot])" loading="lazy" (error)="itemSprites.markFailed(image)" /> }
                       @else { {{ itemName(player.team[slot]) }} }
                     </span>
                   }
+                  @if (!tournamentView || state.mode === 'festa') {
                   <div class="move-stickers">
                     @for (move of player.team[slot].moveStickers ?? []; track $index) { <span class="move-sticker">{{ move }}</span> }
                   </div>
+                  }
                 </div>
                 <small>{{ player.team[slot].name }}
                   @if (player.team[slot].shiny) { <span class="shiny-label">{{ i18n.t('shiny') }}</span> }

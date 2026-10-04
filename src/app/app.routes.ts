@@ -6,6 +6,16 @@ import { TenPickHub } from './pages/ten-pick-hub/ten-pick-hub';
 import { PokeGacha } from './pages/poke-gacha/poke-gacha';
 
 export const routes: Routes = [
+  ...(['ten-pick', 'ten-pick-monotype', 'ten-pick-festa'] as const).map((base) => ({
+    path: `${base}/:draftId/tournament`,
+    loadComponent: () => import('./pages/tournament/tournament').then((module) => module.TournamentPage),
+    data: {
+      mode: base === 'ten-pick-festa' ? 'festa' : base === 'ten-pick-monotype' ? 'monotype' : 'normal',
+      title: 'Pokemon Tournament | Pokefunny',
+      description: 'Play a saved Pokemon tournament and review its results.',
+      canonicalPath: `/${base}`, robots: 'noindex, follow',
+    },
+  })),
   {
     path: '',
     component: Home,

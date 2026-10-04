@@ -3,6 +3,10 @@ import { FestaCard as FestaCardModel, FestaEffectType } from '../../models/pokem
 import { LanguageService, TranslationKey } from '../../services/language.service';
 
 const FESTA_CARD_COVERS: Record<FestaEffectType, { id: number; name: string }> = {
+  'reveal-zoroark': { id: 571, name: 'Zoroark' },
+  'reveal-ditto': { id: 132, name: 'Ditto' },
+  'change-form': { id: 52, name: 'Meowth' },
+  'random-change-form': { id: 201, name: 'Unown' },
   'fully-evolved': { id: 957, name: 'Tinkatink' },
   'first-stage': { id: 10, name: 'Caterpie' },
   'minor-legendary': { id: 491, name: 'Darkrai' },

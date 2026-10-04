@@ -1,0 +1,32 @@
+@if (recommendation(); as choice) {
+  <section class="recommendation" aria-live="polite">
+    @if (choice.idealTournamentSize) {
+      <h3><svg lucideTrophy aria-hidden="true"></svg>{{ i18n.t('competitionIdealTitle') }}</h3>
+      <p>{{ i18n.t('competitionIdealReason', { count: playerCount() }) }}</p>
+    } @else {
+      <p class="reason">{{ i18n.t('competitionByeReason', { count: playerCount(), byes: byes() }) }}</p>
+    }
+    <strong class="recommended-format">{{ i18n.t('competitionRecommendation') }}: {{ i18n.t(choice.idealTournamentSize ? 'singleElimination' : 'swissFormat') }}</strong>
+    @if (!choice.idealTournamentSize) {
+      <p>{{ i18n.t('swissDescription') }}</p>
+      <p class="nearby">{{ i18n.t('nearbyTournamentSizes', { lower: choice.nearestIdealSizes[0], upper: choice.nearestIdealSizes[1] }) }}</p>
+    }
+    <div class="swiss-settings">
+      <label>{{ i18n.t('swissRounds') }}
+        <input type="number" min="1" [max]="maxRounds()" step="1" [ngModel]="rounds()" (ngModelChange)="updateRounds($event)" [disabled]="disabled()" [attr.aria-invalid]="!roundsValid()" />
+      </label>
+      <span>{{ i18n.t('swissRecommendedRounds', { count: suggestedRounds() }) }}</span>
+    </div>
+    @if (!roundsValid()) { <p class="error" role="alert">{{ i18n.t('swissRoundsRange', { max: maxRounds() }) }}</p> }
+    <div class="create-actions">
+      @if (choice.idealTournamentSize) {
+        <button type="button" class="primary" (click)="chooseElimination()" [disabled]="disabled()"><svg lucideTrophy aria-hidden="true"></svg>{{ i18n.t('createCompetition') }}</button>
+        <button type="button" (click)="chooseSwiss()" [disabled]="disabled() || !roundsValid()"><svg lucideShuffle aria-hidden="true"></svg>{{ i18n.t('createSwiss') }}</button>
+      } @else {
+        <button type="button" class="primary" (click)="chooseSwiss()" [disabled]="disabled() || !roundsValid()"><svg lucideShuffle aria-hidden="true"></svg>{{ i18n.t('createSwiss') }}</button>
+        <button type="button" (click)="chooseElimination()" [disabled]="disabled()"><svg lucideTrophy aria-hidden="true"></svg>{{ i18n.t('useElimination') }}</button>
+      }
+    </div>
+    @if (!choice.idealTournamentSize) { <p>{{ i18n.t('eliminationByeNote') }}</p> }
+  </section>
+}

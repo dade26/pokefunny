@@ -1,0 +1,8 @@
+<main class="tournament-page">
+  @if (state(); as draft) {
+    <a class="back-link" [routerLink]="teamsUrl()"><svg lucideArrowLeft aria-hidden="true"></svg>{{ i18n.t('finalTeams') }}</a>
+    @if (draft.finished && draft.players.length >= 2) {
+      <app-tournament-bracket [state]="draft" />
+    }
+  }
+</main>

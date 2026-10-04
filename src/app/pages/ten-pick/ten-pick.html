@@ -94,6 +94,8 @@
         </div>
 
         @if (!selectedGenerations().length) { <p class="filter-error" role="alert">{{ i18n.t('selectGeneration') }}</p> }
+        <app-competition-setup [playerCount]="setupPlayers().length" [disabled]="starting() || !selectedGenerations().length" (create)="startDraft($event)" />
+        @if (competitionStartError()) { <p class="filter-error" role="alert">{{ i18n.t('competitionStartError') }}</p> }
         <button class="start" type="button" [disabled]="setupPlayers().length < 1 || !selectedGenerations().length || starting()" (click)="startDraft()">
           {{ i18n.t('start') }}
         </button>
@@ -114,12 +116,40 @@
         @if (draft.finished && !draft.currentTurn) {
           <div class="complete">
             <h1>{{ i18n.t('finalTeams') }}</h1>
+            @if (draft.players.length >= 2) {
+              <div class="tournament-summary">
+                @if (competitionWinner(); as winner) {
+                  <p class="saved-champion"><svg lucideTrophy aria-hidden="true"></svg><span>{{ i18n.t('tournamentChampion') }}: <strong>{{ winner.name }}</strong></span></p>
+                }
+                <a class="tournament-link" [routerLink]="tournamentUrl()"><svg lucideTrophy aria-hidden="true"></svg>{{ i18n.t(draft.tournament || draft.swissTournament ? 'openTournament' : 'createCompetition') }}</a>
+              </div>
+            }
             <app-team-list [state]="draft" [allowExport]="true" />
             <div class="actions">
               <a [routerLink]="routeBase() + '/new'">{{ i18n.t('newDraft') }}</a>
               <a [routerLink]="routeBase()">{{ i18n.t('myDrafts') }}</a>
             </div>
           </div>
+        } @else if (transformationReveal(); as reveal) {
+          <article class="reroll-stage" aria-live="polite" [attr.aria-busy]="!reveal.result">
+            @if (activeFestaCard(); as card) { <h1>{{ festaCardText(card, 'nameKey') }}</h1> }
+            <p>{{ reveal.playerName }}</p>
+            @if (reveal.result; as pokemon) {
+              <div class="reroll-result">
+                <img class="artwork" [src]="pokemon.artwork || pokemon.sprite" [alt]="pokemon.name" />
+                <h2>{{ pokemon.name }}</h2>
+                @if (pokemon.nickname) { <p>{{ pokemon.nickname }}</p> }
+                @if (pokemon.shiny) { <span class="shiny-label">{{ i18n.t('shiny') }}</span> }
+                <p>{{ i18n.t('festaReplaced', { name: reveal.previous.name }) }}</p>
+              </div>
+              <button type="button" class="pick" (click)="confirmFestaTransformation()">{{ i18n.t('festaConfirm') }}</button>
+            } @else {
+              <div class="reroll-spinning">
+                <img class="artwork" [src]="reveal.previous.artwork || reveal.previous.sprite" [alt]="reveal.previous.name" />
+              </div>
+              <p role="status">{{ i18n.t('gachaSpinning') }}</p>
+            }
+          </article>
         } @else if (rerollReveal(); as reveal) {
           <article class="reroll-stage" aria-live="polite" [attr.aria-busy]="!reveal.result">
             <h1>{{ i18n.t('festaReroll') }}</h1>
@@ -154,7 +184,7 @@
                 <strong>{{ festaRivalPreview() }}</strong>
               </div>
             } @else if (draft.activeFestaCard.phase === 'revealed') {
-              <button class="pick" type="button" (click)="startFestaResolution()">{{ i18n.t('festaResolve') }}</button>
+              <button class="pick" type="button" [disabled]="service.loadingTurn()" (click)="startFestaResolution()">{{ i18n.t('festaResolve') }}</button>
             } @else if (service.loadingTurn() || festaChoicesLoading()) {
               <div class="loading festa-loading" role="status">{{ i18n.t('loading') }}</div>
             } @else if (festaChoicesError()) {
@@ -240,6 +270,28 @@
                     <button class="pick" type="button"
                       [disabled]="service.loadingTurn() || festaTargetRolling() || festaCatalogLoading() || (rule.target === 'choose' && !festaTargetKey()) || (rule.randomItem && rule.kind === 'item' && !draft.activeFestaCard.item) || (!rule.randomItem && rule.kind === 'item' && !festaItemQuery().trim()) || (rule.kind === 'move' && !festaMoveQuery().trim())"
                       (click)="confirmFestaModifier()">{{ i18n.t('festaConfirm') }}</button>
+                  }
+                </div>
+              } @else if (service.isFestaTransformation(card.effect)) {
+                <div class="festa-resolution">
+                  @if (transformationError()) { <p class="error" role="alert">{{ i18n.t('turnError') }}</p> }
+                  @if (festaTargetRolling() && festaTargetPreview(); as preview) {
+                    <div class="festa-target-roll" [class.revealed]="festaTargetRevealed()" role="status" [attr.aria-live]="festaTargetRevealed() ? 'polite' : 'off'">
+                      <span>{{ i18n.t(festaTargetRevealed() ? 'festaTargetSelected' : 'festaChoosingTarget') }}</span>
+                      <img [src]="preview.pokemon.artwork || preview.pokemon.sprite" [alt]="preview.pokemon.name" />
+                      <strong>{{ preview.playerName }} - {{ preview.pokemon.name }}</strong>
+                    </div>
+                  } @else if (card.effect === 'change-form') {
+                    <div class="festa-grid compact">
+                      @for (pick of festaTransformationTargets(); track pick.playerId + ':' + pick.index) {
+                        <button type="button" class="festa-pokemon" (click)="transformFestaPokemon(pick)">
+                          <img [src]="pick.pokemon.artwork || pick.pokemon.sprite" [alt]="pick.pokemon.name" />
+                          <span>{{ pick.pokemon.name }}</span>
+                        </button>
+                      }
+                    </div>
+                  } @else {
+                    <button type="button" class="pick" (click)="transformFestaPokemon()">{{ i18n.t(transformationError() ? 'retry' : 'festaResolve') }}</button>
                   }
                 </div>
               } @else if (card.effect === 'forced-reroll') {
