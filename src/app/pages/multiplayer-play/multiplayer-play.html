@@ -39,7 +39,7 @@
       } @else if (player.phase === 'lobby') {
         <h1>Esperando al host...</h1>
       } @else if (player.phase === 'finished') {
-        <h1>Tu equipo final</h1>
+        <h1>Equipos finales</h1>
       } @else if (!player.canAct) {
         <h1>Esperando a <app-player-name [name]="activePlayer()?.name ?? 'otro jugador'" [favoritePokemon]="activePlayer()?.favoritePokemon" />...</h1>
       } @else if (player.controls; as controls) {
@@ -174,7 +174,7 @@
     </section>
     @if (player.draft; as draft) {
       <section class="team-strip">
-        <app-team-list [state]="draft" [playerId]="player.playerId" [allowExport]="player.phase === 'finished'" />
+        <app-team-list [state]="draft" [playerId]="player.phase === 'finished' ? '' : player.playerId" [allowExport]="player.phase === 'finished'" />
       </section>
     }
   }
