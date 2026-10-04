@@ -41,13 +41,24 @@
       </div>
     </section>
 
+    <section class="room-actions">
+      @if (confirmingDelete()) {
+        <p>¿Borrar la partida para todos? Se eliminarán la sala y la partida guardada en este dispositivo.</p>
+        <button class="danger" type="button" [disabled]="deleting()" (click)="deleteRoom()">{{ deleting() ? 'Borrando...' : 'Sí, borrar partida' }}</button>
+        <button class="primary" type="button" [disabled]="deleting()" (click)="confirmingDelete.set(false)">Cancelar</button>
+      } @else {
+        <button class="danger" type="button" (click)="confirmingDelete.set(true)">Borrar partida</button>
+      }
+      @if (socket.error() && state.phase !== 'lobby') { <p class="error" role="alert">{{ socket.error() }}</p> }
+    </section>
+
     @if (state.phase === 'lobby') {
       <section class="lobby">
         <h1>Sala de espera · {{ connectedPlayers().length }} jugadores</h1>
         <p>Comparte el enlace y empieza cuando estéis todos. Participarán los jugadores conectados en ese momento.</p>
         <div class="players">
           @for (player of state.players; track player.id) {
-            <div><strong>{{ player.name }}</strong><span [class.offline]="!player.connected">{{ player.connected ? 'Conectado' : 'Desconectado' }}</span></div>
+            <div><strong><app-player-name [name]="player.name" [favoritePokemon]="player.favoritePokemon" /></strong><span [class.offline]="!player.connected">{{ player.connected ? 'Conectado' : 'Desconectado' }}</span></div>
           } @empty {
             <p>Esperando jugadores...</p>
           }
@@ -70,15 +81,15 @@
             <a class="primary" [routerLink]="savedDraftUrl()">Consultar partida y crear torneo</a>
           } @else if (draft.activeFestaCard && activeFestaCard(); as card) {
             <article class="watch-card">
-              <h1>Turno de {{ activePlayer()?.name }}</h1>
+              <h1>Turno de <app-player-name [name]="activePlayer()?.name ?? ''" [favoritePokemon]="activePlayer()?.favoritePokemon" /></h1>
               <app-festa-card [card]="card" />
               <p>El jugador activo resuelve la carta desde su dispositivo.</p>
             </article>
           } @else if (draft.currentTurn?.finished) {
-            <app-ten-pick-result [turn]="draft.currentTurn!" [playerName]="activePlayer()?.name ?? 'Jugador'" />
+            <app-ten-pick-result [turn]="draft.currentTurn!" [playerName]="activePlayer()?.name ?? 'Jugador'" [favoritePokemon]="activePlayer()?.favoritePokemon" />
           } @else if (currentPokemon(); as pokemon) {
             <article class="watch-card">
-              <h1>Turno de {{ activePlayer()?.name }}</h1>
+              <h1>Turno de <app-player-name [name]="activePlayer()?.name ?? ''" [favoritePokemon]="activePlayer()?.favoritePokemon" /></h1>
               <strong>{{ draft.currentTurn!.currentIndex + 1 }} / {{ draft.currentTurn!.options.length }}</strong>
               <img [src]="pokemon.artwork || pokemon.sprite" [alt]="pokemon.name" />
               <h2>{{ pokemon.name }}</h2>

@@ -23,6 +23,7 @@ export interface FestaHeldItem {
 }
 
 export interface Player {
+  favoritePokemon?: string;
   monotype?: PokemonType;
   id: string;
   name: string;

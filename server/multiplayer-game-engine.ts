@@ -47,6 +47,7 @@ export class MultiplayerGameEngine {
     const players: Player[] = participants.map((player, index) => ({
       id: player.id,
       name: player.name,
+      favoritePokemon: player.favoritePokemon,
       team: [],
       ...(room.setup.mode === 'monotype' ? { monotype: monotypes[index] } : {}),
     }));
@@ -344,6 +345,7 @@ export class MultiplayerGameEngine {
       players: room.players.map((player) => ({
         id: player.id,
         name: player.name,
+        favoritePokemon: player.favoritePokemon,
         connected: player.connected,
         teamSize: draft?.players.find((draftPlayer) => draftPlayer.id === player.id)?.team.length ?? 0,
       })),
@@ -362,6 +364,7 @@ export class MultiplayerGameEngine {
       phase: room.phase,
       playerId: player.id,
       playerName: player.name,
+      favoritePokemon: player.favoritePokemon,
       connected: player.connected,
       myTeam: draftPlayer?.team ?? [],
       draft,

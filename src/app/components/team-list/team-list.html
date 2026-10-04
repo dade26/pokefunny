@@ -4,7 +4,7 @@
     @for (player of orderedPlayers(); track player.id) {
       <article class="team" [class.active]="player.id === activePlayerId">
         <div class="team-header">
-          <strong>{{ player.name }}</strong>
+          <strong><app-player-name [name]="player.name" [favoritePokemon]="player.favoritePokemon" /></strong>
           <span>{{ player.team.length }} / {{ state.teamSize }}</span>
         </div>
         @if (state.mode === 'monotype') {

@@ -7,7 +7,7 @@
     @for (playerId of turnOrder(); track playerId; let index = $index) {
       <li [class.active]="isActive(index)">
         <span>{{ index + 1 }}</span>
-        <strong>{{ playerName(playerId) }}</strong>
+        <strong><app-player-name [name]="playerName(playerId)" [favoritePokemon]="playerFavorite(playerId)" /></strong>
       </li>
     }
   </ol>

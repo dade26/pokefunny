@@ -1,5 +1,5 @@
 <section class="result">
-  <p class="eyebrow">{{ i18n.t('pickedBy', { name: playerName }) }}</p>
+  <p class="eyebrow">@if (favoritePokemon) { <app-player-name [favoritePokemon]="favoritePokemon" /> }{{ i18n.t('pickedBy', { name: playerName }) }}</p>
   <h2>{{ turn.selectedPokemon?.name }}</h2>
   <p class="sub">{{ i18n.t('encounter') }} {{ (turn.selectedIndex ?? 0) + 1 }} / 10</p>
 

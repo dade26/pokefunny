@@ -6,10 +6,11 @@ import { Player } from '../../models/pokemon.model';
 import { MultiplayerSocketService } from '../../services/multiplayer/multiplayer-socket.service';
 import { TeamList } from '../../components/team-list/team-list';
 import { FestaCard as FestaCardView } from '../../components/festa-card/festa-card';
+import { PlayerName } from '../../components/player-name/player-name';
 
 @Component({
   selector: 'app-multiplayer-play',
-  imports: [FormsModule, RouterLink, TeamList, FestaCardView],
+  imports: [FormsModule, RouterLink, TeamList, FestaCardView, PlayerName],
   templateUrl: './multiplayer-play.html',
   styleUrl: './multiplayer-play.css',
 })

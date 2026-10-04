@@ -1,5 +1,11 @@
 <main class="play">
-  @if (!state()) {
+  @if (socket.deletedRoom()) {
+    <section class="status">
+      <h1>Partida borrada</h1>
+      <p>El host ha borrado la sala {{ socket.deletedRoom() }}. Podéis crear otra partida online.</p>
+      <a routerLink="/">Volver al inicio</a>
+    </section>
+  } @else if (!state()) {
     <section class="status">
       <h1>Reconectando...</h1>
       @if (socket.error()) {
@@ -12,7 +18,7 @@
     <header>
       <div>
         <span>Sala {{ player.roomCode }}</span>
-        <strong>{{ player.playerName }}</strong>
+        <strong><app-player-name [name]="player.playerName" [favoritePokemon]="player.favoritePokemon" /></strong>
       </div>
       <small [class.connected]="socket.connected()">{{ socket.connected() ? 'online' : 'offline' }}</small>
     </header>
@@ -29,7 +35,7 @@
       } @else if (player.phase === 'finished') {
         <h1>Tu equipo final</h1>
       } @else if (!player.canAct) {
-        <h1>Esperando a {{ activePlayer()?.name ?? 'otro jugador' }}...</h1>
+        <h1>Esperando a <app-player-name [name]="activePlayer()?.name ?? 'otro jugador'" [favoritePokemon]="activePlayer()?.favoritePokemon" />...</h1>
       } @else if (player.controls; as controls) {
         @if (controls.kind === 'pick') {
           <article class="pokemon-card">

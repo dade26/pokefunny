@@ -7,6 +7,7 @@ import { ALL_GENERATIONS } from '../src/app/models/pokemon.model';
 import { MultiplayerSetup } from '../src/app/models/multiplayer/multiplayer.model';
 import { MultiplayerGameEngine, MultiplayerGameError } from './multiplayer-game-engine';
 import { GameRoom, InMemoryRoomRepository, RoomPlayer } from './room-repository';
+import { favoritePokemonImage } from '../src/app/models/favorite-pokemon';
 
 const port = Number(process.env['MULTIPLAYER_PORT'] ?? process.env['PORT'] ?? 3000);
 const clientOrigin = process.env['CLIENT_ORIGIN'] ?? 'http://localhost:4200';
@@ -64,13 +65,18 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('joinRoom', async ({ roomCode, name, playerToken }, callback) => {
+  socket.on('joinRoom', async ({ roomCode, name, playerToken, favoritePokemon }, callback) => {
     try {
       const room = await requireRoom(roomCode);
       if (room.phase !== 'lobby' && !playerToken) throw new MultiplayerGameError('La partida ya ha empezado.');
       const player = playerToken
         ? reconnectPlayer(room, playerToken, socket)
         : addPlayer(room, String(name ?? ''), socket);
+      if (favoritePokemon !== undefined) {
+        player.favoritePokemon = favoritePokemonImage(favoritePokemon) ? favoritePokemon : undefined;
+        const participant = room.draft?.players.find((candidate) => candidate.id === player.id);
+        if (participant) participant.favoritePokemon = player.favoritePokemon;
+      }
       await socket.join(room.roomCode);
       await rooms.save(room);
       callback?.({
@@ -82,6 +88,25 @@ io.on('connection', (socket) => {
       });
       await emitRoom(room);
       console.log(`[room ${room.roomCode}] player ${player.name} joined/reconnected`);
+    } catch (error) {
+      replyError(callback, error);
+    }
+  });
+
+  socket.on('deleteRoom', async ({ roomCode, hostToken }, callback) => {
+    try {
+      const room = await requireRoom(roomCode);
+      requireHost(room, socket, hostToken);
+      await rooms.delete(room.roomCode);
+      io.to(room.roomCode).emit('roomDeleted', { roomCode: room.roomCode });
+      for (const member of await io.in(room.roomCode).fetchSockets()) {
+        if (member.data.roomCode === room.roomCode) {
+          for (const key of Object.keys(member.data)) delete member.data[key];
+        }
+        await member.leave(room.roomCode);
+      }
+      callback?.({ ok: true });
+      console.log(`[room ${room.roomCode}] deleted by host`);
     } catch (error) {
       replyError(callback, error);
     }
@@ -200,7 +225,8 @@ setInterval(async () => {
 }, 60_000).unref();
 
 httpServer.listen(port, () => {
-  console.log(`PokeFunny multiplayer server listening on http://localhost:${port}`);
+  const address = httpServer.address();
+  console.log(`PokeFunny multiplayer server listening on http://localhost:${typeof address === 'object' && address ? address.port : port}`);
 });
 
 async function createRoom(socket: Socket, setup: MultiplayerSetup): Promise<GameRoom> {
@@ -283,10 +309,13 @@ async function playerCommand(
 }
 
 async function emitRoom(room: GameRoom): Promise<void> {
+  if (await rooms.get(room.roomCode) !== room) return;
   io.to(room.roomCode).emit('roomState', engine.hostState(room, clientOrigin));
   for (const player of room.players) {
     if (!player.socketId) continue;
-    io.to(player.socketId).emit('privatePlayerState', await engine.playerState(room, player));
+    const state = await engine.playerState(room, player);
+    if (await rooms.get(room.roomCode) !== room) return;
+    io.to(player.socketId).emit('privatePlayerState', state);
   }
 }
 
@@ -298,7 +327,7 @@ async function requireRoom(roomCode: string | undefined): Promise<GameRoom> {
 
 function requireHost(room: GameRoom, socket: Socket, hostToken?: string): void {
   if (socket.data.role !== 'host' || room.hostSocketId !== socket.id || room.hostToken !== hostToken) {
-    throw new MultiplayerGameError('Solo el host puede iniciar la partida.');
+    throw new MultiplayerGameError('Solo el host puede gestionar la partida.');
   }
 }
 

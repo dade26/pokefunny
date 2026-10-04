@@ -5,6 +5,7 @@ export interface RoomPlayer {
   id: string;
   token: string;
   name: string;
+  favoritePokemon?: string;
   socketId?: string;
   connected: boolean;
 }
@@ -46,6 +47,8 @@ export class InMemoryRoomRepository implements RoomRepository {
   }
 
   async save(room: GameRoom): Promise<void> {
+    // An action awaiting async work must not recreate a room deleted by the host.
+    if (!this.rooms.has(room.roomCode)) return;
     room.updatedAt = Date.now();
     this.rooms.set(room.roomCode, room);
   }

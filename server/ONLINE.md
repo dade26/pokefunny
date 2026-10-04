@@ -1,5 +1,11 @@
 # Modo online
 
+## Borrar una partida y mostrar favoritos
+
+El host puede usar «Borrar partida» en la sala de espera, durante la partida o al terminar. Tras confirmar, se elimina la sala del servidor y su copia guardada en el dispositivo del host; los jugadores conectados reciben un aviso y sus sesiones de esa sala se limpian. Si falla la conexión, se muestra el error y el host puede volver a intentarlo.
+
+Cada móvil envía su Pokémon favorito al entrar o reconectarse. Su icono acompaña al nombre en la sala, el orden de turnos, los equipos y la vista del jugador. Se conservan las formas de Vivillon. Estos cambios requieren actualizar tanto la web como el servidor Online.
+
 ## Comprobar la versión publicada
 
 La web y el backend se despliegan por separado. Hacer push o publicar la web no actualiza necesariamente el proceso de Render. Tras cambiar el motor Online, despliega también el último commit de `main` en el servicio `pokefunny.onrender.com`.

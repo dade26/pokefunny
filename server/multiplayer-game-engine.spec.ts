@@ -64,6 +64,16 @@ function festaRoom(cardId: string): GameRoom {
 }
 
 describe('MultiplayerGameEngine', () => {
+  it('shares each mobile favorite in the lobby, private state and draft', async () => {
+    const engine = new MultiplayerGameEngine();
+    const game = room();
+    game.players[0].favoritePokemon = '25';
+    game.players[1].favoritePokemon = 'vivillon-ocean';
+    expect(engine.hostState(game).players.map((player) => player.favoritePokemon)).toEqual(['25', 'vivillon-ocean']);
+    expect((await engine.playerState(game, game.players[0])).favoritePokemon).toBe('25');
+    game.draft = await engine.createInitialDraft(game);
+    expect(game.draft.players.map((player) => player.favoritePokemon)).toEqual(['25', 'vivillon-ocean']);
+  });
   it.each(FESTA_CARDS.map((card) => card.id))('fully resolves the online card %s', async (cardId) => {
     const engine = new MultiplayerGameEngine();
     const game = festaRoom(cardId);

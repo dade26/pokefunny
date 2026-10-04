@@ -12,6 +12,7 @@ export interface MultiplayerSetup {
 }
 
 export interface MultiplayerPlayerSummary {
+  favoritePokemon?: string;
   id: string;
   name: string;
   connected: boolean;
@@ -35,6 +36,7 @@ export interface MultiplayerPlayerState {
   phase: MultiplayerRoomPhase;
   playerId: string;
   playerName: string;
+  favoritePokemon?: string;
   connected: boolean;
   myTeam: Pokemon[];
   draft?: DraftState;

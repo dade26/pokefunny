@@ -9,10 +9,11 @@ import { TeamList } from '../../components/team-list/team-list';
 import { TenPickResult } from '../../components/ten-pick-result/ten-pick-result';
 import { FestaCard as FestaCardView } from '../../components/festa-card/festa-card';
 import { TenPickService } from '../../services/ten-pick.service';
+import { PlayerName } from '../../components/player-name/player-name';
 
 @Component({
   selector: 'app-multiplayer-host',
-  imports: [FormsModule, RouterLink, DraftOrder, TeamList, TenPickResult, FestaCardView],
+  imports: [FormsModule, RouterLink, DraftOrder, TeamList, TenPickResult, FestaCardView, PlayerName],
   templateUrl: './multiplayer-host.html',
   styleUrl: './multiplayer-host.css',
 })
@@ -32,6 +33,8 @@ export class MultiplayerHost implements OnInit {
   readonly requireNicknames = signal(false);
   readonly creating = signal(false);
   readonly starting = signal(false);
+  readonly deleting = signal(false);
+  readonly confirmingDelete = signal(false);
   readonly allGenerations = ALL_GENERATIONS;
   readonly generations = signal([...ALL_GENERATIONS]);
   readonly connectedPlayers = computed(() => this.room()?.players.filter((player) => player.connected) ?? []);
@@ -58,6 +61,8 @@ export class MultiplayerHost implements OnInit {
     effect(() => {
       const state = this.room();
       if (state?.draft) untracked(() => this.drafts.saveMultiplayerDraft(state.roomCode, state.draft!));
+      const deleted = this.socket.deletedRoom();
+      if (deleted) untracked(() => this.drafts.deleteDraft(`online-${deleted.toLowerCase()}`));
     });
   }
 
@@ -101,6 +106,22 @@ export class MultiplayerHost implements OnInit {
       // Keep the lobby visible with the server error.
     } finally {
       this.starting.set(false);
+    }
+  }
+
+  async deleteRoom(): Promise<void> {
+    if (this.deleting()) return;
+    const roomCode = this.room()?.roomCode;
+    this.deleting.set(true);
+    try {
+      await this.socket.deleteRoom();
+      if (roomCode) this.drafts.deleteDraft(`online-${roomCode.toLowerCase()}`);
+      this.confirmingDelete.set(false);
+      await this.router.navigate([this.historyUrl()], { replaceUrl: true });
+    } catch {
+      // Keep the room and confirmation visible so the host can retry.
+    } finally {
+      this.deleting.set(false);
     }
   }
 

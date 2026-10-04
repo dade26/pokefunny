@@ -12,10 +12,10 @@ function room(cardId) {
   return {
     roomCode: 'UITEST', phase: 'playing', hostToken: 'test', hostConnected: true,
     setup: { mode: 'festa', teamSize: 3, filters: { generations: [1,2,3,4,5,6,7,8,9], mega: true, gigantamax: false } },
-    players: [{ id: 'p1', name: 'David', token: 'one', connected: true }, { id: 'p2', name: 'Rival', token: 'two', connected: true }],
+    players: [{ id: 'p1', name: 'David', favoritePokemon: '25', token: 'one', connected: true }, { id: 'p2', name: 'Rival', favoritePokemon: 'vivillon-ocean', token: 'two', connected: true }],
     stateVersion: 1, processedActions: [], createdAt: Date.now(), updatedAt: Date.now(),
     draft: {
-      mode: 'festa', players: [{ id: 'p1', name: 'David', team: [pokemon(6, 'Charizard')] }, { id: 'p2', name: 'Rival', team: [pokemon(94, 'Gengar')] }],
+      mode: 'festa', players: [{ id: 'p1', name: 'David', favoritePokemon: '25', team: [pokemon(6, 'Charizard')] }, { id: 'p2', name: 'Rival', favoritePokemon: 'vivillon-ocean', team: [pokemon(94, 'Gengar')] }],
       draftOrder: ['p1', 'p2'], currentRound: 2, currentTurnIndex: 0, teamSize: 3, finished: false, festaChance: 0,
       filters: { generations: [1,2,3,4,5,6,7,8,9], mega: true, gigantamax: false },
       currentTurn: { playerId: 'p1', options: [pokemon(1, 'Bulbasaur')], currentIndex: 0, skippedPokemonIds: [], finished: false },
@@ -78,7 +78,40 @@ for (const [browserType, width] of [[chromium, 1280], [webkit, 390]]) {
     await expect(page.getByRole('heading', { name: 'Recuperando tu turno' })).toBeVisible();
     await show({ ...legacy, canAct: false });
     await expect(page.getByRole('heading', { name: /Esperando a/ })).toBeVisible();
+    await page.locator('header app-player-name img').evaluate(image => image.decode());
+    assert.equal(await page.locator('header app-player-name img').getAttribute('src'), 'images/pokemon/v1/25.webp');
+    await page.evaluate(() => {
+      const component = window.ng.getComponent(document.querySelector('app-multiplayer-play'));
+      component.socket.deletedRoom.set('UITEST');
+      component.socket.playerState.set(null);
+      window.ng.applyChanges(component);
+    });
+    await expect(page.getByRole('heading', { name: 'Partida borrada' })).toBeVisible();
+    await expect(page.locator('.controller')).toHaveCount(0);
+
+    await page.goto(`${baseUrl}/host/UITEST`);
+    await page.waitForFunction(() => !!window.ng?.getComponent(document.querySelector('app-multiplayer-host')));
+    const hostGame = room('random-change-form');
+    await page.evaluate(snapshot => {
+      const component = window.ng.getComponent(document.querySelector('app-multiplayer-host'));
+      component.socket.roomState.set(snapshot);
+      component.socket.error.set('');
+      component.socket.deleteRoom = async () => { window.deletedRoom = snapshot.roomCode; };
+      window.ng.applyChanges(component);
+    }, engine.hostState(hostGame));
+    await page.locator('app-draft-order app-player-name img').first().evaluate(image => image.decode());
+    await page.locator('app-team-list app-player-name img').last().evaluate(image => image.decode());
+    await page.getByRole('button', { name: 'Borrar partida', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Sí, borrar partida' })).toBeVisible();
+    assert(!await page.evaluate(() => window.deletedRoom));
+    await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Sí, borrar partida' })).toHaveCount(0);
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Host overflow');
+    await page.screenshot({ path: `test-results/online-cards/host-favorites-${browserType.name()}-${width}.png`, fullPage: true });
+    await page.getByRole('button', { name: 'Borrar partida', exact: true }).click();
+    await page.getByRole('button', { name: 'Sí, borrar partida' }).click();
+    await page.waitForFunction(() => window.deletedRoom === 'UITEST');
     assert.deepEqual(errors, [], `${browserType.name()} page errors`);
-    console.log(`${browserType.name()} ${width}px: all ${FESTA_CARDS.length} cards and recovery states rendered`);
+    console.log(`${browserType.name()} ${width}px: all ${FESTA_CARDS.length} cards, favorites and room deletion checked`);
   } finally { await browser.close(); }
 }

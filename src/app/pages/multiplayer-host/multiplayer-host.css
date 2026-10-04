@@ -14,6 +14,10 @@ input, select { min-height: 42px; border: 2px solid var(--border-strong, #111); 
 .primary:hover:not(:disabled) { background: #f4bb2f; }
 .primary:disabled { opacity: .55; cursor: not-allowed; }
 .error { color: var(--error, #9b1c31); font-weight: 800; }
+.room-actions { margin: 16px 0; }
+.room-actions button { margin: 4px 8px 4px 0; }
+.danger { min-height: 44px; padding: 8px 16px; border: 2px solid var(--error, #9b1c31); border-radius: 8px; background: var(--surface, #fff); color: var(--error, #9b1c31); font: inherit; font-weight: 800; cursor: pointer; }
+.danger:disabled { opacity: .55; cursor: wait; }
 .room-banner { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; background: var(--online-banner-bg); color: var(--online-banner-text); border: 2px solid var(--online-banner-border); box-shadow: 4px 4px 0 var(--online-banner-shadow); padding: 16px; border-radius: 8px; margin: 18px 0; }
 .room-banner span { display: block; font-size: .8rem; opacity: .8; }
 .room-banner strong { font-size: clamp(2rem, 7vw, 4rem); letter-spacing: 0; }

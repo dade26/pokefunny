@@ -16,7 +16,7 @@ describe('Online card controller recovery', () => {
 
   function setup(initial: MultiplayerPlayerState) {
     const socket = {
-      playerState: signal(initial), error: signal(''), connected: signal(true),
+      playerState: signal<MultiplayerPlayerState | null>(initial), error: signal(''), connected: signal(true), deletedRoom: signal(''),
       roomCode: signal('TEST12'), reconnectPlayer: vi.fn().mockResolvedValue(true),
     };
     TestBed.configureTestingModule({
@@ -46,6 +46,16 @@ describe('Online card controller recovery', () => {
     const { controller } = setup({ ...state, controls: undefined });
     expect(controller().textContent).toContain('Recuperando tu turno');
     expect(controller().querySelector('button')).not.toBeNull();
+  });
+
+  it('shows the deletion notice instead of reconnecting or allowing actions', () => {
+    const { fixture, socket } = setup(state);
+    socket.deletedRoom.set('TEST12');
+    socket.playerState.set(null);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Partida borrada');
+    expect(fixture.nativeElement.textContent).not.toContain('Reconectando');
+    expect(fixture.nativeElement.querySelector('.controller')).toBeNull();
   });
 
   it('continues to show a normal wait message to players who cannot act', () => {

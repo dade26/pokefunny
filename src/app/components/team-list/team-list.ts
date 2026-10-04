@@ -6,6 +6,7 @@ import { DraftState, FestaHeldItem, Player, Pokemon, typeIcon } from '../../mode
 import { PokepasteError, PokepasteService } from '../../services/pokepaste.service';
 import { fixedFormItem } from '../../models/fixed-form-items';
 import { ItemSpriteService } from '../../services/item-sprite.service';
+import { PlayerName } from '../player-name/player-name';
 
 interface PasteState {
   loading: boolean;
@@ -19,7 +20,7 @@ interface PasteState {
 
 @Component({
   selector: 'app-team-list',
-  imports: [FormsModule, LucideCopy, LucideFileText, LucideX],
+  imports: [FormsModule, LucideCopy, LucideFileText, LucideX, PlayerName],
   templateUrl: './team-list.html',
   styleUrl: './team-list.css',
   host: { '[class.tournament-team]': 'tournamentView' },

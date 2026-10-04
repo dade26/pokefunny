@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import {
   MultiplayerPlayerState,
@@ -7,6 +7,7 @@ import {
 } from '../../models/multiplayer/multiplayer.model';
 import { DraftState, Pokemon } from '../../models/pokemon.model';
 import { pokemonArtworkUrl } from '../../models/pokemon-images';
+import { FavoritePokemonService } from '../favorite-pokemon.service';
 
 interface Ack<T> {
   ok: boolean;
@@ -24,6 +25,8 @@ const PLAYER_TOKEN_KEY = 'pokefunny.multiplayer.player';
 
 @Injectable({ providedIn: 'root' })
 export class MultiplayerSocketService {
+  private readonly favorites = inject(FavoritePokemonService);
+  readonly deletedRoom = signal('');
   readonly roomState = signal<MultiplayerRoomState | null>(null);
   readonly playerState = signal<MultiplayerPlayerState | null>(null);
   readonly error = signal('');
@@ -49,17 +52,30 @@ export class MultiplayerSocketService {
     });
     this.socket.on('disconnect', () => this.connected.set(false));
     this.socket.on('roomState', (state: MultiplayerRoomState) => {
+      if (this.deletedRoom() === state.roomCode) return;
       this.restoreDraftImages(state.draft);
       this.roomState.set(state);
     });
     this.socket.on('privatePlayerState', (state: MultiplayerPlayerState) => {
+      if (this.deletedRoom() === state.roomCode) return;
       this.restorePlayerImages(state);
       this.playerState.set(state);
+    });
+    this.socket.on('roomDeleted', ({ roomCode }: { roomCode: string }) => {
+      if (this.session?.roomCode !== roomCode && this.roomCode() !== roomCode) return;
+      this.deletedRoom.set(roomCode);
+      this.session = undefined;
+      this.roomState.set(null);
+      this.playerState.set(null);
+      localStorage.removeItem(this.hostTokenKey(roomCode));
+      localStorage.removeItem(this.playerTokenKey(roomCode));
+      this.error.set('');
     });
     return this.socket;
   }
 
   async createRoom(setup: MultiplayerSetup): Promise<MultiplayerRoomState> {
+    this.deletedRoom.set('');
     const response = await this.emit<MultiplayerRoomState>('createRoom', setup);
     if (response.hostToken && response.roomCode) {
       localStorage.setItem(this.hostTokenKey(response.roomCode), response.hostToken);
@@ -76,6 +92,7 @@ export class MultiplayerSocketService {
     const hostToken = localStorage.getItem(this.hostTokenKey(roomCode));
     if (!hostToken) return false;
     const response = await this.emit<MultiplayerRoomState>('reconnectHost', { roomCode, hostToken });
+    if (this.deletedRoom() === roomCode) return false;
     if (response.state) {
       this.restoreDraftImages(response.state.draft);
       this.roomState.set(response.state);
@@ -86,7 +103,8 @@ export class MultiplayerSocketService {
 
   async joinRoom(roomCode: string, name: string): Promise<MultiplayerPlayerState> {
     const playerToken = localStorage.getItem(this.playerTokenKey(roomCode));
-    const response = await this.emit<MultiplayerPlayerState>('joinRoom', { roomCode, name, playerToken });
+    const response = await this.emit<MultiplayerPlayerState>('joinRoom', { roomCode, name, playerToken, favoritePokemon: this.favoriteKey() });
+    this.deletedRoom.set('');
     if (response.playerToken && response.roomCode) {
       localStorage.setItem(this.playerTokenKey(response.roomCode), response.playerToken);
     }
@@ -101,7 +119,9 @@ export class MultiplayerSocketService {
   async reconnectPlayer(roomCode: string): Promise<boolean> {
     const playerToken = localStorage.getItem(this.playerTokenKey(roomCode));
     if (!playerToken) return false;
-    const response = await this.emit<MultiplayerPlayerState>('joinRoom', { roomCode, playerToken });
+    const response = await this.emit<MultiplayerPlayerState>('joinRoom', { roomCode, playerToken, favoritePokemon: this.favoriteKey() });
+    if (this.deletedRoom() === roomCode) return false;
+    this.deletedRoom.set('');
     if (response.state) {
       this.restorePlayerImages(response.state);
       this.playerState.set(response.state);
@@ -113,6 +133,15 @@ export class MultiplayerSocketService {
   startGame(): Promise<void> {
     const roomCode = this.roomCode();
     return this.command('startGame', { roomCode, hostToken: localStorage.getItem(this.hostTokenKey(roomCode)) });
+  }
+
+  deleteRoom(): Promise<void> {
+    const roomCode = this.roomCode();
+    return this.command('deleteRoom', { roomCode, hostToken: localStorage.getItem(this.hostTokenKey(roomCode)) });
+  }
+
+  private favoriteKey(): string | undefined {
+    return this.favorites.favorite()?.key ?? localStorage.getItem('pokefunny.favoritePokemon') ?? undefined;
   }
 
   pickPokemon(optionId: string, nickname = ''): Promise<void> {

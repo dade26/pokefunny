@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { PokemonService } from './pokemon.service';
 import { pokemonArtworkUrl } from '../models/pokemon-images';
+import { vivillonForms } from '../models/favorite-pokemon';
 
 export interface FavoritePokemon {
   id: number;
@@ -10,11 +11,6 @@ export interface FavoritePokemon {
 }
 
 const storageKey = 'pokefunny.favoritePokemon';
-const vivillonForms = [
-  'icy-snow', 'polar', 'tundra', 'continental', 'garden', 'elegant', 'modern', 'marine',
-  'archipelago', 'high-plains', 'sandstorm', 'river', 'monsoon', 'savanna', 'sun', 'ocean',
-  'jungle', 'fancy', 'poke-ball',
-];
 
 @Injectable({ providedIn: 'root' })
 export class FavoritePokemonService {
