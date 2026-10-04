@@ -1,13 +1,13 @@
 import { LanguageService } from '../../services/language.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { LucideEye, LucidePlay, LucidePlus, LucideTrash2 } from '@lucide/angular';
+import { LucideEye, LucideGlobe, LucidePlay, LucidePlus, LucideTrash2 } from '@lucide/angular';
 import { SavedDraft } from '../../models/pokemon.model';
 import { TenPickService } from '../../services/ten-pick.service';
 
 @Component({
   selector: 'app-draft-history',
-  imports: [RouterLink, LucideEye, LucidePlay, LucidePlus, LucideTrash2],
+  imports: [RouterLink, LucideEye, LucideGlobe, LucidePlay, LucidePlus, LucideTrash2],
   templateUrl: './draft-history.html',
   styleUrl: './draft-history.css',
 })

@@ -77,6 +77,8 @@ export interface FestaCard {
 export interface ActiveFestaCard {
   cardId: string;
   phase: 'revealed' | 'resolving';
+  affectedPlayerId?: string;
+  resolvingPlayerId?: string;
   rivalPlayerId?: string;
   target?: { playerId: string; index: number };
   item?: FestaHeldItem;

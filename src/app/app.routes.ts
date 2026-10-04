@@ -38,6 +38,37 @@ export const routes: Routes = [
     },
   },
   {
+    path: 'ten-pick/multiplayer',
+    redirectTo: 'ten-pick/online',
+    pathMatch: 'full',
+  },
+  ...(['ten-pick', 'ten-pick-monotype', 'ten-pick-festa'] as const).map((base) => ({
+    path: `${base}/online`,
+    loadComponent: () => import('./pages/multiplayer-host/multiplayer-host').then((module) => module.MultiplayerHost),
+    data: {
+      mode: base === 'ten-pick-festa' ? 'festa' : base === 'ten-pick-monotype' ? 'monotype' : 'normal',
+      title: 'Ten Pick Multiplayer | Pokefunny',
+      description: 'Create an online Ten Pick room and play with player devices as controllers.',
+      canonicalPath: `/${base}/online`,
+      robots: 'noindex, follow',
+    },
+  })),
+  {
+    path: 'host/:roomCode',
+    loadComponent: () => import('./pages/multiplayer-host/multiplayer-host').then((module) => module.MultiplayerHost),
+    data: { title: 'Pokefunny Multiplayer Host', robots: 'noindex, follow' },
+  },
+  {
+    path: 'join/:roomCode',
+    loadComponent: () => import('./pages/multiplayer-join/multiplayer-join').then((module) => module.MultiplayerJoin),
+    data: { title: 'Join Pokefunny Multiplayer', robots: 'noindex, follow' },
+  },
+  {
+    path: 'play/:roomCode',
+    loadComponent: () => import('./pages/multiplayer-play/multiplayer-play').then((module) => module.MultiplayerPlay),
+    data: { title: 'Pokefunny Player Controller', robots: 'noindex, follow' },
+  },
+  {
     path: 'ten-pick/drafts',
     component: DraftHistory,
     data: {

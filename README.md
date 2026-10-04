@@ -2,6 +2,8 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.1.1.
 
+For online rooms, local network play and public deployment, see [Modo online](server/ONLINE.md).
+
 ## Development server
 
 To start a local development server, run:

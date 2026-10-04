@@ -1,5 +1,6 @@
 .history { max-width: 1040px; margin: 0 auto; padding: 32px 24px; animation: reveal 250ms ease both; }
 .heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; margin-bottom: 28px; }
+.heading-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 h1 { margin: 0; font-size: 30px; }
 a, button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 14px; border: 2px solid var(--border, #a5b4ab); border-radius: 4px; background: var(--surface, #fff); color: var(--text, #293631); text-decoration: none; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
 a:hover, button:hover { background: var(--hover, #e5eee8); }

@@ -2,6 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { Injectable, inject, signal } from '@angular/core';
 
 const en = {
+  playOnline: 'Play Online',
   festaZoroarkName: 'It was Zoroark!?',
   festaZoroarkDescription: 'A random Pokemon on your team transforms into Zoroark.',
   festaDittoName: 'It was Ditto!?',
@@ -305,6 +306,7 @@ const es: Record<TranslationKey, string> = {
   festaCardTradeAnyDescription: 'Intercambia dos Pokémon elegidos por dos jugadores cualesquiera.',
   festaCardTradeLastName: 'Intercambia tu \u00faltima elecci\u00f3n',
   festaCardTradeLastDescription: 'Intercambia el último Pokémon que hayas recibido por un Pokémon de otro jugador.',
+  playOnline: 'Jugar Online',
   newDraft: 'Nuevo draft', noDrafts: 'No hay drafts guardados', completed: 'Terminado', inProgress: 'En curso',
   pokemonPicked: 'Pokémon elegidos', deleteQuestion: '\u00bfBorrar este draft?', delete: 'Borrar', cancel: 'Cancelar',
   viewTeams: 'Ver equipos', continue: 'Continuar', deleteDraft: 'Borrar draft', deleteDraftFor: 'Borrar draft de {name}',

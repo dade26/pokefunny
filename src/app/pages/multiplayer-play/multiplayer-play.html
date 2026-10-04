@@ -1,0 +1,107 @@
+<main class="play">
+  @if (!state()) {
+    <section class="status">
+      <h1>Reconectando...</h1>
+      @if (socket.error()) {
+        <p>{{ socket.error() }}</p>
+        <a [routerLink]="['/join', socket.roomCode()]">Volver a entrar</a>
+      }
+    </section>
+  } @else {
+    @let player = state()!;
+    <header>
+      <div>
+        <span>Sala {{ player.roomCode }}</span>
+        <strong>{{ player.playerName }}</strong>
+      </div>
+      <small [class.connected]="socket.connected()">{{ socket.connected() ? 'online' : 'offline' }}</small>
+    </header>
+
+    @if (player.draft; as draft) {
+      <section class="team-strip">
+        <app-team-list [state]="draft" [playerId]="player.playerId" [allowExport]="player.phase === 'finished'" />
+      </section>
+    }
+
+    <section class="controller">
+      @if (player.phase === 'lobby') {
+        <h1>Esperando al host...</h1>
+      } @else if (player.phase === 'finished') {
+        <h1>Tu equipo final</h1>
+      } @else if (!player.canAct) {
+        <h1>Esperando a {{ activePlayer()?.name ?? 'otro jugador' }}...</h1>
+      } @else if (player.controls; as controls) {
+        @if (controls.kind === 'pick') {
+          <article class="pokemon-card">
+            <span>{{ controls.currentIndex + 1 }} / {{ controls.total }}</span>
+            <img [src]="controls.option.artwork || controls.option.sprite" [alt]="controls.option.name" />
+            <h1>{{ controls.option.name }}</h1>
+            @if (requireNicknames()) {
+              <label>Mote
+                <input maxlength="18" [ngModel]="nickname()" (ngModelChange)="nickname.set($event)" />
+              </label>
+            }
+            <button class="pick" type="button" [disabled]="requireNicknames() && !nickname().trim()" (click)="pick(controls.turnId)">Elegir</button>
+            @if (controls.canSkip) {
+              <button class="skip" type="button" (click)="skip(controls.turnId)">Skip</button>
+            } @else {
+              <p>Último encuentro: debes quedártelo.</p>
+            }
+          </article>
+        } @else if (controls.kind === 'festa-revealed' && activeCard(); as card) {
+          <article class="festa">
+            <app-festa-card [card]="card" />
+            <button class="pick" type="button" (click)="socket.startFestaResolution()">Resolver</button>
+          </article>
+        } @else if (controls.kind === 'festa-pokemon-choice' && activeCard(); as card) {
+          <article class="festa">
+            <app-festa-card [card]="card" />
+            <div class="choice-grid">
+              @for (choice of controls.choices; track choice.id) {
+                <button type="button" (click)="socket.resolveFestaPokemon(choice.id, nickname())">
+                  <img [src]="choice.artwork || choice.sprite" [alt]="choice.name" />
+                  <span>{{ choice.name }}</span>
+                </button>
+              }
+            </div>
+          </article>
+        } @else if (controls.kind === 'festa-reroll') {
+          <article class="festa">
+            <h1>Elige un pick para rerollear</h1>
+            <div class="choice-grid">
+              @for (pokemon of controls.team; track $index) {
+                <button type="button" (click)="socket.resolveFestaReroll($index)">
+                  <img [src]="pokemon.artwork || pokemon.sprite" [alt]="pokemon.name" />
+                  <span>{{ pokemon.name }}</span>
+                </button>
+              }
+            </div>
+          </article>
+        } @else if (controls.kind === 'festa-trade-any') {
+          <article class="festa">
+            <h1>Intercambio</h1>
+            <select [ngModel]="selectedFirst()" (ngModelChange)="selectedFirst.set($event)">
+              <option value="">Primer Pokémon</option>
+              @for (pick of allPicks(); track pick.key) { <option [value]="pick.key">{{ pick.player.name }} - {{ pick.pokemonName }}</option> }
+            </select>
+            <select [ngModel]="selectedSecond()" (ngModelChange)="selectedSecond.set($event)">
+              <option value="">Segundo Pokémon</option>
+              @for (pick of allPicks(); track pick.key) { <option [value]="pick.key">{{ pick.player.name }} - {{ pick.pokemonName }}</option> }
+            </select>
+            <button class="pick" type="button" [disabled]="!selectedFirst() || !selectedSecond() || selectedFirst() === selectedSecond()" (click)="socket.resolveFestaTrade(selectedFirst(), selectedSecond())">Confirmar</button>
+          </article>
+        } @else if (controls.kind === 'festa-trade-last') {
+          <article class="festa">
+            <h1>Cambia tu último pick</h1>
+            <select [ngModel]="selectedSecond()" (ngModelChange)="selectedSecond.set($event)">
+              <option value="">Pokémon rival</option>
+              @for (pick of rivalPicks(); track pick.key) { <option [value]="pick.key">{{ pick.player.name }} - {{ pick.pokemonName }}</option> }
+            </select>
+            <button class="pick" type="button" [disabled]="!selectedSecond()" (click)="socket.resolveFestaTrade('', selectedSecond())">Confirmar</button>
+          </article>
+        }
+      }
+      @if (socket.error()) { <p class="error">{{ socket.error() }}</p> }
+    </section>
+  }
+</main>

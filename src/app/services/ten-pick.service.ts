@@ -178,6 +178,8 @@ export class TenPickService {
     const state = this.state();
     if (!state?.activeFestaCard || state.activeFestaCard.phase === 'resolving') return;
     const card = getFestaCard(state.activeFestaCard.cardId);
+    const affectedPlayer = this.getFestaAffectedPlayer(state);
+    const defaultResolvingPlayerId = affectedPlayer?.id ?? this.getCurrentPlayer(state).id;
     if (card && this.isFestaTransformation(card.effect) && !this.getFestaTransformationTargets(state, card.effect).length) {
       this.resolveFestaNoEffect('No eligible Pokemon for this Festa Card.');
       return;
@@ -189,21 +191,37 @@ export class TenPickService {
         this.resolveFestaNoEffect('No eligible Pokemon for this Festa Card.');
         return;
       }
-      this.commit({ ...state, activeFestaCard: { ...state.activeFestaCard, phase: 'resolving' } });
+      this.commit({ ...state, activeFestaCard: {
+        ...state.activeFestaCard,
+        phase: 'resolving',
+        affectedPlayerId: affectedPlayer?.id,
+        resolvingPlayerId: defaultResolvingPlayerId,
+      } });
       return;
     }
     if (card && this.isOpponentChoiceEffect(card.effect)) {
-      const currentPlayer = this.getCurrentPlayer(state);
+      const currentPlayer = affectedPlayer ?? this.getCurrentPlayer(state);
       const rivals = state.players.filter((player) => player.id !== currentPlayer.id);
       const rival = rivals[Math.floor(Math.random() * rivals.length)];
       if (!rival) {
         this.resolveFestaNoEffect('Rival choice could not resolve: no rival player.');
         return;
       }
-      this.commit({ ...state, activeFestaCard: { ...state.activeFestaCard, phase: 'resolving', rivalPlayerId: rival.id } });
+      this.commit({ ...state, activeFestaCard: {
+        ...state.activeFestaCard,
+        phase: 'resolving',
+        affectedPlayerId: currentPlayer.id,
+        resolvingPlayerId: rival.id,
+        rivalPlayerId: rival.id,
+      } });
       return;
     }
-    this.commit({ ...state, activeFestaCard: { ...state.activeFestaCard, phase: 'resolving' } });
+    this.commit({ ...state, activeFestaCard: {
+      ...state.activeFestaCard,
+      phase: 'resolving',
+      affectedPlayerId: affectedPlayer?.id,
+      resolvingPlayerId: defaultResolvingPlayerId,
+    } });
   }
 
   async getFestaPokemonChoices(kind: FestaPokemonChoiceKind): Promise<Pokemon[]> {
@@ -445,7 +463,7 @@ export class TenPickService {
       if (this.state() !== state) return;
       const receivedPokemon = this.withNickname(withFixedFormItem(pokemon), nickname, state);
       if (!receivedPokemon) return;
-      const player = this.getCurrentPlayer(state);
+      const player = this.getFestaAffectedPlayer(state) ?? this.getCurrentPlayer(state);
       const rival = this.getFestaRival(state);
       const players = state.players.map((current) =>
         current.id === player.id ? { ...current, lastPickIndex: current.team.length, team: [...current.team, receivedPokemon] } : current,
@@ -666,8 +684,35 @@ export class TenPickService {
   }
 
   getFestaRival(state: DraftState): Player | null {
-    const rivalId = state.activeFestaCard?.rivalPlayerId;
+    const rivalId = state.activeFestaCard?.rivalPlayerId ?? (
+      state.activeFestaCard && getFestaCard(state.activeFestaCard.cardId)
+        && this.isOpponentChoiceEffect(getFestaCard(state.activeFestaCard.cardId)!.effect)
+        ? state.activeFestaCard.resolvingPlayerId
+        : undefined
+    );
     return rivalId ? state.players.find((player) => player.id === rivalId) ?? null : null;
+  }
+
+  getFestaAffectedPlayer(state: DraftState): Player | null {
+    const active = state.activeFestaCard;
+    const affectedPlayerId = active?.affectedPlayerId ?? state.currentTurn?.playerId;
+    return affectedPlayerId ? state.players.find((player) => player.id === affectedPlayerId) ?? null : null;
+  }
+
+  getFestaResolvingPlayer(state: DraftState): Player | null {
+    const active = state.activeFestaCard;
+    if (!active) return null;
+    const card = getFestaCard(active.cardId);
+    const resolvingPlayerId = active.resolvingPlayerId ?? (
+      card && this.isOpponentChoiceEffect(card.effect) ? active.rivalPlayerId : undefined
+    ) ?? active.affectedPlayerId ?? state.currentTurn?.playerId;
+    return resolvingPlayerId ? state.players.find((player) => player.id === resolvingPlayerId) ?? null : null;
+  }
+
+  canResolveActiveFesta(playerId: string, state = this.state()): boolean {
+    return !!state?.activeFestaCard
+      && state.activeFestaCard.phase === 'resolving'
+      && this.getFestaResolvingPlayer(state)?.id === playerId;
   }
 
   getFestaPokemonChoiceKind(effect: FestaEffectType): FestaPokemonChoiceKind | null {

@@ -1,0 +1,12 @@
+<main class="join">
+  <a routerLink="/ten-pick/multiplayer">Crear sala</a>
+  <section>
+    <span>Sala {{ roomCode() }}</span>
+    <h1>Únete a la partida</h1>
+    <label>Nombre
+      <input maxlength="24" autocomplete="name" [ngModel]="name()" (ngModelChange)="name.set($event)" (keydown.enter)="join()" />
+    </label>
+    <button type="button" [disabled]="!name().trim() || joining()" (click)="join()">{{ joining() ? 'Entrando...' : 'Entrar' }}</button>
+    @if (socket.error()) { <p class="error">{{ socket.error() }}</p> }
+  </section>
+</main>

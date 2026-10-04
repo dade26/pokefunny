@@ -1,0 +1,92 @@
+<main class="multiplayer-host">
+  <a class="back" [routerLink]="historyUrl()">{{ modeName() }}</a>
+
+  @if (!room()) {
+    <section class="setup">
+      <h1>{{ modeName() }} Online</h1>
+      <p>Crea la sala y comparte el enlace. Cada jugador elige su nombre al entrar; el número de jugadores se decide al empezar.</p>
+      <div class="setup-grid">
+        <label>Pokémon por jugador
+          <input type="number" min="1" max="12" [ngModel]="teamSize()" (ngModelChange)="teamSize.set(+$event)" />
+        </label>
+        @if (mode() === 'festa') {
+          <label>Probabilidad FESTA
+            <input type="number" min="0" max="100" [ngModel]="festaChance()" (ngModelChange)="festaChance.set(+$event)" />
+          </label>
+        }
+        <label class="check"><input type="checkbox" [ngModel]="requireNicknames()" (ngModelChange)="requireNicknames.set($event)" /> Motes obligatorios</label>
+        <label class="check"><input type="checkbox" [ngModel]="mega()" (ngModelChange)="mega.set($event)" /> Mega</label>
+        <label class="check"><input type="checkbox" [ngModel]="gigantamax()" (ngModelChange)="gigantamax.set($event)" /> Gigantamax</label>
+      </div>
+      <fieldset class="generations">
+        <legend>Generaciones</legend>
+        @for (generation of allGenerations; track generation) {
+          <label class="check"><input type="checkbox" [checked]="generations().includes(generation)" (change)="toggleGeneration(generation)" /> Gen {{ generation }}</label>
+        }
+      </fieldset>
+      @if (!generations().length) { <p class="error">Selecciona al menos una generación.</p> }
+      <button class="primary" type="button" [disabled]="creating() || !generations().length" (click)="createRoom()">{{ creating() ? 'Creando...' : 'Crear sala' }}</button>
+      @if (socket.error()) { <p class="error">{{ socket.error() }}</p> }
+    </section>
+  } @else {
+    @let state = room()!;
+    <section class="room-banner">
+      <div>
+        <span>Sala</span>
+        <strong>{{ state.roomCode }}</strong>
+      </div>
+      <div class="join-link">
+        <span>Enlace</span>
+        <code>{{ originJoinUrl() }}</code>
+      </div>
+    </section>
+
+    @if (state.phase === 'lobby') {
+      <section class="lobby">
+        <h1>Sala de espera · {{ connectedPlayers().length }} jugadores</h1>
+        <p>Comparte el enlace y empieza cuando estéis todos. Participarán los jugadores conectados en ese momento.</p>
+        <p>El host dirige la sala y observa la partida. Para jugar también, abre el enlace en otro navegador o dispositivo.</p>
+        <div class="players">
+          @for (player of state.players; track player.id) {
+            <div><strong>{{ player.name }}</strong><span [class.offline]="!player.connected">{{ player.connected ? 'Conectado' : 'Desconectado' }}</span></div>
+          } @empty {
+            <p>Esperando jugadores...</p>
+          }
+        </div>
+        <button class="primary" type="button" [disabled]="starting() || connectedPlayers().length < 1" (click)="startGame()">{{ starting() ? 'Empezando...' : 'Empezar partida (' + connectedPlayers().length + ')' }}</button>
+        @if (socket.error()) { <p class="error" role="alert">{{ socket.error() }}</p> }
+      </section>
+    } @else if (state.draft; as draft) {
+      <section class="board" [class.finished]="state.phase === 'finished'">
+        @if (state.phase !== 'finished') {
+          <aside>
+            <app-draft-order [state]="draft" />
+            <app-team-list [state]="draft" [activePlayerId]="state.activePlayerId ?? ''" />
+          </aside>
+        }
+        <section class="stage">
+          @if (state.phase === 'finished') {
+            <h1>Equipos finales</h1>
+            <app-team-list [state]="draft" [allowExport]="true" />
+          } @else if (draft.activeFestaCard && activeFestaCard(); as card) {
+            <article class="watch-card">
+              <h1>Turno de {{ activePlayer()?.name }}</h1>
+              <app-festa-card [card]="card" />
+              <p>El jugador activo resuelve la carta desde su dispositivo.</p>
+            </article>
+          } @else if (draft.currentTurn?.finished) {
+            <app-ten-pick-result [turn]="draft.currentTurn!" [playerName]="activePlayer()?.name ?? 'Jugador'" />
+          } @else if (currentPokemon(); as pokemon) {
+            <article class="watch-card">
+              <h1>Turno de {{ activePlayer()?.name }}</h1>
+              <strong>{{ draft.currentTurn!.currentIndex + 1 }} / {{ draft.currentTurn!.options.length }}</strong>
+              <img [src]="pokemon.artwork || pokemon.sprite" [alt]="pokemon.name" />
+              <h2>{{ pokemon.name }}</h2>
+              <p>El host solo observa. Las decisiones se toman en el dispositivo del jugador.</p>
+            </article>
+          }
+        </section>
+      </section>
+    }
+  }
+</main>

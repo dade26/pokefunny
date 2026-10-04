@@ -1,7 +1,10 @@
 <main class="history">
   <div class="heading">
     <div><h1>{{ monotype ? 'Ten Pick Monotype' : festa ? 'Ten Pick Festa' : i18n.t('myDrafts') }}</h1></div>
-    <a class="new-draft" [routerLink]="routeBase + '/new'"><svg lucidePlus aria-hidden="true"></svg>{{ i18n.t('newDraft') }}</a>
+    <div class="heading-actions">
+      <a class="new-draft" [routerLink]="routeBase + '/new'"><svg lucidePlus aria-hidden="true"></svg>{{ i18n.t('newDraft') }}</a>
+      <a [routerLink]="routeBase + '/online'"><svg lucideGlobe aria-hidden="true"></svg>{{ i18n.t('playOnline') }}</a>
+    </div>
   </div>
   @if (!drafts().length) {
     <div class="empty"><svg lucidePlay aria-hidden="true"></svg><h2>{{ i18n.t('noDrafts') }}</h2></div>

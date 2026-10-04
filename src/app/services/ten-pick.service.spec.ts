@@ -578,17 +578,28 @@ describe('TenPickService saved drafts', () => {
     await service.startDraft({ playerNames: ['Current', 'Rival'], teamSize: 6, mode: 'festa', festaChance: 0 });
     await service.ensureTurn();
     const state = service.state()!;
-    service.state.set({ ...state, draftOrder: state.players.map((player) => player.id), activeFestaCard: { cardId: 'opponent-fully-evolved', phase: 'revealed' } });
+    service.state.set({
+      ...state,
+      draftOrder: state.players.map((player) => player.id),
+      currentTurn: { ...state.currentTurn!, playerId: state.players[0].id },
+      activeFestaCard: { cardId: 'opponent-fully-evolved', phase: 'revealed' },
+    });
     service.startFestaResolution();
     expect(service.state()?.activeFestaCard).toEqual({
       cardId: 'opponent-fully-evolved',
       phase: 'resolving',
+      affectedPlayerId: state.players[0].id,
+      resolvingPlayerId: state.players[1].id,
       rivalPlayerId: state.players[1].id,
     });
+    expect(service.getFestaAffectedPlayer(service.state()!)?.id).toBe(state.players[0].id);
+    expect(service.getFestaResolvingPlayer(service.state()!)?.id).toBe(state.players[1].id);
+    expect(service.canResolveActiveFesta(state.players[0].id)).toBe(false);
+    expect(service.canResolveActiveFesta(state.players[1].id)).toBe(true);
   });
 
   it.each(['opponent-fully-evolved', 'opponent-first-stage', 'opponent-minor-legendary'])(
-    '%s gives the rival choice to the current player and preserves the rival after reopening', async (cardId) => {
+    '%s is resolved by the chosen rival for the current player and preserves the rival after reopening', async (cardId) => {
       const id = await service.startDraft({ playerNames: ['Current', 'Rival', 'Other rival'], teamSize: 6, mode: 'festa', festaChance: 0 });
       await service.ensureTurn();
       const state = service.state()!;
@@ -597,9 +608,16 @@ describe('TenPickService saved drafts', () => {
         activeFestaCard: { cardId, phase: 'revealed' } });
       const random = vi.spyOn(Math, 'random').mockReturnValue(0.99);
       try { service.startFestaResolution(); } finally { random.mockRestore(); }
+      expect(service.state()?.activeFestaCard).toMatchObject({
+        affectedPlayerId: state.players[0].id,
+        resolvingPlayerId: state.players[2].id,
+        rivalPlayerId: state.players[2].id,
+      });
       const reloaded = new TenPickService({ getRandomOptions } as unknown as PokemonPoolService, pokemonService as never, new StorageService());
       reloaded.openDraft(id);
       expect(reloaded.getFestaRival(reloaded.state()!)?.id).toBe(state.players[2].id);
+      expect(reloaded.getFestaAffectedPlayer(reloaded.state()!)?.id).toBe(state.players[0].id);
+      expect(reloaded.getFestaResolvingPlayer(reloaded.state()!)?.id).toBe(state.players[2].id);
       reloaded.startFestaResolution();
       expect(reloaded.getFestaRival(reloaded.state()!)?.id).toBe(state.players[2].id);
       pokemonService.getPokemon.mockResolvedValue(options[5]);
@@ -610,6 +628,30 @@ describe('TenPickService saved drafts', () => {
       expect(reloaded.state()?.history?.at(-1)?.message).toContain('Other rival selected');
     },
   );
+
+  it('uses the resolving rival nickname when an opponent choice adds Pokemon to the affected player', async () => {
+    await service.startDraft({ playerNames: ['David', 'Aneta'], teamSize: 6, mode: 'festa', festaChance: 0, requireNicknames: true });
+    await service.ensureTurn();
+    const state = service.state()!;
+    service.state.set({
+      ...state,
+      draftOrder: state.players.map((player) => player.id),
+      currentTurn: { ...state.currentTurn!, playerId: state.players[0].id },
+      players: state.players.map((player, index) => ({ ...player, team: [options[index]] })),
+      activeFestaCard: { cardId: 'opponent-first-stage', phase: 'revealed' },
+    });
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    service.startFestaResolution();
+    expect(service.canResolveActiveFesta(state.players[0].id)).toBe(false);
+    expect(service.canResolveActiveFesta(state.players[1].id)).toBe(true);
+
+    pokemonService.getPokemon.mockResolvedValue(options[5]);
+    await service.resolveFestaPokemonChoice(options[5].id);
+    expect(service.state()?.players[0].team).toEqual([options[0]]);
+    await service.resolveFestaPokemonChoice(options[5].id, 'Aneta Pick');
+    expect(service.state()?.players[0].team).toEqual([options[0], { ...options[5], nickname: 'Aneta Pick' }]);
+    expect(service.state()?.players[1].team).toEqual([options[1]]);
+  });
 
   it('resumes the encounter when there is no rival for an opponent card', async () => {
     await service.startDraft({ playerNames: ['Solo'], teamSize: 6, mode: 'festa', festaChance: 0 });
