@@ -34,6 +34,7 @@ export class MultiplayerSocketService {
   readonly roomCode = computed(() => this.roomState()?.roomCode ?? this.playerState()?.roomCode ?? '');
   private socket?: Socket;
   private session?: { role: 'host' | 'player'; roomCode: string };
+  private sessionVersion = 0;
 
   connect(): Socket {
     if (this.socket) return this.socket;
@@ -74,9 +75,26 @@ export class MultiplayerSocketService {
     return this.socket;
   }
 
+  disconnect(): void {
+    this.sessionVersion += 1;
+    const socket = this.socket;
+    this.session = undefined;
+    this.socket = undefined;
+    socket?.removeAllListeners();
+    socket?.disconnect();
+    this.connected.set(false);
+    this.roomState.set(null);
+    this.playerState.set(null);
+    this.deletedRoom.set('');
+    this.error.set('');
+    // Keep the stored tokens so this device can return to the same player and team.
+  }
+
   async createRoom(setup: MultiplayerSetup): Promise<MultiplayerRoomState> {
+    const sessionVersion = this.sessionVersion;
     this.deletedRoom.set('');
     const response = await this.emit<MultiplayerRoomState>('createRoom', setup);
+    if (sessionVersion !== this.sessionVersion) throw new Error('Has salido de la partida.');
     if (response.hostToken && response.roomCode) {
       localStorage.setItem(this.hostTokenKey(response.roomCode), response.hostToken);
     }
@@ -89,10 +107,11 @@ export class MultiplayerSocketService {
   }
 
   async reconnectHost(roomCode: string): Promise<boolean> {
+    const sessionVersion = this.sessionVersion;
     const hostToken = localStorage.getItem(this.hostTokenKey(roomCode));
     if (!hostToken) return false;
     const response = await this.emit<MultiplayerRoomState>('reconnectHost', { roomCode, hostToken });
-    if (this.deletedRoom() === roomCode) return false;
+    if (sessionVersion !== this.sessionVersion || this.deletedRoom() === roomCode) return false;
     if (response.state) {
       this.restoreDraftImages(response.state.draft);
       this.roomState.set(response.state);
@@ -102,8 +121,10 @@ export class MultiplayerSocketService {
   }
 
   async joinRoom(roomCode: string, name: string): Promise<MultiplayerPlayerState> {
+    const sessionVersion = this.sessionVersion;
     const playerToken = localStorage.getItem(this.playerTokenKey(roomCode));
     const response = await this.emit<MultiplayerPlayerState>('joinRoom', { roomCode, name, playerToken, favoritePokemon: this.favoriteKey() });
+    if (sessionVersion !== this.sessionVersion) throw new Error('Has salido de la partida.');
     this.deletedRoom.set('');
     if (response.playerToken && response.roomCode) {
       localStorage.setItem(this.playerTokenKey(response.roomCode), response.playerToken);
@@ -117,10 +138,11 @@ export class MultiplayerSocketService {
   }
 
   async reconnectPlayer(roomCode: string): Promise<boolean> {
+    const sessionVersion = this.sessionVersion;
     const playerToken = localStorage.getItem(this.playerTokenKey(roomCode));
     if (!playerToken) return false;
     const response = await this.emit<MultiplayerPlayerState>('joinRoom', { roomCode, playerToken, favoritePokemon: this.favoriteKey() });
-    if (this.deletedRoom() === roomCode) return false;
+    if (sessionVersion !== this.sessionVersion || this.deletedRoom() === roomCode) return false;
     this.deletedRoom.set('');
     if (response.state) {
       this.restorePlayerImages(response.state);
@@ -185,6 +207,10 @@ export class MultiplayerSocketService {
     this.error.set('');
     return new Promise((resolve, reject) => {
       socket.timeout(8000).emit(event, payload, (timeout: Error | null, response: Ack<T>) => {
+        if (socket !== this.socket) {
+          reject(new Error('Has salido de la partida.'));
+          return;
+        }
         if (timeout) {
           this.error.set('No se pudo contactar con el servidor.');
           reject(timeout);

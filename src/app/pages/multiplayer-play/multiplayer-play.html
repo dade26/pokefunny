@@ -1,4 +1,9 @@
 <main class="play">
+  @if (!socket.deletedRoom()) {
+    <div class="exit-bar">
+      <button class="leave-game" type="button" (click)="leaveGame()">Salir de la partida</button>
+    </div>
+  }
   @if (socket.deletedRoom()) {
     <section class="status">
       <h1>Partida borrada</h1>
@@ -22,12 +27,6 @@
       </div>
       <small [class.connected]="socket.connected()">{{ socket.connected() ? 'online' : 'offline' }}</small>
     </header>
-
-    @if (player.draft; as draft) {
-      <section class="team-strip">
-        <app-team-list [state]="draft" [playerId]="player.playerId" [allowExport]="player.phase === 'finished'" />
-      </section>
-    }
 
     <section class="controller">
       @if (player.phase === 'lobby') {
@@ -166,5 +165,10 @@
       }
       @if (socket.error()) { <p class="error">{{ socket.error() }}</p> }
     </section>
+    @if (player.draft; as draft) {
+      <section class="team-strip">
+        <app-team-list [state]="draft" [playerId]="player.playerId" [allowExport]="player.phase === 'finished'" />
+      </section>
+    }
   }
 </main>

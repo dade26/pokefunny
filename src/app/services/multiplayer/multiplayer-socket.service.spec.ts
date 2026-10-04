@@ -13,13 +13,14 @@ describe('Online mobile identity and room deletion', () => {
     connected: true, myTeam: [], canAct: false, stateVersion: 1,
   } as const;
   let events: Record<string, (...args: any[]) => void>;
-  let socket: { on: ReturnType<typeof vi.fn>; timeout: ReturnType<typeof vi.fn>; emit: ReturnType<typeof vi.fn> };
+  let socket: { on: ReturnType<typeof vi.fn>; timeout: ReturnType<typeof vi.fn>; emit: ReturnType<typeof vi.fn>; removeAllListeners: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> };
   let service: MultiplayerSocketService;
 
   beforeEach(() => {
     localStorage.clear();
     events = {};
     socket = {
+      removeAllListeners: vi.fn(), disconnect: vi.fn(),
       on: vi.fn((event, handler) => { events[event] = handler; }),
       timeout: vi.fn(() => socket),
       emit: vi.fn((_event, _payload, callback) => callback(null, {
@@ -80,5 +81,44 @@ describe('Online mobile identity and room deletion', () => {
     expect(service.playerState()).toBe(previous);
     expect(service.deletedRoom()).toBe('');
     expect(service.error()).toBe('No se pudo borrar.');
+  });
+
+  it('disconnects locally and keeps the token for returning to the same team', async () => {
+    await service.joinRoom('TEST12', 'David');
+    service.connected.set(true);
+    service.disconnect();
+    expect(socket.removeAllListeners).toHaveBeenCalledOnce();
+    expect(socket.disconnect).toHaveBeenCalledOnce();
+    expect(service.connected()).toBe(false);
+    expect(service.playerState()).toBeNull();
+    expect(service.roomState()).toBeNull();
+    expect(service.error()).toBe('');
+    expect(localStorage.getItem('pokefunny.multiplayer.player.TEST12')).toBe('token');
+    expect(await service.reconnectPlayer('TEST12')).toBe(true);
+    expect(mock.io).toHaveBeenCalled();
+    expect(service.playerState()?.playerId).toBe('p1');
+  });
+
+  it('does not restore a session when leaving just after a reconnect response', async () => {
+    await service.joinRoom('TEST12', 'David');
+    socket.emit.mockImplementationOnce((_event, _payload, callback) => {
+      callback(null, { ok: true, state: { ...playerState, myTeam: [] } });
+      service.disconnect();
+    });
+    expect(await service.reconnectPlayer('TEST12')).toBe(false);
+    expect(service.playerState()).toBeNull();
+    expect(service.roomState()).toBeNull();
+  });
+
+  it('ignores a late timeout after leaving instead of showing an error on the next page', async () => {
+    await service.joinRoom('TEST12', 'David');
+    let reply!: (error: Error | null, response?: unknown) => void;
+    socket.emit.mockImplementationOnce((_event, _payload, callback) => { reply = callback; });
+    const reconnect = service.reconnectPlayer('TEST12');
+    service.disconnect();
+    reply(new Error('Timeout'));
+    await expect(reconnect).rejects.toThrow('Has salido de la partida.');
+    expect(service.error()).toBe('');
+    expect(service.playerState()).toBeNull();
   });
 });

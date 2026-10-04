@@ -2,6 +2,8 @@
 
 ## Borrar una partida y mostrar favoritos
 
+En el móvil, «Salir de la partida» está arriba y desconecta el dispositivo. Se conserva la sesión guardada para volver a entrar en la misma sala y recuperar el equipo. Durante la partida, los picks y sus acciones aparecen antes que los Pokémon del equipo.
+
 El host puede usar «Borrar partida» en la sala de espera, durante la partida o al terminar. Tras confirmar, se elimina la sala del servidor y su copia guardada en el dispositivo del host; los jugadores conectados reciben un aviso y sus sesiones de esa sala se limpian. Si falla la conexión, se muestra el error y el host puede volver a intentarlo.
 
 Cada móvil envía su Pokémon favorito al entrar o reconectarse. Su icono acompaña al nombre en la sala, el orden de turnos, los equipos y la vista del jugador. Se conservan las formas de Vivillon. Estos cambios requieren actualizar tanto la web como el servidor Online.

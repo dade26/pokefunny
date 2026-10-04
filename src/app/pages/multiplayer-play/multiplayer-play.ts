@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { getFestaCard } from '../../models/festa-cards';
 import { Player } from '../../models/pokemon.model';
 import { MultiplayerSocketService } from '../../services/multiplayer/multiplayer-socket.service';
@@ -16,6 +16,7 @@ import { PlayerName } from '../../components/player-name/player-name';
 })
 export class MultiplayerPlay implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   readonly socket = inject(MultiplayerSocketService);
   readonly state = this.socket.playerState;
   readonly nickname = signal('');
@@ -37,7 +38,12 @@ export class MultiplayerPlay implements OnInit {
 
   async ngOnInit(): Promise<void> {
     const roomCode = this.route.snapshot.paramMap.get('roomCode') ?? '';
-    await this.socket.reconnectPlayer(roomCode.toUpperCase());
+    await this.socket.reconnectPlayer(roomCode.toUpperCase()).catch(() => undefined);
+  }
+
+  async leaveGame(): Promise<void> {
+    this.socket.disconnect();
+    await this.router.navigate(['/ten-pick']);
   }
 
   pick(optionId: string): Promise<void> {

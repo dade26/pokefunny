@@ -1,7 +1,7 @@
 import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { vi } from 'vitest';
 import { MultiplayerPlay } from './multiplayer-play';
 import { MultiplayerSocketService } from '../../services/multiplayer/multiplayer-socket.service';
@@ -18,17 +18,20 @@ describe('Online card controller recovery', () => {
     const socket = {
       playerState: signal<MultiplayerPlayerState | null>(initial), error: signal(''), connected: signal(true), deletedRoom: signal(''),
       roomCode: signal('TEST12'), reconnectPlayer: vi.fn().mockResolvedValue(true),
+      disconnect: vi.fn(),
     };
+    const router = { navigate: vi.fn().mockResolvedValue(true) };
     TestBed.configureTestingModule({
       imports: [MultiplayerPlay],
       providers: [
         { provide: MultiplayerSocketService, useValue: socket },
+        { provide: Router, useValue: router },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => 'TEST12' } } } },
       ],
     }).overrideComponent(MultiplayerPlay, { set: { imports: [FormsModule], schemas: [NO_ERRORS_SCHEMA] } });
     const fixture = TestBed.createComponent(MultiplayerPlay);
     fixture.detectChanges();
-    return { fixture, socket, controller: () => fixture.nativeElement.querySelector('.controller') as HTMLElement };
+    return { fixture, socket, router, controller: () => fixture.nativeElement.querySelector('.controller') as HTMLElement };
   }
 
   it('shows recovery instead of an empty box for the legacy automatic-card response', async () => {
@@ -46,6 +49,14 @@ describe('Online card controller recovery', () => {
     const { controller } = setup({ ...state, controls: undefined });
     expect(controller().textContent).toContain('Recuperando tu turno');
     expect(controller().querySelector('button')).not.toBeNull();
+  });
+
+  it('disconnects and returns to the modes when the top exit button is pressed', async () => {
+    const { fixture, socket, router } = setup(state);
+    fixture.nativeElement.querySelector('.leave-game').click();
+    await fixture.whenStable();
+    expect(socket.disconnect).toHaveBeenCalledOnce();
+    expect(router.navigate).toHaveBeenCalledWith(['/ten-pick']);
   });
 
   it('shows the deletion notice instead of reconnecting or allowing actions', () => {

@@ -1,7 +1,10 @@
 .play { max-width: 760px; margin: 0 auto; padding: 14px; }
 :host { --online-banner-bg: #111; --online-banner-text: #fff; --online-banner-border: #111; --online-banner-shadow: #111; }
 :host-context([data-theme=dark]) { --online-banner-bg: var(--surface); --online-banner-text: var(--text); --online-banner-border: var(--border-strong); --online-banner-shadow: var(--shadow); }
-header { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center; background: var(--online-banner-bg); color: var(--online-banner-text); border: 2px solid var(--online-banner-border); border-radius: 8px; padding: 12px 14px; box-shadow: 0 3px 0 var(--online-banner-shadow); }
+.exit-bar { position: sticky; top: 0; z-index: 3; display: flex; justify-content: flex-end; padding: 6px 0 10px; background: var(--page, #edf2ee); }
+.leave-game { min-height: 44px; padding: 8px 14px; background: var(--surface, #fff); color: var(--error, #9b1c31); cursor: pointer; }
+.leave-game:hover { background: var(--hover, #e5eee8); }
+header { display: flex; justify-content: space-between; align-items: center; background: var(--online-banner-bg); color: var(--online-banner-text); border: 2px solid var(--online-banner-border); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; box-shadow: 0 3px 0 var(--online-banner-shadow); }
 header span { display: block; color: var(--warning-text, #65530e); font-size: .8rem; font-weight: 800; }
 header strong { font-size: 1.15rem; }
 small { color: var(--error, #9b1c31); }
