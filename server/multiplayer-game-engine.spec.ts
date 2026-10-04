@@ -46,7 +46,190 @@ function forceTurn(draft: DraftState, playerId = 'p1'): DraftState {
   };
 }
 
+function festaRoom(cardId: string): GameRoom {
+  const game = room();
+  game.phase = 'playing';
+  game.draft = {
+    mode: 'festa',
+    players: [
+      { id: 'p1', name: 'David', team: [{ ...pokemon(6, 'Charizard'), rawName: 'charizard' }], lastPickIndex: 0 },
+      { id: 'p2', name: 'Aneta', team: [{ ...pokemon(94, 'Gengar'), rawName: 'gengar' }], lastPickIndex: 0 },
+    ],
+    draftOrder: ['p1', 'p2'], currentRound: 2, currentTurnIndex: 0,
+    teamSize: 3, finished: false, festaChance: 0, filters: setup.filters,
+    currentTurn: { playerId: 'p1', options: [pokemon(1)], currentIndex: 0, skippedPokemonIds: [], finished: false },
+    activeFestaCard: { cardId, phase: 'revealed' },
+  };
+  return game;
+}
+
 describe('MultiplayerGameEngine', () => {
+  it.each(FESTA_CARDS.map((card) => card.id))('fully resolves the online card %s', async (cardId) => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom(cardId);
+    const originalSizes = game.draft!.players.map((player) => player.team.length);
+    await engine.startFestaResolution(game, 'p1', 'start');
+    if (game.draft!.activeFestaCard) {
+      const resolver = game.players.find((player) => player.id === game.draft!.activeFestaCard!.resolvingPlayerId)!;
+      const controls = (await engine.playerState(game, resolver)).controls!;
+      switch (controls.kind) {
+        case 'festa-pokemon-choice':
+          expect(controls.choices.length).toBeGreaterThan(0);
+          await engine.resolveFestaPokemon(game, resolver.id, controls.choices[0].id, '', 'resolve');
+          break;
+        case 'festa-form-choice':
+          await engine.resolveTransformation(game, resolver.id, controls.targets[0].key, 'resolve');
+          break;
+        case 'festa-modifier':
+          await engine.resolveModifier(game, resolver.id, controls.targets[0].key, controls.values[0]?.id ?? '', 'resolve');
+          break;
+        case 'festa-reroll':
+          await engine.resolveForcedReroll(game, resolver.id, 0, 'resolve');
+          break;
+        case 'festa-trade-any':
+          await engine.resolveTrade(game, resolver.id, 'p1:0', 'p2:0', 'resolve');
+          break;
+        case 'festa-trade-last':
+          await engine.resolveTrade(game, resolver.id, '', 'p2:0', 'resolve');
+          break;
+        default:
+          throw new Error(`Unresolvable card: ${cardId} / ${controls.kind}`);
+      }
+      expect(game.processedActions).toContain('resolve');
+    }
+    expect(game.draft!.activeFestaCard).toBeUndefined();
+    expect(game.processedActions).toContain('start');
+    const consumesPick = FESTA_CARDS.find((card) => card.id === cardId)!.consumesPick;
+    expect(game.draft!.players.map((player) => player.team.length)).toEqual([
+      originalSizes[0] + (consumesPick ? 1 : 0), originalSizes[1],
+    ]);
+    expect(game.draft!.currentTurn?.playerId).toBe(consumesPick ? 'p2' : 'p1');
+    expect((await engine.playerState(game, game.players[consumesPick ? 1 : 0])).controls?.kind).toBe('pick');
+  });
+
+  it.each(['trade-last', 'trade-any', 'opponent-first-stage', 'item-random-rival'])('does not lock a solo game with %s', async (cardId) => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom(cardId);
+    game.players = [game.players[0]];
+    game.draft!.players = [game.draft!.players[0]];
+    game.draft!.draftOrder = ['p1'];
+    game.draft!.currentTurnIndex = 0;
+    await engine.startFestaResolution(game, 'p1', 'no-target');
+    expect(game.draft!.activeFestaCard).toBeUndefined();
+    expect((await engine.playerState(game, game.players[0])).controls?.kind).toBe('pick');
+    await expect(engine.startFestaResolution(game, 'p1', 'no-target')).rejects.toThrow('ya fue procesada');
+  });
+
+  it.each(['reveal-zoroark', 'reveal-ditto'])('preserves nickname and modifiers with %s', async (cardId) => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom(cardId);
+    Object.assign(game.draft!.players[0].team[0], {
+      nickname: 'Sparky', heldItem: { id: 'leftovers', name: 'Leftovers' }, moveStickers: ['Surf'], shiny: true,
+    });
+    await engine.startFestaResolution(game, 'p1', 'transform');
+    expect(game.draft!.players[0].team[0]).toMatchObject({
+      id: cardId === 'reveal-zoroark' ? 571 : 132,
+      nickname: 'Sparky', heldItem: { id: 'leftovers', name: 'Leftovers' }, moveStickers: ['Surf'], shiny: true,
+    });
+  });
+
+  it.each([
+    [386, 'deoxys-normal'], [487, 'giratina-altered'], [641, 'tornadus-incarnate'],
+    [10007, 'giratina-origin'],
+  ])('changes forms for %s (%s)', async (id, rawName) => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom('change-form');
+    game.draft!.players[0].team = [{ ...pokemon(Number(id)), rawName: String(rawName), nickname: 'Buddy', moveStickers: ['Surf'] }];
+    await engine.startFestaResolution(game, 'p1', 'start');
+    const controls = (await engine.playerState(game, game.players[0])).controls;
+    expect(controls?.kind).toBe('festa-form-choice');
+    await engine.resolveTransformation(game, 'p1', 'p1:0', 'change');
+    expect(game.draft!.players[0].team[0].id).not.toBe(id);
+    expect(game.draft!.players[0].team[0]).toMatchObject({ nickname: 'Buddy', moveStickers: ['Surf'] });
+    expect(game.draft!.activeFestaCard).toBeUndefined();
+  });
+
+  it('offers all first-stage choices, excludes single-stage species and includes regional forms', async () => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom('first-stage');
+    await engine.startFestaResolution(game, 'p1', 'start');
+    const controls = (await engine.playerState(game, game.players[0])).controls;
+    expect(controls?.kind).toBe('festa-pokemon-choice');
+    if (controls?.kind !== 'festa-pokemon-choice') throw new Error('Missing choices');
+    const ids = controls.choices.map((choice) => choice.id);
+    expect(ids.length).toBeGreaterThan(80);
+    expect(ids).toContain(1);
+    expect(ids).toContain(10161); // Galarian Meowth
+    expect(ids).not.toContain(132); // Ditto has no evolution
+    expect(ids).not.toContain(150); // Mewtwo has no evolution
+    expect(ids).not.toContain(2); // Ivysaur is not a first stage
+    await engine.resolveFestaPokemon(game, 'p1', 1, '', 'pick');
+    expect(game.draft!.players[0].team[1].id).toBe(1);
+  });
+
+  it('requires a nickname for rerolls and retains the pending card on validation failure', async () => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom('forced-reroll');
+    game.draft!.requireNicknames = true;
+    await engine.startFestaResolution(game, 'p1', 'start');
+    await expect(engine.resolveForcedReroll(game, 'p1', 0, 'reroll', '  ')).rejects.toThrow('mote');
+    expect(game.draft!.players[0].team[0].id).toBe(6);
+    expect(game.draft!.activeFestaCard?.cardId).toBe('forced-reroll');
+    expect(game.processedActions).not.toContain('reroll');
+    await engine.resolveForcedReroll(game, 'p1', 0, 'reroll', ' New buddy ');
+    expect(game.draft!.players[0].team[0].nickname).toBe('New buddy');
+    expect(game.draft!.activeFestaCard).toBeUndefined();
+  });
+
+  it('includes legendary forms without offering the banned Eternamax form', async () => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom('minor-legendary');
+    await engine.startFestaResolution(game, 'p1', 'start');
+    const controls = (await engine.playerState(game, game.players[0])).controls;
+    if (controls?.kind !== 'festa-pokemon-choice') throw new Error('Missing choices');
+    const ids = controls.choices.map((choice) => choice.id);
+    expect(ids).toContain(10007); // Giratina Origin
+    expect(ids).not.toContain(10190); // Eternatus Eternamax
+  });
+
+  it('removes the previous form item when a Mega Pokemon becomes Ditto', async () => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom('reveal-ditto');
+    game.draft!.players[0].team = [{
+      ...pokemon(10034), rawName: 'charizard-mega-x', nickname: 'Buddy',
+      heldItem: { id: 'charizarditex', name: 'Charizardite X' },
+    }];
+    await engine.startFestaResolution(game, 'p1', 'start');
+    expect(game.draft!.players[0].team[0]).toMatchObject({ id: 132, nickname: 'Buddy' });
+    expect(game.draft!.players[0].team[0].heldItem).toBeUndefined();
+  });
+
+  it('adds required form items to online Pokemon and excludes them from item targets', async () => {
+    const engine = new MultiplayerGameEngine();
+    const mega = (engine as unknown as { toPokemon(entry: object): Pokemon }).toPokemon({
+      id: 10034, name: 'charizard-mega-x', generation: 1, family: 'chain:2', types: ['fire', 'dragon'], images: 5,
+    });
+    expect(mega.heldItem).toEqual({ id: 'charizarditex', name: 'Charizardite X' });
+    const game = festaRoom('item-chosen-rival');
+    game.draft!.players[1].team = [mega, pokemon(94)];
+    await engine.startFestaResolution(game, 'p1', 'start');
+    const controls = (await engine.playerState(game, game.players[0])).controls;
+    if (controls?.kind !== 'festa-modifier') throw new Error('Missing modifier');
+    expect(controls.targets.map((target) => target.key)).toEqual(['p2:1']);
+    expect(controls.values.some((value) => value.id === 'charizarditex')).toBe(false);
+    await expect(engine.resolveModifier(game, 'p1', 'p2:1', 'charizarditex', 'invalid')).rejects.toThrow('valor válido');
+    await engine.resolveModifier(game, 'p1', 'p2:1', 'leftovers', 'valid');
+    expect(game.draft!.players[1].team[0].heldItem).toEqual(mega.heldItem);
+  });
+
+  it.each(['p1:', 'p1:0:extra', 'p1:-1', 'p1:1.5', 'p1: 0'])('rejects malformed trade selection %s', async (selection) => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom('trade-any');
+    await engine.startFestaResolution(game, 'p1', 'start');
+    await expect(engine.resolveTrade(game, 'p1', selection, 'p2:0', 'invalid')).rejects.toThrow('Selección inválida');
+    expect(game.draft!.activeFestaCard?.cardId).toBe('trade-any');
+  });
+
   it('uses local artwork when a catalog entry has artwork but no sprite', () => {
     const engine = new MultiplayerGameEngine();
     const result = (engine as unknown as { toPokemon(entry: object): Pokemon }).toPokemon({
@@ -184,6 +367,35 @@ describe('MultiplayerGameEngine', () => {
     await engine.resolveTrade(game, 'p1', 'p1:0', 'p2:0', 'trade');
     expect(game.draft.players[0].team[0].name).toBe('Gengar');
     expect(game.draft.players[1].team[0].name).toBe('Bulbasaur');
+  });
+
+  it.each([0, undefined])('trades the last pick without a first selection (lastPickIndex: %s)', async (lastPickIndex) => {
+    const engine = new MultiplayerGameEngine();
+    const game = room();
+    game.draft = {
+      mode: 'festa',
+      players: [
+        { id: 'p1', name: 'David', team: [pokemon(1, 'Bulbasaur'), pokemon(4, 'Charmander')], lastPickIndex },
+        { id: 'p2', name: 'Aneta', team: [pokemon(94, 'Gengar')] },
+      ],
+      draftOrder: ['p1', 'p2'],
+      currentRound: 1,
+      currentTurnIndex: 1,
+      teamSize: 3,
+      finished: false,
+      currentTurn: { playerId: 'p1', options: [pokemon(6)], currentIndex: 0, skippedPokemonIds: [], finished: false },
+      activeFestaCard: { cardId: 'trade-last', phase: 'resolving', resolvingPlayerId: 'p1' },
+      filters: setup.filters,
+    };
+    await expect(engine.resolveTrade(game, 'p1', '', 'p1:1', 'own-team'))
+      .rejects.toThrow('otro jugador');
+    await engine.resolveTrade(game, 'p1', '', 'p2:0', 'trade-last');
+    const expectedIndex = lastPickIndex ?? 1;
+    expect(game.draft.players[0].team[expectedIndex].name).toBe('Gengar');
+    expect(game.draft.players[0].team[1 - expectedIndex].name).toBe(expectedIndex === 0 ? 'Charmander' : 'Bulbasaur');
+    expect(game.draft.players[1].team[0].name).toBe(expectedIndex === 0 ? 'Bulbasaur' : 'Charmander');
+    expect(game.draft.activeFestaCard).toBeUndefined();
+    expect(game.processedActions).toContain('trade-last');
   });
 
   it('rerolls the correct FESTA team slot', async () => {

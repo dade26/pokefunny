@@ -131,8 +131,8 @@ export class MultiplayerSocketService {
     return this.command('resolveFestaPokemon', { pokemonId, nickname, actionId: crypto.randomUUID() });
   }
 
-  resolveFestaReroll(teamIndex: number): Promise<void> {
-    return this.command('resolveFestaReroll', { teamIndex, actionId: crypto.randomUUID() });
+  resolveFestaReroll(teamIndex: number, nickname = ''): Promise<void> {
+    return this.command('resolveFestaReroll', { teamIndex, nickname, actionId: crypto.randomUUID() });
   }
 
   resolveFestaTransformation(target: string): Promise<void> {

@@ -96,9 +96,14 @@
         } @else if (controls.kind === 'festa-reroll') {
           <article class="festa">
             <h1>Elige un pick para rerollear</h1>
+            @if (requireNicknames()) {
+              <label>Mote
+                <input maxlength="18" [ngModel]="nickname()" (ngModelChange)="nickname.set($event)" />
+              </label>
+            }
             <div class="choice-grid">
               @for (pokemon of controls.team; track $index) {
-                <button type="button" (click)="socket.resolveFestaReroll($index)">
+                <button type="button" [disabled]="requireNicknames() && !nickname().trim()" (click)="resolveFestaReroll($index)">
                   <img [src]="pokemon.artwork || pokemon.sprite" [alt]="pokemon.name" />
                   <span>{{ pokemon.name }}</span>
                 </button>

@@ -54,6 +54,11 @@ export class MultiplayerPlay implements OnInit {
     this.nickname.set('');
   }
 
+  async resolveFestaReroll(teamIndex: number): Promise<void> {
+    await this.socket.resolveFestaReroll(teamIndex, this.nickname());
+    this.nickname.set('');
+  }
+
   allPicks(): { key: string; player: Player; pokemonName: string }[] {
     const draft = this.state()?.draft;
     return draft?.players.flatMap((player) =>

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { FESTA_CARDS, getFestaCard, pickRandomActiveFestaCard } from '../src/app/models/festa-cards';
 import {
   ALL_GENERATIONS,
+  BANNED_POKEMON_ID,
   DraftState,
   FestaEffectType,
   Player,
@@ -129,6 +130,16 @@ export class MultiplayerGameEngine {
     if (card.effect === 'forced-reroll' && !this.currentPlayer(draft).team.length) {
       room.draft = this.withHistory({ ...draft, activeFestaCard: undefined }, 'Forced Reroll no tuvo efecto.');
       this.bump(room);
+      this.markAction(room, actionId);
+      return;
+    }
+    const actor = this.currentPlayer(draft);
+    const rivalHasPicks = draft.players.some((player) => player.id !== actor.id && player.team.length > 0);
+    if ((card.effect === 'trade-last' && (!actor.team.length || !rivalHasPicks))
+      || (card.effect === 'trade-any' && draft.players.reduce((count, player) => count + player.team.length, 0) < 2)) {
+      room.draft = this.withHistory({ ...draft, activeFestaCard: undefined }, `${card.name} no tuvo objetivos válidos.`);
+      this.bump(room);
+      this.markAction(room, actionId);
       return;
     }
     const affectedPlayerId = active.affectedPlayerId ?? draft.currentTurn?.playerId ?? playerId;
@@ -200,8 +211,7 @@ export class MultiplayerGameEngine {
       ? this.shuffle(candidates)[0]
       : candidates.find((candidate) => candidate.key === targetValue);
     if (!target) throw new MultiplayerGameError('No hay un objetivo válido para esta carta.');
-    const catalog = await this.festaCatalog();
-    const entries = rule.kind === 'item' ? catalog.items : catalog.moves;
+    const entries = await this.modifierValues(rule.kind);
     const value = rule.randomItem
       ? this.shuffle(entries)[0]
       : entries.find((entry) => entry.id === rawValue || entry.name === rawValue);
@@ -252,7 +262,7 @@ export class MultiplayerGameEngine {
     this.markAction(room, actionId);
   }
 
-  async resolveForcedReroll(room: GameRoom, playerId: string, teamIndex: number, actionId?: string): Promise<void> {
+  async resolveForcedReroll(room: GameRoom, playerId: string, teamIndex: number, actionId?: string, nickname = ''): Promise<void> {
     this.assertUniqueAction(room, actionId);
     const draft = this.requireDraft(room);
     const active = draft.activeFestaCard;
@@ -262,9 +272,12 @@ export class MultiplayerGameEngine {
     const player = draft.players.find((candidate) => candidate.id === playerId);
     const oldPokemon = player?.team[teamIndex];
     if (!player || !oldPokemon) throw new MultiplayerGameError('Ese pick no existe.');
+    // Validate before generating a replacement so an invalid nickname leaves the card intact.
+    this.withNickname(oldPokemon, nickname, draft);
     const [replacement] = await this.randomOptions(1, player.team.filter((_, index) => index !== teamIndex).map((pokemon) => pokemon.id), draft);
+    const received = this.withNickname(replacement, nickname, draft);
     const players = draft.players.map((candidate) => candidate.id === playerId
-      ? { ...candidate, lastPickIndex: teamIndex, team: candidate.team.map((pokemon, index) => index === teamIndex ? replacement : pokemon) }
+      ? { ...candidate, lastPickIndex: teamIndex, team: candidate.team.map((pokemon, index) => index === teamIndex ? received : pokemon) }
       : candidate);
     room.draft = this.withHistory({ ...draft, players, activeFestaCard: undefined }, `${player.name} rerolled ${oldPokemon.name} into ${replacement.name}.`);
     this.bump(room);
@@ -282,12 +295,12 @@ export class MultiplayerGameEngine {
     if (card?.effect !== 'trade-any' && card?.effect !== 'trade-last') {
       throw new MultiplayerGameError('La carta FESTA activa no permite intercambios.');
     }
-    const firstPick = this.parsePick(first);
-    const secondPick = this.parsePick(second);
     const actor = this.currentPlayer(draft);
+    const firstPick = card.effect === 'trade-last'
+      ? { playerId: actor.id, index: this.lastPickIndex(actor) }
+      : this.parsePick(first);
+    const secondPick = this.parsePick(second);
     if (card.effect === 'trade-last') {
-      firstPick.playerId = actor.id;
-      firstPick.index = this.lastPickIndex(actor);
       if (secondPick.playerId === actor.id) throw new MultiplayerGameError('Debes elegir un Pokémon de otro jugador.');
     }
     if (firstPick.playerId === secondPick.playerId && firstPick.index === secondPick.index) {
@@ -383,12 +396,11 @@ export class MultiplayerGameEngine {
       }
       const modifierRule = festaModifierRule(card.effect);
       if (modifierRule) {
-        const catalog = await this.festaCatalog();
         return {
           kind: 'festa-modifier', cardId: active.cardId, modifierKind: modifierRule.kind,
           targetMode: modifierRule.target, randomValue: !!modifierRule.randomItem,
           targets: this.modifierTargets(draft, card.effect),
-          values: modifierRule.randomItem ? [] : modifierRule.kind === 'item' ? catalog.items : catalog.moves,
+          values: modifierRule.randomItem ? [] : await this.modifierValues(modifierRule.kind),
         };
       }
       if (card.effect === 'forced-reroll') return { kind: 'festa-reroll', cardId: active.cardId, team: this.currentPlayer(draft).team };
@@ -470,17 +482,22 @@ export class MultiplayerGameEngine {
     const catalog = await this.catalog();
     const kind = effect.replace(/^opponent-/, '');
     const { Dex } = await import('@pkmn/dex');
-    const choices = this.shuffle(catalog)
-      .filter((entry) => entry.id < 10000 && (() => {
+    const familyCounts = new Map<string, number>();
+    for (const entry of catalog.filter((entry) => entry.id < 10000)) {
+      familyCounts.set(entry.family, (familyCounts.get(entry.family) ?? 0) + 1);
+    }
+    const choices = catalog
+      .filter((entry) => {
         const species = Dex.species.get(entry.name);
-        if (kind === 'first-stage') return species.exists && !species.prevo;
-        if (kind === 'fully-evolved') return species.exists && !species.nfe;
         if (kind === 'minor-legendary') {
           return species.exists && species.tags?.some((tag) => ['Mythical', 'Restricted Legendary', 'Sub-Legendary'].includes(String(tag)));
         }
-        return true;
-      })())
-      .slice(0, 80)
+        if (entry.id >= 10000 && !/-(galar|hisui|paldea)(?:-|$)/.test(entry.name)) return false;
+        if (kind === 'first-stage') return species.exists && !species.prevo && (species.evos?.length ?? 0) > 0
+          && (familyCounts.get(entry.family) ?? 0) >= 2;
+        if (kind === 'fully-evolved') return species.exists && (species.evos?.length ?? 0) === 0;
+        return false;
+      })
       .map((entry) => this.toPokemon(entry));
     room.festaChoices = { cardId, choices };
     return choices;
@@ -506,7 +523,7 @@ export class MultiplayerGameEngine {
         this.bump(room);
         return;
       }
-      this.replaceTeamPokemon(room, actor.id, targetIndex, withFixedFormItem(this.toPokemon(replacementEntry)));
+      this.replaceTeamPokemon(room, actor.id, targetIndex, this.transformedPokemon(actor.team[targetIndex], replacementEntry));
       return;
     }
     const targets = await this.formTargets(draft, true);
@@ -523,21 +540,26 @@ export class MultiplayerGameEngine {
   private async formTargets(draft: DraftState, includeAllPlayers: boolean): Promise<{ key: string; playerName: string; pokemon: Pokemon }[]> {
     const actor = this.currentPlayer(draft);
     const catalog = await this.catalog();
+    const { Dex } = await import('@pkmn/dex');
     const players = includeAllPlayers ? draft.players : draft.players.filter((player) => player.id === actor.id);
     return players.flatMap((player) => player.team.flatMap((pokemon, index) =>
-      this.formAlternatives(catalog, pokemon, draft).length
+      this.formAlternatives(catalog, pokemon, draft, Dex).length
         ? [{ key: `${player.id}:${index}`, playerName: player.name, pokemon }]
         : []));
   }
 
-  private formAlternatives(catalog: CatalogEntry[], pokemon: Pokemon, draft: DraftState): CatalogEntry[] {
+  private formAlternatives(catalog: CatalogEntry[], pokemon: Pokemon, draft: DraftState, dex: typeof import('@pkmn/dex').Dex): CatalogEntry[] {
     const rawName = pokemon.rawName ?? pokemon.name.toLowerCase().replace(/\s+/g, '-');
     const bases = catalog.filter((entry) => entry.id < 10000).sort((a, b) => b.name.length - a.name.length);
-    const base = bases.find((entry) => rawName === entry.name || rawName.startsWith(`${entry.name}-`));
-    if (!base) return [];
+    const speciesNumber = (name: string): number | undefined => {
+      const species = dex.species.get(name);
+      return species.exists ? species.num : bases.find((entry) => name === entry.name || name.startsWith(`${entry.name}-`))?.id;
+    };
+    const number = speciesNumber(rawName);
+    if (!number) return [];
     const generations = new Set(draft.filters?.generations ?? ALL_GENERATIONS);
     return catalog.filter((entry) => entry.id !== pokemon.id
-      && (entry.name === base.name || entry.name.startsWith(`${base.name}-`))
+      && speciesNumber(entry.name) === number
       && !entry.name.startsWith('koraidon-') && !entry.name.startsWith('miraidon-')
       && generations.has(entry.generation)
       && (draft.filters?.mega !== false || !/-mega(?:-|$)/.test(entry.name))
@@ -549,9 +571,14 @@ export class MultiplayerGameEngine {
     const player = draft.players.find((candidate) => candidate.id === playerId);
     const previous = player?.team[index];
     if (!player || !previous) throw new MultiplayerGameError('Ese Pokémon ya no existe.');
-    const alternatives = this.formAlternatives(await this.catalog(), previous, draft);
+    const { Dex } = await import('@pkmn/dex');
+    const alternatives = this.formAlternatives(await this.catalog(), previous, draft, Dex);
     const replacementEntry = this.shuffle(alternatives)[0];
     if (!replacementEntry) throw new MultiplayerGameError('Ese Pokémon no tiene otra forma disponible.');
+    this.replaceTeamPokemon(room, playerId, index, this.transformedPokemon(previous, replacementEntry));
+  }
+
+  private transformedPokemon(previous: Pokemon, replacementEntry: CatalogEntry): Pokemon {
     let replacement = withFixedFormItem({
       ...this.toPokemon(replacementEntry),
       ...(previous.nickname ? { nickname: previous.nickname } : {}),
@@ -561,7 +588,7 @@ export class MultiplayerGameEngine {
     });
     const requiredItem = fixedFormItem(replacement);
     if (requiredItem) replacement = { ...replacement, heldItem: requiredItem };
-    this.replaceTeamPokemon(room, playerId, index, replacement);
+    return replacement;
   }
 
   private replaceTeamPokemon(room: GameRoom, playerId: string, index: number, replacement: Pokemon): void {
@@ -592,6 +619,16 @@ export class MultiplayerGameEngine {
     return this.festaCatalogRequest;
   }
 
+  private async modifierValues(kind: 'item' | 'move'): Promise<{ id: string; name: string }[]> {
+    const catalog = await this.festaCatalog();
+    if (kind === 'move') return catalog.moves;
+    const { Dex } = await import('@pkmn/dex');
+    return catalog.items.filter((entry) => {
+      const item = Dex.items.get(entry.id);
+      return item.exists && !item.megaStone && !(item.zMove && item.itemUser?.length);
+    });
+  }
+
   private async randomOptions(count: number, blockedIds: number[], draft: DraftState): Promise<Pokemon[]> {
     const catalog = await this.catalog();
     const blocked = new Set(blockedIds);
@@ -616,14 +653,14 @@ export class MultiplayerGameEngine {
 
   private catalog(): Promise<CatalogEntry[]> {
     this.catalogRequest ??= readFile(join(process.cwd(), 'public', 'data', 'pokemon-catalog.v1.json'), 'utf8')
-      .then((raw) => JSON.parse(raw) as CatalogEntry[]);
+      .then((raw) => (JSON.parse(raw) as CatalogEntry[]).filter((entry) => entry.id !== BANNED_POKEMON_ID));
     return this.catalogRequest;
   }
 
   private toPokemon(entry: CatalogEntry): Pokemon {
     const name = entry.name.split('-').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
     const image = entry.images & 5 ? `images/pokemon/v1/${entry.id}.webp` : '';
-    return {
+    return withFixedFormItem({
       id: entry.id,
       name,
       rawName: entry.name,
@@ -631,7 +668,7 @@ export class MultiplayerGameEngine {
       artwork: image,
       types: entry.types.map((type) => type.charAt(0).toUpperCase() + type.slice(1)),
       generation: entry.generation,
-    };
+    });
   }
 
   private requireDraft(room: GameRoom): DraftState {
@@ -684,8 +721,10 @@ export class MultiplayerGameEngine {
   }
 
   private parsePick(value: string): { playerId: string; index: number } {
-    const [playerId, index] = value.split(':');
-    if (!playerId || !Number.isInteger(Number(index))) throw new MultiplayerGameError('Selección inválida.');
+    const [playerId, index, extra] = value.split(':');
+    if (!playerId || index === undefined || !/^\d+$/.test(index) || extra !== undefined || !Number.isSafeInteger(Number(index))) {
+      throw new MultiplayerGameError('Selección inválida.');
+    }
     return { playerId, index: Number(index) };
   }
 

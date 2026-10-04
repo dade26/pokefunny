@@ -148,7 +148,7 @@ io.on('connection', (socket) => {
 
   socket.on('resolveFestaReroll', async (payload, callback) => {
     await playerCommand(socket, callback, async (room, player) => {
-      await engine.resolveForcedReroll(room, player.id, Number(payload?.teamIndex), String(payload?.actionId ?? ''));
+      await engine.resolveForcedReroll(room, player.id, Number(payload?.teamIndex), String(payload?.actionId ?? ''), String(payload?.nickname ?? ''));
       await rooms.save(room);
       console.log(`[room ${room.roomCode}] festa reroll by ${player.name}`);
     });
