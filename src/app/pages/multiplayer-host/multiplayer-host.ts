@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ALL_GENERATIONS, DraftMode, Pokemon } from '../../models/pokemon.model';
@@ -8,6 +8,7 @@ import { DraftOrder } from '../../components/draft-order/draft-order';
 import { TeamList } from '../../components/team-list/team-list';
 import { TenPickResult } from '../../components/ten-pick-result/ten-pick-result';
 import { FestaCard as FestaCardView } from '../../components/festa-card/festa-card';
+import { TenPickService } from '../../services/ten-pick.service';
 
 @Component({
   selector: 'app-multiplayer-host',
@@ -19,6 +20,7 @@ export class MultiplayerHost implements OnInit {
   readonly socket = inject(MultiplayerSocketService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly drafts = inject(TenPickService);
   readonly room = this.socket.roomState;
   readonly mode = signal<DraftMode>('normal');
   readonly modeName = computed(() => this.mode() === 'festa' ? 'Ten Pick Festa'
@@ -44,6 +46,20 @@ export class MultiplayerHost implements OnInit {
     const cardId = this.room()?.draft?.activeFestaCard?.cardId;
     return cardId ? getFestaCard(cardId) ?? null : null;
   });
+  readonly savedDraftUrl = computed(() => {
+    const state = this.room();
+    if (!state?.draft) return this.historyUrl();
+    const base = state.setup.mode === 'festa' ? '/ten-pick-festa'
+      : state.setup.mode === 'monotype' ? '/ten-pick-monotype' : '/ten-pick';
+    return `${base}/online-${state.roomCode.toLowerCase()}`;
+  });
+
+  constructor() {
+    effect(() => {
+      const state = this.room();
+      if (state?.draft) untracked(() => this.drafts.saveMultiplayerDraft(state.roomCode, state.draft!));
+    });
+  }
 
   async ngOnInit(): Promise<void> {
     this.mode.set(this.route.snapshot.data['mode'] ?? 'normal');

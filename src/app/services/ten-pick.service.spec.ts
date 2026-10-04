@@ -38,6 +38,21 @@ describe('TenPickService saved drafts', () => {
     vi.restoreAllMocks();
   });
 
+  it('saves an online draft in the normal history and preserves its tournament', () => {
+    const state = {
+      players: [{ id: 'p1', name: 'A', team: [] }, { id: 'p2', name: 'B', team: [] }],
+      draftOrder: ['p1', 'p2'], currentRound: 1, currentTurnIndex: 0, teamSize: 1, finished: true,
+    };
+    const id = service.saveMultiplayerDraft('ABC123', state);
+    expect(id).toBe('online-abc123');
+    expect(new StorageService().loadDrafts()[0].state.finished).toBe(true);
+    const tournament = { type: 'single_elimination', data: {} } as never;
+    service.drafts.update((drafts) => drafts.map((draft) => draft.id === id
+      ? { ...draft, state: { ...draft.state, tournament } } : draft));
+    service.saveMultiplayerDraft('ABC123', state);
+    expect(service.drafts().find((draft) => draft.id === id)?.state.tournament).toBe(tournament);
+  });
+
   it('creates and persists the manually chosen Swiss competition before drafting', async () => {
     const id = await service.startDraft({ playerNames: ['A', 'B', 'C', 'D'], teamSize: 6,
       competition: { format: 'swiss', rounds: 2 } });

@@ -16,6 +16,8 @@ import {
 } from '../src/app/models/multiplayer/multiplayer.model';
 import { GameRoom, RoomPlayer } from './room-repository';
 import { assignMonotypes } from '../src/app/models/monotype';
+import { festaModifierRule } from '../src/app/models/festa-modifiers';
+import { fixedFormItem, withFixedFormItem } from '../src/app/models/fixed-form-items';
 
 interface CatalogEntry {
   id: number;
@@ -34,6 +36,7 @@ export class MultiplayerGameError extends Error {
 
 export class MultiplayerGameEngine {
   private catalogRequest?: Promise<CatalogEntry[]>;
+  private festaCatalogRequest?: Promise<{ items: { id: string; name: string }[]; moves: { id: string; name: string }[] }>;
 
   async createInitialDraft(room: GameRoom): Promise<DraftState> {
     const participants = room.players.filter((player) => player.connected);
@@ -114,7 +117,7 @@ export class MultiplayerGameEngine {
     this.markAction(room, actionId);
   }
 
-  startFestaResolution(room: GameRoom, playerId: string, actionId?: string): void {
+  async startFestaResolution(room: GameRoom, playerId: string, actionId?: string): Promise<void> {
     this.assertUniqueAction(room, actionId);
     const draft = this.requireDraft(room);
     this.requirePlayerTurn(draft, playerId);
@@ -128,15 +131,89 @@ export class MultiplayerGameEngine {
       this.bump(room);
       return;
     }
+    const affectedPlayerId = active.affectedPlayerId ?? draft.currentTurn?.playerId ?? playerId;
+    if (this.isOpponentChoice(card.effect)) {
+      const rival = this.shuffle(draft.players.filter((player) => player.id !== affectedPlayerId))[0];
+      if (!rival) {
+        room.draft = this.withHistory({ ...draft, activeFestaCard: undefined }, `${card.name} no tuvo efecto: no hay rival.`);
+        this.bump(room);
+        this.markAction(room, actionId);
+        return;
+      }
+      room.draft = {
+        ...draft,
+        activeFestaCard: { ...active, phase: 'resolving', affectedPlayerId, resolvingPlayerId: rival.id, rivalPlayerId: rival.id },
+      };
+      this.bump(room);
+      this.markAction(room, actionId);
+      return;
+    }
+    if (this.isAutomaticTransformation(card.effect)) {
+      await this.resolveAutomaticTransformation(room, card.effect);
+      this.markAction(room, actionId);
+      return;
+    }
+    if ((card.effect === 'change-form' && !(await this.formTargets(draft, false)).length)
+      || (festaModifierRule(card.effect) && !this.modifierTargets(draft, card.effect).length)) {
+      room.draft = this.withHistory({ ...draft, activeFestaCard: undefined }, `${card.name} no tuvo objetivos válidos.`);
+      this.bump(room);
+      this.markAction(room, actionId);
+      return;
+    }
     room.draft = {
       ...draft,
       activeFestaCard: {
         ...active,
         phase: 'resolving',
-        affectedPlayerId: active.affectedPlayerId ?? draft.currentTurn?.playerId,
+        affectedPlayerId,
         resolvingPlayerId: playerId,
       },
     };
+    this.bump(room);
+    this.markAction(room, actionId);
+  }
+
+  async resolveTransformation(room: GameRoom, playerId: string, targetValue: string, actionId?: string): Promise<void> {
+    this.assertUniqueAction(room, actionId);
+    const draft = this.requireDraft(room);
+    const active = draft.activeFestaCard;
+    if (!active || active.cardId !== 'change-form' || active.phase !== 'resolving' || active.resolvingPlayerId !== playerId) {
+      throw new MultiplayerGameError('No puedes resolver este cambio de forma.');
+    }
+    const target = this.parsePick(targetValue);
+    if (target.playerId !== playerId) throw new MultiplayerGameError('Ese Pokémon no pertenece a tu equipo.');
+    await this.applyFormChange(room, target.playerId, target.index);
+    this.markAction(room, actionId);
+  }
+
+  async resolveModifier(room: GameRoom, playerId: string, targetValue: string, rawValue: string, actionId?: string): Promise<void> {
+    this.assertUniqueAction(room, actionId);
+    const draft = this.requireDraft(room);
+    const active = draft.activeFestaCard;
+    const card = active ? getFestaCard(active.cardId) : undefined;
+    const rule = card ? festaModifierRule(card.effect) : undefined;
+    if (!active || active.phase !== 'resolving' || active.resolvingPlayerId !== playerId || !rule) {
+      throw new MultiplayerGameError('No puedes resolver este modificador FESTA.');
+    }
+    const candidates = this.modifierTargets(draft, card!.effect);
+    const target = rule.target === 'random'
+      ? this.shuffle(candidates)[0]
+      : candidates.find((candidate) => candidate.key === targetValue);
+    if (!target) throw new MultiplayerGameError('No hay un objetivo válido para esta carta.');
+    const catalog = await this.festaCatalog();
+    const entries = rule.kind === 'item' ? catalog.items : catalog.moves;
+    const value = rule.randomItem
+      ? this.shuffle(entries)[0]
+      : entries.find((entry) => entry.id === rawValue || entry.name === rawValue);
+    if (!value) throw new MultiplayerGameError('Elige un valor válido para esta carta.');
+    const parsed = this.parsePick(target.key);
+    const players = draft.players.map((player) => player.id === parsed.playerId
+      ? { ...player, team: player.team.map((pokemon, index) => index !== parsed.index ? pokemon
+        : rule.kind === 'item' ? { ...pokemon, heldItem: { id: value.id, name: value.name } }
+          : { ...pokemon, moveStickers: [...(pokemon.moveStickers ?? []), value.name] }) }
+      : player);
+    room.draft = this.withHistory({ ...draft, players, activeFestaCard: undefined },
+      `${this.currentPlayer(draft).name}: ${value.name} -> ${target.playerName} / ${target.pokemon.name}.`);
     this.bump(room);
     this.markAction(room, actionId);
   }
@@ -258,7 +335,7 @@ export class MultiplayerGameEngine {
         teamSize: draft?.players.find((draftPlayer) => draftPlayer.id === player.id)?.team.length ?? 0,
       })),
       draft,
-      activePlayerId: draft ? this.currentPlayer(draft).id : undefined,
+      activePlayerId: draft ? draft.activeFestaCard?.resolvingPlayerId ?? this.currentPlayer(draft).id : undefined,
       stateVersion: room.stateVersion,
       joinUrl: origin ? `${origin}/join/${room.roomCode}` : undefined,
     };
@@ -275,7 +352,7 @@ export class MultiplayerGameEngine {
       connected: player.connected,
       myTeam: draftPlayer?.team ?? [],
       draft,
-      activePlayerId: draft ? this.currentPlayer(draft).id : undefined,
+      activePlayerId: draft ? draft.activeFestaCard?.resolvingPlayerId ?? this.currentPlayer(draft).id : undefined,
       canAct: !!draft && this.canPlayerAct(draft, player.id),
       stateVersion: room.stateVersion,
       controls: draft ? await this.controlsFor(room, player.id) : undefined,
@@ -300,6 +377,19 @@ export class MultiplayerGameEngine {
       }
       if (card.consumesPick) {
         return { kind: 'festa-pokemon-choice', cardId: active.cardId, choices: await this.getFestaChoices(room, card.effect) };
+      }
+      if (card.effect === 'change-form') {
+        return { kind: 'festa-form-choice', cardId: active.cardId, targets: await this.formTargets(draft, false) };
+      }
+      const modifierRule = festaModifierRule(card.effect);
+      if (modifierRule) {
+        const catalog = await this.festaCatalog();
+        return {
+          kind: 'festa-modifier', cardId: active.cardId, modifierKind: modifierRule.kind,
+          targetMode: modifierRule.target, randomValue: !!modifierRule.randomItem,
+          targets: this.modifierTargets(draft, card.effect),
+          values: modifierRule.randomItem ? [] : modifierRule.kind === 'item' ? catalog.items : catalog.moves,
+        };
       }
       if (card.effect === 'forced-reroll') return { kind: 'festa-reroll', cardId: active.cardId, team: this.currentPlayer(draft).team };
       if (card.effect === 'trade-any') return { kind: 'festa-trade-any', cardId: active.cardId };
@@ -378,12 +468,128 @@ export class MultiplayerGameEngine {
     const cardId = getFestaCard(effect)?.id ?? effect;
     if (room.festaChoices?.cardId === cardId) return room.festaChoices.choices;
     const catalog = await this.catalog();
+    const kind = effect.replace(/^opponent-/, '');
+    const { Dex } = await import('@pkmn/dex');
     const choices = this.shuffle(catalog)
-      .filter((entry) => entry.id < 10000)
+      .filter((entry) => entry.id < 10000 && (() => {
+        const species = Dex.species.get(entry.name);
+        if (kind === 'first-stage') return species.exists && !species.prevo;
+        if (kind === 'fully-evolved') return species.exists && !species.nfe;
+        if (kind === 'minor-legendary') {
+          return species.exists && species.tags?.some((tag) => ['Mythical', 'Restricted Legendary', 'Sub-Legendary'].includes(String(tag)));
+        }
+        return true;
+      })())
       .slice(0, 80)
       .map((entry) => this.toPokemon(entry));
     room.festaChoices = { cardId, choices };
     return choices;
+  }
+
+  private isOpponentChoice(effect: FestaEffectType): boolean {
+    return effect.startsWith('opponent-');
+  }
+
+  private isAutomaticTransformation(effect: FestaEffectType): boolean {
+    return ['reveal-zoroark', 'reveal-ditto', 'random-change-form'].includes(effect);
+  }
+
+  private async resolveAutomaticTransformation(room: GameRoom, effect: FestaEffectType): Promise<void> {
+    const draft = this.requireDraft(room);
+    const actor = this.currentPlayer(draft);
+    if (effect === 'reveal-zoroark' || effect === 'reveal-ditto') {
+      const targetIndex = actor.team.length ? Math.floor(Math.random() * actor.team.length) : -1;
+      const catalog = await this.catalog();
+      const replacementEntry = catalog.find((entry) => entry.id === (effect === 'reveal-zoroark' ? 571 : 132));
+      if (targetIndex < 0 || !replacementEntry) {
+        room.draft = this.withHistory({ ...draft, activeFestaCard: undefined }, 'La carta FESTA no tuvo objetivos válidos.');
+        this.bump(room);
+        return;
+      }
+      this.replaceTeamPokemon(room, actor.id, targetIndex, withFixedFormItem(this.toPokemon(replacementEntry)));
+      return;
+    }
+    const targets = await this.formTargets(draft, true);
+    const target = this.shuffle(targets)[0];
+    if (!target) {
+      room.draft = this.withHistory({ ...draft, activeFestaCard: undefined }, 'La carta FESTA no tuvo formas válidas.');
+      this.bump(room);
+      return;
+    }
+    const parsed = this.parsePick(target.key);
+    await this.applyFormChange(room, parsed.playerId, parsed.index);
+  }
+
+  private async formTargets(draft: DraftState, includeAllPlayers: boolean): Promise<{ key: string; playerName: string; pokemon: Pokemon }[]> {
+    const actor = this.currentPlayer(draft);
+    const catalog = await this.catalog();
+    const players = includeAllPlayers ? draft.players : draft.players.filter((player) => player.id === actor.id);
+    return players.flatMap((player) => player.team.flatMap((pokemon, index) =>
+      this.formAlternatives(catalog, pokemon, draft).length
+        ? [{ key: `${player.id}:${index}`, playerName: player.name, pokemon }]
+        : []));
+  }
+
+  private formAlternatives(catalog: CatalogEntry[], pokemon: Pokemon, draft: DraftState): CatalogEntry[] {
+    const rawName = pokemon.rawName ?? pokemon.name.toLowerCase().replace(/\s+/g, '-');
+    const bases = catalog.filter((entry) => entry.id < 10000).sort((a, b) => b.name.length - a.name.length);
+    const base = bases.find((entry) => rawName === entry.name || rawName.startsWith(`${entry.name}-`));
+    if (!base) return [];
+    const generations = new Set(draft.filters?.generations ?? ALL_GENERATIONS);
+    return catalog.filter((entry) => entry.id !== pokemon.id
+      && (entry.name === base.name || entry.name.startsWith(`${base.name}-`))
+      && !entry.name.startsWith('koraidon-') && !entry.name.startsWith('miraidon-')
+      && generations.has(entry.generation)
+      && (draft.filters?.mega !== false || !/-mega(?:-|$)/.test(entry.name))
+      && (draft.filters?.gigantamax === true || !entry.name.endsWith('-gmax')));
+  }
+
+  private async applyFormChange(room: GameRoom, playerId: string, index: number): Promise<void> {
+    const draft = this.requireDraft(room);
+    const player = draft.players.find((candidate) => candidate.id === playerId);
+    const previous = player?.team[index];
+    if (!player || !previous) throw new MultiplayerGameError('Ese Pokémon ya no existe.');
+    const alternatives = this.formAlternatives(await this.catalog(), previous, draft);
+    const replacementEntry = this.shuffle(alternatives)[0];
+    if (!replacementEntry) throw new MultiplayerGameError('Ese Pokémon no tiene otra forma disponible.');
+    let replacement = withFixedFormItem({
+      ...this.toPokemon(replacementEntry),
+      ...(previous.nickname ? { nickname: previous.nickname } : {}),
+      ...(previous.moveStickers ? { moveStickers: [...previous.moveStickers] } : {}),
+      ...(!fixedFormItem(previous) && previous.heldItem ? { heldItem: previous.heldItem } : {}),
+      ...(previous.shiny ? { shiny: true } : {}),
+    });
+    const requiredItem = fixedFormItem(replacement);
+    if (requiredItem) replacement = { ...replacement, heldItem: requiredItem };
+    this.replaceTeamPokemon(room, playerId, index, replacement);
+  }
+
+  private replaceTeamPokemon(room: GameRoom, playerId: string, index: number, replacement: Pokemon): void {
+    const draft = this.requireDraft(room);
+    const player = draft.players.find((candidate) => candidate.id === playerId);
+    const previous = player?.team[index];
+    if (!player || !previous) throw new MultiplayerGameError('Ese Pokémon ya no existe.');
+    const players = draft.players.map((candidate) => candidate.id === playerId
+      ? { ...candidate, team: candidate.team.map((pokemon, teamIndex) => teamIndex === index ? replacement : pokemon) }
+      : candidate);
+    room.draft = this.withHistory({ ...draft, players, activeFestaCard: undefined }, `${player.name}: ${previous.name} -> ${replacement.name}.`);
+    this.bump(room);
+  }
+
+  private modifierTargets(draft: DraftState, effect: FestaEffectType): { key: string; playerName: string; pokemon: Pokemon }[] {
+    const rule = festaModifierRule(effect);
+    if (!rule) return [];
+    const actor = this.currentPlayer(draft);
+    return draft.players
+      .filter((player) => rule.scope === 'all' || (rule.scope === 'own' ? player.id === actor.id : player.id !== actor.id))
+      .flatMap((player) => player.team.map((pokemon, index) => ({ key: `${player.id}:${index}`, playerName: player.name, pokemon })))
+      .filter(({ pokemon }) => rule.kind !== 'item' || !fixedFormItem(pokemon));
+  }
+
+  private festaCatalog(): Promise<{ items: { id: string; name: string }[]; moves: { id: string; name: string }[] }> {
+    this.festaCatalogRequest ??= readFile(join(process.cwd(), 'public', 'data', 'festa-catalog.v1.json'), 'utf8')
+      .then((raw) => JSON.parse(raw));
+    return this.festaCatalogRequest;
   }
 
   private async randomOptions(count: number, blockedIds: number[], draft: DraftState): Promise<Pokemon[]> {
@@ -400,6 +606,7 @@ export class MultiplayerGameEngine {
       if (monotype && !entry.types.some((type) => type.toLowerCase() === monotype.toLowerCase())) continue;
       if (draft.filters?.mega === false && /-mega(?:-|$)/.test(entry.name)) continue;
       if (draft.filters?.gigantamax === false && entry.name.endsWith('-gmax')) continue;
+      if (entry.name.startsWith('koraidon-') || entry.name.startsWith('miraidon-')) continue;
       accepted.push(entry);
       blockedFamilies.add(entry.family);
     }
@@ -415,13 +622,13 @@ export class MultiplayerGameEngine {
 
   private toPokemon(entry: CatalogEntry): Pokemon {
     const name = entry.name.split('-').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
-    const sprite = entry.images & 1 ? `images/pokemon/v1/${entry.id}.webp` : '';
+    const image = entry.images & 5 ? `images/pokemon/v1/${entry.id}.webp` : '';
     return {
       id: entry.id,
       name,
       rawName: entry.name,
-      sprite,
-      artwork: sprite,
+      sprite: image,
+      artwork: image,
       types: entry.types.map((type) => type.charAt(0).toUpperCase() + type.slice(1)),
       generation: entry.generation,
     };

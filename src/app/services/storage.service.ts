@@ -54,6 +54,9 @@ export class StorageService {
         ...(turn?.selectedPokemon ? [turn.selectedPokemon] : []),
       ];
       for (const entry of pokemon) {
+        if (draft.id.startsWith('online-') && !entry.artwork && !entry.sprite) {
+          entry.artwork = pokemonArtworkUrl(entry.id, entry.shiny);
+        }
         if (externalImage.test(entry.artwork)) {
           entry.artwork = pokemonArtworkUrl(entry.id, entry.shiny);
         }

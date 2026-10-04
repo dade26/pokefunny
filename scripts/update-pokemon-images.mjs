@@ -15,6 +15,16 @@ for (const pokemon of catalog) {
   jobs.push({ id: pokemon.id, from: normal, to: '' }, { id: pokemon.id, from: shiny, to: 'shiny/' });
 }
 
+const vivillonForms = [
+  'icy-snow', 'polar', 'tundra', 'continental', 'garden', 'elegant', 'modern', 'marine',
+  'archipelago', 'high-plains', 'sandstorm', 'river', 'monsoon', 'savanna', 'sun', 'ocean',
+  'jungle', 'fancy', 'poke-ball',
+];
+for (const form of vivillonForms) {
+  const id = `666-${form}`;
+  jobs.push({ id, from: '', to: '' }, { id, from: 'shiny/', to: 'shiny/' });
+}
+
 let cursor = 0;
 let completed = 0;
 let downloaded = 0;

@@ -45,7 +45,6 @@
       <section class="lobby">
         <h1>Sala de espera · {{ connectedPlayers().length }} jugadores</h1>
         <p>Comparte el enlace y empieza cuando estéis todos. Participarán los jugadores conectados en ese momento.</p>
-        <p>El host dirige la sala y observa la partida. Para jugar también, abre el enlace en otro navegador o dispositivo.</p>
         <div class="players">
           @for (player of state.players; track player.id) {
             <div><strong>{{ player.name }}</strong><span [class.offline]="!player.connected">{{ player.connected ? 'Conectado' : 'Desconectado' }}</span></div>
@@ -68,6 +67,7 @@
           @if (state.phase === 'finished') {
             <h1>Equipos finales</h1>
             <app-team-list [state]="draft" [allowExport]="true" />
+            <a class="primary" [routerLink]="savedDraftUrl()">Consultar partida y crear torneo</a>
           } @else if (draft.activeFestaCard && activeFestaCard(); as card) {
             <article class="watch-card">
               <h1>Turno de {{ activePlayer()?.name }}</h1>
@@ -82,7 +82,6 @@
               <strong>{{ draft.currentTurn!.currentIndex + 1 }} / {{ draft.currentTurn!.options.length }}</strong>
               <img [src]="pokemon.artwork || pokemon.sprite" [alt]="pokemon.name" />
               <h2>{{ pokemon.name }}</h2>
-              <p>El host solo observa. Las decisiones se toman en el dispositivo del jugador.</p>
             </article>
           }
         </section>

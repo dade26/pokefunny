@@ -638,6 +638,22 @@ export class TenPickService {
     return true;
   }
 
+  saveMultiplayerDraft(roomCode: string, state: DraftState): string {
+    const id = `online-${roomCode.toLowerCase()}`;
+    const now = new Date().toISOString();
+    const previous = this.drafts().find((draft) => draft.id === id);
+    const savedState: DraftState = {
+      ...state,
+      ...(previous?.state.tournament && !state.tournament ? { tournament: previous.state.tournament } : {}),
+      ...(previous?.state.swissTournament && !state.swissTournament ? { swissTournament: previous.state.swissTournament } : {}),
+    };
+    const saved: SavedDraft = { id, createdAt: previous?.createdAt ?? now, updatedAt: now, state: savedState };
+    const drafts = [...this.drafts().filter((draft) => draft.id !== id), saved];
+    this.storageService.saveDrafts(drafts);
+    this.drafts.set(drafts);
+    return id;
+  }
+
   saveTournament(tournament: import('../models/tournament').TournamentState, expectedState: DraftState): void {
     if (this.state() !== expectedState || !expectedState.finished) return;
     this.commit({ ...expectedState, tournament, swissTournament: undefined });

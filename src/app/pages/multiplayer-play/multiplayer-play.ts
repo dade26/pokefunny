@@ -20,6 +20,8 @@ export class MultiplayerPlay implements OnInit {
   readonly nickname = signal('');
   readonly selectedFirst = signal('');
   readonly selectedSecond = signal('');
+  readonly modifierTarget = signal('');
+  readonly modifierValue = signal('');
   readonly activeCard = computed(() => {
     const id = this.state()?.draft?.activeFestaCard?.cardId;
     return id ? getFestaCard(id) ?? null : null;
@@ -45,6 +47,11 @@ export class MultiplayerPlay implements OnInit {
   skip(optionId: string): Promise<void> {
     this.nickname.set('');
     return this.socket.skipPokemon(optionId);
+  }
+
+  async resolveFestaPokemon(pokemonId: number): Promise<void> {
+    await this.socket.resolveFestaPokemon(pokemonId, this.nickname());
+    this.nickname.set('');
   }
 
   allPicks(): { key: string; player: Player; pokemonName: string }[] {

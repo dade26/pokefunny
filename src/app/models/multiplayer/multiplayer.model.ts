@@ -49,6 +49,8 @@ export type MultiplayerControls =
   | { kind: 'pick'; turnId: string; option: Pokemon; canSkip: boolean; currentIndex: number; total: number }
   | { kind: 'festa-revealed'; cardId: string }
   | { kind: 'festa-pokemon-choice'; cardId: string; choices: Pokemon[] }
+  | { kind: 'festa-form-choice'; cardId: string; targets: { key: string; playerName: string; pokemon: Pokemon }[] }
+  | { kind: 'festa-modifier'; cardId: string; modifierKind: 'item' | 'move'; targetMode: 'choose' | 'random'; randomValue: boolean; targets: { key: string; playerName: string; pokemon: Pokemon }[]; values: { id: string; name: string }[] }
   | { kind: 'festa-reroll'; cardId: string; team: Pokemon[] }
   | { kind: 'festa-trade-any'; cardId: string }
   | { kind: 'festa-trade-last'; cardId: string }

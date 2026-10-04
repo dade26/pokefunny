@@ -118,9 +118,23 @@ io.on('connection', (socket) => {
 
   socket.on('startFestaResolution', async (payload, callback) => {
     await playerCommand(socket, callback, async (room, player) => {
-      engine.startFestaResolution(room, player.id, String(payload?.actionId ?? ''));
+      await engine.startFestaResolution(room, player.id, String(payload?.actionId ?? ''));
       await rooms.save(room);
       console.log(`[room ${room.roomCode}] festa resolution by ${player.name}`);
+    });
+  });
+
+  socket.on('resolveFestaTransformation', async (payload, callback) => {
+    await playerCommand(socket, callback, async (room, player) => {
+      await engine.resolveTransformation(room, player.id, String(payload?.target ?? ''), String(payload?.actionId ?? ''));
+      await rooms.save(room);
+    });
+  });
+
+  socket.on('resolveFestaModifier', async (payload, callback) => {
+    await playerCommand(socket, callback, async (room, player) => {
+      await engine.resolveModifier(room, player.id, String(payload?.target ?? ''), String(payload?.value ?? ''), String(payload?.actionId ?? ''));
+      await rooms.save(room);
     });
   });
 

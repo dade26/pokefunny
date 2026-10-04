@@ -5,6 +5,8 @@ import {
   MultiplayerRoomState,
   MultiplayerSetup,
 } from '../../models/multiplayer/multiplayer.model';
+import { DraftState, Pokemon } from '../../models/pokemon.model';
+import { pokemonArtworkUrl } from '../../models/pokemon-images';
 
 interface Ack<T> {
   ok: boolean;
@@ -46,8 +48,14 @@ export class MultiplayerSocketService {
       void reconnect.catch(() => undefined);
     });
     this.socket.on('disconnect', () => this.connected.set(false));
-    this.socket.on('roomState', (state: MultiplayerRoomState) => this.roomState.set(state));
-    this.socket.on('privatePlayerState', (state: MultiplayerPlayerState) => this.playerState.set(state));
+    this.socket.on('roomState', (state: MultiplayerRoomState) => {
+      this.restoreDraftImages(state.draft);
+      this.roomState.set(state);
+    });
+    this.socket.on('privatePlayerState', (state: MultiplayerPlayerState) => {
+      this.restorePlayerImages(state);
+      this.playerState.set(state);
+    });
     return this.socket;
   }
 
@@ -56,7 +64,10 @@ export class MultiplayerSocketService {
     if (response.hostToken && response.roomCode) {
       localStorage.setItem(this.hostTokenKey(response.roomCode), response.hostToken);
     }
-    if (response.state) this.roomState.set(response.state);
+    if (response.state) {
+      this.restoreDraftImages(response.state.draft);
+      this.roomState.set(response.state);
+    }
     this.session = { role: 'host', roomCode: response.roomCode! };
     return response.state!;
   }
@@ -65,7 +76,10 @@ export class MultiplayerSocketService {
     const hostToken = localStorage.getItem(this.hostTokenKey(roomCode));
     if (!hostToken) return false;
     const response = await this.emit<MultiplayerRoomState>('reconnectHost', { roomCode, hostToken });
-    if (response.state) this.roomState.set(response.state);
+    if (response.state) {
+      this.restoreDraftImages(response.state.draft);
+      this.roomState.set(response.state);
+    }
     this.session = { role: 'host', roomCode };
     return true;
   }
@@ -76,7 +90,10 @@ export class MultiplayerSocketService {
     if (response.playerToken && response.roomCode) {
       localStorage.setItem(this.playerTokenKey(response.roomCode), response.playerToken);
     }
-    if (response.state) this.playerState.set(response.state);
+    if (response.state) {
+      this.restorePlayerImages(response.state);
+      this.playerState.set(response.state);
+    }
     this.session = { role: 'player', roomCode };
     return response.state!;
   }
@@ -85,7 +102,10 @@ export class MultiplayerSocketService {
     const playerToken = localStorage.getItem(this.playerTokenKey(roomCode));
     if (!playerToken) return false;
     const response = await this.emit<MultiplayerPlayerState>('joinRoom', { roomCode, playerToken });
-    if (response.state) this.playerState.set(response.state);
+    if (response.state) {
+      this.restorePlayerImages(response.state);
+      this.playerState.set(response.state);
+    }
     this.session = { role: 'player', roomCode };
     return true;
   }
@@ -113,6 +133,14 @@ export class MultiplayerSocketService {
 
   resolveFestaReroll(teamIndex: number): Promise<void> {
     return this.command('resolveFestaReroll', { teamIndex, actionId: crypto.randomUUID() });
+  }
+
+  resolveFestaTransformation(target: string): Promise<void> {
+    return this.command('resolveFestaTransformation', { target, actionId: crypto.randomUUID() });
+  }
+
+  resolveFestaModifier(target: string, value: string): Promise<void> {
+    return this.command('resolveFestaModifier', { target, value, actionId: crypto.randomUUID() });
   }
 
   resolveFestaTrade(first: string, second: string): Promise<void> {
@@ -149,5 +177,29 @@ export class MultiplayerSocketService {
 
   private playerTokenKey(roomCode: string): string {
     return `${PLAYER_TOKEN_KEY}.${roomCode.toUpperCase()}`;
+  }
+
+  private restoreDraftImages(draft?: DraftState): void {
+    if (!draft) return;
+    draft.players.forEach((player) => player.team.forEach((pokemon) => this.restorePokemonImage(pokemon)));
+    draft.currentTurn?.options.forEach((pokemon) => this.restorePokemonImage(pokemon));
+    if (draft.currentTurn?.selectedPokemon) this.restorePokemonImage(draft.currentTurn.selectedPokemon);
+    if (draft.activeFestaCard?.replacement) this.restorePokemonImage(draft.activeFestaCard.replacement);
+  }
+
+  private restorePlayerImages(state: MultiplayerPlayerState): void {
+    this.restoreDraftImages(state.draft);
+    state.myTeam.forEach((pokemon) => this.restorePokemonImage(pokemon));
+    const controls = state.controls;
+    if (controls?.kind === 'pick') this.restorePokemonImage(controls.option);
+    if (controls?.kind === 'festa-pokemon-choice') controls.choices.forEach((pokemon) => this.restorePokemonImage(pokemon));
+    if (controls?.kind === 'festa-reroll') controls.team.forEach((pokemon) => this.restorePokemonImage(pokemon));
+    if (controls?.kind === 'festa-form-choice' || controls?.kind === 'festa-modifier') {
+      controls.targets.forEach((target) => this.restorePokemonImage(target.pokemon));
+    }
+  }
+
+  private restorePokemonImage(pokemon: Pokemon): void {
+    if (!pokemon.artwork && !pokemon.sprite) pokemon.artwork = pokemonArtworkUrl(pokemon.id, pokemon.shiny);
   }
 }

@@ -38,7 +38,7 @@ describe('App', () => {
     expect(compiled.querySelector('.languages')?.textContent).toContain('English');
     expect(compiled.querySelector('.languages')?.textContent).toContain('Espa\u00f1ol');
     expect(compiled.querySelector('.brand-avatar img')?.getAttribute('src'))
-      .toBe('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png');
+      .toBe('images/pokemon/v1/25.webp');
     expect(compiled.querySelector('app-favorite-picker')).toBeNull();
   });
 

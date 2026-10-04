@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ALL_GENERATIONS, DraftState, Pokemon } from '../src/app/models/pokemon.model';
 import { MultiplayerGameEngine } from './multiplayer-game-engine';
 import { GameRoom } from './room-repository';
+import { FESTA_CARDS } from '../src/app/models/festa-cards';
 
 const setup = {
   mode: 'normal' as const,
@@ -46,6 +47,15 @@ function forceTurn(draft: DraftState, playerId = 'p1'): DraftState {
 }
 
 describe('MultiplayerGameEngine', () => {
+  it('uses local artwork when a catalog entry has artwork but no sprite', () => {
+    const engine = new MultiplayerGameEngine();
+    const result = (engine as unknown as { toPokemon(entry: object): Pokemon }).toPokemon({
+      id: 10301, name: 'zygarde-mega', generation: 6, family: 'chain:370', types: ['dragon'], images: 4,
+    });
+    expect(result.artwork).toBe('images/pokemon/v1/10301.webp');
+    expect(result.sprite).toBe('images/pokemon/v1/10301.webp');
+  });
+
   it('uses the connected lobby members when starting without a configured player count', async () => {
     const engine = new MultiplayerGameEngine();
     const game = room();
@@ -198,5 +208,78 @@ describe('MultiplayerGameEngine', () => {
     expect(game.draft.players[0].team).toHaveLength(2);
     expect(game.draft.players[0].team[0].name).toBe('Bulbasaur');
     expect(game.draft.players[0].team[1].name).not.toBe('Charmander');
+  });
+
+  it('gives a rival the controls for rival-choice FESTA cards', async () => {
+    const engine = new MultiplayerGameEngine();
+    const game = room();
+    game.draft = await engine.createInitialDraft(game);
+    game.draft = {
+      ...forceTurn(game.draft, 'p1'), mode: 'festa',
+      activeFestaCard: { cardId: 'opponent-first-stage', phase: 'revealed' },
+    };
+    await engine.startFestaResolution(game, 'p1', 'rival-card');
+    expect(game.draft.activeFestaCard?.affectedPlayerId).toBe('p1');
+    expect(game.draft.activeFestaCard?.resolvingPlayerId).toBe('p2');
+    expect((await engine.playerState(game, game.players[0])).canAct).toBe(false);
+    expect((await engine.playerState(game, game.players[1])).controls?.kind).toBe('festa-pokemon-choice');
+  });
+
+  it('resolves Who is this without leaving the turn locked', async () => {
+    const engine = new MultiplayerGameEngine();
+    const game = room();
+    game.draft = await engine.createInitialDraft(game);
+    game.draft = {
+      ...forceTurn(game.draft, 'p1'), mode: 'festa',
+      players: [
+        { id: 'p1', name: 'David', team: [{ ...pokemon(6, 'Charizard'), rawName: 'charizard' }] },
+        { id: 'p2', name: 'Aneta', team: [pokemon(94, 'Gengar')] },
+      ],
+      activeFestaCard: { cardId: 'random-change-form', phase: 'revealed' },
+    };
+    await engine.startFestaResolution(game, 'p1', 'form-card');
+    expect(game.draft.activeFestaCard).toBeUndefined();
+    expect(game.draft.players.some((player) => player.team.some((pick) => ![6, 94].includes(pick.id)))).toBe(true);
+  });
+
+  it('offers controls and resolves modifier cards instead of leaving an unsupported wait state', async () => {
+    const engine = new MultiplayerGameEngine();
+    const game = room();
+    game.draft = await engine.createInitialDraft(game);
+    game.draft = {
+      ...forceTurn(game.draft, 'p1'), mode: 'festa',
+      players: [
+        { id: 'p1', name: 'David', team: [pokemon(1, 'Bulbasaur')] },
+        { id: 'p2', name: 'Aneta', team: [pokemon(94, 'Gengar')] },
+      ],
+      activeFestaCard: { cardId: 'item-random-rival', phase: 'revealed' },
+    };
+    await engine.startFestaResolution(game, 'p1', 'item-card');
+    expect((await engine.playerState(game, game.players[0])).controls?.kind).toBe('festa-modifier');
+    await engine.resolveModifier(game, 'p1', '', 'leftovers', 'item-resolution');
+    expect(game.draft.activeFestaCard).toBeUndefined();
+    expect(game.draft.players[1].team[0].heldItem).toBeDefined();
+  });
+
+  it('never leaves any FESTA card with only an unsupported wait state', async () => {
+    const engine = new MultiplayerGameEngine();
+    for (const card of FESTA_CARDS) {
+      const game = room();
+      game.draft = await engine.createInitialDraft(game);
+      game.draft = {
+        ...forceTurn(game.draft, 'p1'), mode: 'festa',
+        players: [
+          { id: 'p1', name: 'David', team: [{ ...pokemon(6, 'Charizard'), rawName: 'charizard' }] },
+          { id: 'p2', name: 'Aneta', team: [{ ...pokemon(94, 'Gengar'), rawName: 'gengar' }] },
+        ],
+        activeFestaCard: { cardId: card.id, phase: 'revealed' },
+      };
+      await engine.startFestaResolution(game, 'p1', `card-${card.id}`);
+      if (!game.draft.activeFestaCard) continue;
+      const states = await Promise.all(game.players.map((player) => engine.playerState(game, player)));
+      const acting = states.find((state) => state.canAct);
+      expect(acting?.controls?.kind, card.id).toBeDefined();
+      expect(acting?.controls?.kind, card.id).not.toBe('festa-wait');
+    }
   });
 });

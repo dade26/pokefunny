@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Pokemon } from '../models/pokemon.model';
 import { PokemonService } from './pokemon.service';
+import { fixedFormItem } from '../models/fixed-form-items';
 
 export class PokepasteError extends Error {
   constructor(readonly key: 'unknownForm' | 'unknownAbility', readonly pokemonName: string) {
@@ -24,18 +25,24 @@ export class PokepasteService {
       if (!species.exists) {
         throw new PokepasteError('unknownForm', pokemon.name);
       }
+      const transformationItem = fixedFormItem({ ...pokemon, rawName: detail.name });
+      const exportSpecies = transformationItem
+        ? Dex.species.get(species.baseSpecies || detail.species.name)
+        : species;
+      if (!exportSpecies.exists) throw new PokepasteError('unknownForm', pokemon.name);
       const abilitySlot = [...detail.abilities]
         .sort((a, b) => Number(a.is_hidden) - Number(b.is_hidden) || a.slot - b.slot)[0];
-      const ability = abilitySlot ? Dex.abilities.get(abilitySlot.ability.name) : null;
-      const fixedGender = species.gender === 'M' || species.gender === 'F'
-        ? species.gender
+      const baseAbility = transformationItem ? exportSpecies.abilities['0'] : undefined;
+      const ability = Dex.abilities.get(baseAbility || abilitySlot?.ability.name || '');
+      const fixedGender = exportSpecies.gender === 'M' || exportSpecies.gender === 'F'
+        ? exportSpecies.gender
         : /-female(?:-|$)/.test(detail.name) ? 'F' : /-male(?:-|$)/.test(detail.name) ? 'M' : '';
       const gender = fixedGender ? ` (${fixedGender})` : '';
       const assignedItem = typeof pokemon.heldItem === 'string' ? pokemon.heldItem : pokemon.heldItem?.name;
-      const heldItem = assignedItem || species.requiredItem;
+      const heldItem = transformationItem?.name || assignedItem || species.requiredItem;
       const item = heldItem ? ` @ ${heldItem}` : '';
       const nickname = this.cleanSetText(pokemon.nickname);
-      const name = nickname ? `${nickname} (${species.name})` : species.name;
+      const name = nickname ? `${nickname} (${exportSpecies.name})` : exportSpecies.name;
       const shiny = pokemon.shiny ? '\nShiny: Yes' : '';
       const abilityText = ability?.exists ? `\nAbility: ${ability.name}` : '';
       return `${name}${gender}${item}${abilityText}${shiny}`;

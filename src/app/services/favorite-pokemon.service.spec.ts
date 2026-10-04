@@ -8,7 +8,6 @@ const catalog = [
   { id: 666, name: 'vivillon', images: 5 },
   { id: 9999, name: 'missing-image', images: 0 },
 ];
-const spriteBase = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
 
 describe('FavoritePokemonService', () => {
   let getPokemonCatalog: ReturnType<typeof vi.fn>;
@@ -37,7 +36,7 @@ describe('FavoritePokemonService', () => {
     const service = TestBed.inject(FavoritePokemonService);
     expect(service.pickerOpen()).toBe(false);
     await getPokemonCatalog.mock.results[0].value;
-    expect(service.favorite()).toEqual({ id: 122, key: '122', name: 'Mr Mime', artwork: `${spriteBase}/122.png` });
+    expect(service.favorite()).toEqual({ id: 122, key: '122', name: 'Mr Mime', artwork: 'images/pokemon/v1/122.webp' });
     expect(service.pickerOpen()).toBe(false);
   });
 
@@ -48,7 +47,7 @@ describe('FavoritePokemonService', () => {
     expect(vivillon).toHaveLength(20);
     expect(vivillon.map((pokemon) => pokemon.name)).toContain('Vivillon Poke Ball');
     expect(vivillon.find((pokemon) => pokemon.key === 'vivillon-archipelago')?.artwork)
-      .toBe(`${spriteBase}/666-archipelago.png`);
+      .toBe('images/pokemon/v1/666-archipelago.webp');
 
     service.choose(vivillon.find((pokemon) => pokemon.key === 'vivillon-ocean')!);
     expect(localStorage.getItem('pokefunny.favoritePokemon')).toBe('vivillon-ocean');

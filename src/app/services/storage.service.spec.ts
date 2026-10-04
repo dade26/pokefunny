@@ -17,6 +17,18 @@ describe('StorageService draft history', () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => vi.restoreAllMocks());
 
+  it('repairs empty image paths in drafts saved by older multiplayer servers', () => {
+    const savedState: DraftState = {
+      ...state,
+      players: [{ ...state.players[0], team: [{ id: 25, name: 'Pikachu', sprite: '', artwork: '', types: ['Electric'] }] }],
+    };
+    localStorage.setItem(libraryKey, JSON.stringify([
+      { id: 'online-old', createdAt: '2026-01-01', updatedAt: '2026-01-01', state: savedState },
+    ]));
+    expect(new StorageService().loadDrafts()[0].state.players[0].team[0].artwork)
+      .toBe('images/pokemon/v1/25.webp');
+  });
+
   it('migrates the old draft once without losing its locked turn or existing history', () => {
     const storage = new StorageService();
     storage.saveDrafts([{ id: 'other', createdAt: '2026-01-01', updatedAt: '2026-01-01', state }]);

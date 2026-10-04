@@ -37,7 +37,7 @@ describe('PokepasteService', () => {
     expect(text).toBe([
       'Darkrai\nAbility: Bad Dreams',
       'Fezandipiti (M)\nAbility: Toxic Chain',
-      'Venusaur-Mega @ Venusaurite\nAbility: Thick Fat',
+      'Venusaur @ Venusaurite\nAbility: Overgrow',
       'Cinderace\nAbility: Blaze',
       'Rotom-Wash\nAbility: Levitate',
       'Naganadel\nAbility: Beast Boost',
@@ -85,20 +85,35 @@ describe('PokepasteService', () => {
     expect(text).toBe('Night Buddy (Darkrai)\nAbility: Bad Dreams');
   });
 
-  it('omits the ability when it is missing from Showdown data', async () => {
+  it('exports a Mega as its base species with the stone and base ability', async () => {
     getDetail.mockResolvedValue({
       name: 'venusaur-mega', is_default: false, species: { name: 'venusaur-mega' },
       abilities: [{ ability: { name: 'new-mega-ability' }, is_hidden: false, slot: 1 }],
     });
     const text = await TestBed.inject(PokepasteService).createText([team[0]]);
-    expect(text).toBe('Venusaur-Mega @ Venusaurite');
+    expect(text).toBe('Venusaur @ Venusaurite\nAbility: Overgrow');
+  });
+
+  it.each([
+    ['kyogre-primal', 'kyogre', 'Kyogre @ Blue Orb\nAbility: Drizzle'],
+    ['zacian-crowned', 'zacian', 'Zacian @ Rusted Sword\nAbility: Intrepid Sword'],
+    ['dialga-origin', 'dialga', 'Dialga @ Adamant Crystal\nAbility: Pressure'],
+  ])('exports the object transformation %s as its base species', async (name, base, expected) => {
+    getDetail.mockResolvedValue({
+      name, is_default: false, species: { name: base },
+      abilities: [{ ability: { name: 'transformed-ability' }, is_hidden: false, slot: 1 }],
+    });
+    const text = await TestBed.inject(PokepasteService).createText([
+      { ...team[0], name, rawName: name },
+    ]);
+    expect(text).toBe(expected);
   });
 
   it.each([
     ['meowstic-male', 'Meowstic (M)'],
     ['meowstic-female', 'Meowstic-F (F)'],
-    ['meowstic-male-mega', 'Meowstic-M-Mega (M) @ Meowsticite'],
-    ['meowstic-female-mega', 'Meowstic-F-Mega (F) @ Meowsticite'],
+    ['meowstic-male-mega', 'Meowstic (M) @ Meowsticite\nAbility: Keen Eye'],
+    ['meowstic-female-mega', 'Meowstic (M) @ Meowsticite\nAbility: Keen Eye'],
     ['indeedee-male', 'Indeedee (M)'],
     ['indeedee-female', 'Indeedee-F (F)'],
     ['basculegion-male', 'Basculegion (M)'],
@@ -134,7 +149,7 @@ describe('PokepasteService', () => {
       abilities: [{ ability: { name: 'synchronize' }, is_hidden: false, slot: 1 }],
     });
     expect(await TestBed.inject(PokepasteService).createText([team[0]]))
-      .toBe(`${exportedName}\nAbility: Synchronize`);
+      .toBe(exportedName.includes('\nAbility:') ? exportedName : `${exportedName}\nAbility: Synchronize`);
   });
 
   it('rejects an unknown alternate form even when its base species exists', async () => {

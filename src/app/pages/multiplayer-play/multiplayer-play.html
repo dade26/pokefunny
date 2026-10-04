@@ -56,14 +56,42 @@
         } @else if (controls.kind === 'festa-pokemon-choice' && activeCard(); as card) {
           <article class="festa">
             <app-festa-card [card]="card" />
+            @if (requireNicknames()) {
+              <label>Mote
+                <input maxlength="18" [ngModel]="nickname()" (ngModelChange)="nickname.set($event)" />
+              </label>
+            }
             <div class="choice-grid">
               @for (choice of controls.choices; track choice.id) {
-                <button type="button" (click)="socket.resolveFestaPokemon(choice.id, nickname())">
+                <button type="button" [disabled]="requireNicknames() && !nickname().trim()" (click)="resolveFestaPokemon(choice.id)">
                   <img [src]="choice.artwork || choice.sprite" [alt]="choice.name" />
                   <span>{{ choice.name }}</span>
                 </button>
               }
             </div>
+          </article>
+        } @else if (controls.kind === 'festa-modifier') {
+          <article class="festa">
+            <h1>{{ controls.modifierKind === 'item' ? 'Objeto FESTA' : 'Movimiento FESTA' }}</h1>
+            @if (controls.targetMode === 'choose') {
+              <select [ngModel]="modifierTarget()" (ngModelChange)="modifierTarget.set($event)">
+                <option value="">Elige un Pokémon</option>
+                @for (target of controls.targets; track target.key) {
+                  <option [value]="target.key">{{ target.playerName }} - {{ target.pokemon.name }}</option>
+                }
+              </select>
+            }
+            @if (!controls.randomValue) {
+              <select [ngModel]="modifierValue()" (ngModelChange)="modifierValue.set($event)">
+                <option value="">{{ controls.modifierKind === 'item' ? 'Elige un objeto' : 'Elige un movimiento' }}</option>
+                @for (value of controls.values; track value.id) { <option [value]="value.id">{{ value.name }}</option> }
+              </select>
+            } @else {
+              <p>El objeto se elegirá al azar.</p>
+            }
+            <button class="pick" type="button"
+              [disabled]="controls.targetMode === 'choose' && !modifierTarget() || !controls.randomValue && !modifierValue()"
+              (click)="socket.resolveFestaModifier(modifierTarget(), modifierValue())">Confirmar</button>
           </article>
         } @else if (controls.kind === 'festa-reroll') {
           <article class="festa">
@@ -73,6 +101,18 @@
                 <button type="button" (click)="socket.resolveFestaReroll($index)">
                   <img [src]="pokemon.artwork || pokemon.sprite" [alt]="pokemon.name" />
                   <span>{{ pokemon.name }}</span>
+                </button>
+              }
+            </div>
+          </article>
+        } @else if (controls.kind === 'festa-form-choice') {
+          <article class="festa">
+            <h1>Elige un Pokémon para cambiar de forma</h1>
+            <div class="choice-grid">
+              @for (target of controls.targets; track target.key) {
+                <button type="button" (click)="socket.resolveFestaTransformation(target.key)">
+                  <img [src]="target.pokemon.artwork || target.pokemon.sprite" [alt]="target.pokemon.name" />
+                  <span>{{ target.playerName }} - {{ target.pokemon.name }}</span>
                 </button>
               }
             </div>

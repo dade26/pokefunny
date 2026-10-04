@@ -1,5 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { PokemonService } from './pokemon.service';
+import { pokemonArtworkUrl } from '../models/pokemon-images';
 
 export interface FavoritePokemon {
   id: number;
@@ -9,7 +10,6 @@ export interface FavoritePokemon {
 }
 
 const storageKey = 'pokefunny.favoritePokemon';
-const spriteBaseUrl = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
 const vivillonForms = [
   'icy-snow', 'polar', 'tundra', 'continental', 'garden', 'elegant', 'modern', 'marine',
   'archipelago', 'high-plains', 'sandstorm', 'river', 'monsoon', 'savanna', 'sun', 'ocean',
@@ -35,12 +35,12 @@ export class FavoritePokemonService {
     this.error.set(false);
     try {
       const catalog = await this.pokemonService.getPokemonCatalog();
-      const options = catalog.filter((entry) => entry.images & 1).flatMap((entry) => {
+      const options = catalog.filter((entry) => entry.images & 5).flatMap((entry) => {
         const option = {
           id: entry.id,
           key: String(entry.id),
           name: this.formatName(entry.id === 666 ? 'vivillon-meadow' : entry.name),
-          artwork: `${spriteBaseUrl}/${entry.id}.png`,
+          artwork: pokemonArtworkUrl(entry.id),
         };
         if (entry.id !== 666) return [option];
         return [
@@ -49,7 +49,7 @@ export class FavoritePokemonService {
             id: entry.id,
             key: `vivillon-${form}`,
             name: this.formatName(`vivillon-${form}`),
-            artwork: `${spriteBaseUrl}/666-${form}.png`,
+            artwork: `images/pokemon/v1/666-${form}.webp`,
           })),
         ];
       });
