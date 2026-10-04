@@ -16,7 +16,7 @@ const app = express();
 app.use(cors({ origin: clientOrigin, credentials: true }));
 app.get('/health', (_request, response) => response.json({
   ok: true,
-  gameEngineVersion: 4,
+  gameEngineVersion: 5,
   revision: process.env['RENDER_GIT_COMMIT'] ?? process.env['COMMIT_SHA'] ?? 'local',
 }));
 

@@ -1,5 +1,11 @@
 # Modo online
 
+## Probabilidad de cartas FESTA
+
+La probabilidad configurada se sortea al empezar el turno y tras cada skip, al mostrar el siguiente encuentro. Por ejemplo, 40% significa una tirada independiente del 40% por encuentro; no garantiza una carta en cada turno. Pueden salir varias cartas en el mismo turno si las anteriores no consumen el pick. Resolver una carta devuelve al encuentro actual sin hacer otra tirada; el siguiente skip vuelve a sortear. Las cartas empiezan a salir cuando todos los jugadores tienen al menos un Pokémon.
+
+Este cambio requiere actualizar el servidor Online. `/health` debe mostrar `gameEngineVersion: 5` y la revisión desplegada.
+
 ## Resultados y animaciones FESTA
 
 Los sorteos FESTA se ven en el host y los móviles: rival, Pokémon destinatario, objeto, forma y reroll. La animación recorre candidatos y termina mostrando el resultado real del servidor. En las cartas de Rival, primero se sortea quién elige; al terminar los tres segundos, ese rival recibe los controles y el host muestra quién elige el Pokémon para quién. Reconectarse conserva el mismo rival y el mismo resultado.
@@ -22,7 +28,7 @@ Cada móvil envía su Pokémon favorito al entrar o reconectarse. Su icono acomp
 
 La web y el backend se despliegan por separado. Hacer push o publicar la web no actualiza necesariamente el proceso de Render. Tras cambiar el motor Online, despliega también el último commit de `main` en el servicio `pokefunny.onrender.com`.
 
-`https://pokefunny.onrender.com/health` debe incluir `gameEngineVersion: 4` y `revision` con el commit desplegado. Si solo responde `{"ok":true}`, sigue ejecutando una versión antigua. Esa versión puede enviar `festa-wait` al jugador activo al resolver cartas de transformación u objetos, dejando la partida bloqueada.
+`https://pokefunny.onrender.com/health` debe incluir `gameEngineVersion: 5` y `revision` con el commit desplegado. Si solo responde `{"ok":true}`, sigue ejecutando una versión antigua. Esa versión puede enviar `festa-wait` al jugador activo al resolver cartas de transformación u objetos, dejando la partida bloqueada.
 
 Comprueba en Render que el servicio usa la rama `main`, instala con `npm ci` y arranca con `npm run start:server`. El reinicio elimina las salas en memoria, por lo que las partidas anteriores deben crearse de nuevo.
 

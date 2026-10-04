@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ALL_GENERATIONS, DraftState, Pokemon } from '../src/app/models/pokemon.model';
 import { MultiplayerGameEngine } from './multiplayer-game-engine';
 import { GameRoom } from './room-repository';
@@ -64,6 +64,60 @@ function festaRoom(cardId: string): GameRoom {
 }
 
 describe('MultiplayerGameEngine', () => {
+  it('rolls the configured FESTA chance independently after every skip, including after resolving a card', async () => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom('trade-any');
+    game.draft!.activeFestaCard = undefined;
+    game.draft!.festaChance = 40;
+    game.draft!.currentTurn!.options = [pokemon(1), pokemon(2), pokemon(3), pokemon(4)];
+    const random = vi.spyOn(Math, 'random');
+    const tradeDraw = (FESTA_CARDS.findIndex(card => card.id === 'trade-any') + 0.5) / FESTA_CARDS.length;
+    try {
+      random.mockReturnValue(0.4);
+      await engine.skip(game, 'p1', optionId(engine, game.draft!), 'skip-1');
+      expect(game.draft!.activeFestaCard).toBeUndefined();
+      expect(random).toHaveBeenCalledTimes(1);
+
+      for (const index of [2, 3]) {
+        random.mockReset().mockReturnValueOnce(0.399).mockReturnValue(tradeDraw);
+        await engine.skip(game, 'p1', optionId(engine, game.draft!), `skip-${index}`);
+        expect(game.draft!.activeFestaCard?.cardId).toBe('trade-any');
+        expect(game.draft!.currentTurn!.currentIndex).toBe(index);
+        expect(engine.hostState(game).draft!.activeFestaCard?.cardId).toBe('trade-any');
+        expect((await engine.playerState(game, game.players[0])).controls?.kind).toBe('festa-revealed');
+        await expect(engine.skip(game, 'p1', optionId(engine, game.draft!), `pending-${index}`)).rejects.toThrow('pendiente');
+        await engine.startFestaResolution(game, 'p1', `start-${index}`);
+        await engine.resolveTrade(game, 'p1', 'p1:0', 'p2:0', `trade-${index}`);
+        expect(game.draft!.activeFestaCard).toBeUndefined();
+        expect(game.draft!.currentTurn!.finished).toBe(false);
+      }
+      expect(game.draft!.history?.filter(entry => entry.message.includes('activated a Festa Card'))).toHaveLength(2);
+      random.mockClear();
+      await expect(engine.skip(game, 'p1', optionId(engine, game.draft!), 'last-skip')).rejects.toThrow('obligatorio');
+      expect(random).not.toHaveBeenCalled();
+      expect(game.draft!.currentTurn!.skippedPokemonIds).toEqual([1, 2, 3]);
+    } finally { random.mockRestore(); }
+  });
+
+  it.each([
+    ['zero chance', 'festa', 0, false],
+    ['full chance', 'festa', 100, true],
+    ['normal mode', 'normal', 100, false],
+    ['monotype mode', 'monotype', 100, false],
+  ] as const)('handles %s on skip', async (_name, mode, chance, expectsCard) => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom('trade-any');
+    game.draft!.activeFestaCard = undefined;
+    game.draft!.mode = mode;
+    game.draft!.festaChance = chance;
+    game.draft!.currentTurn!.options = [pokemon(1), pokemon(2)];
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0.999);
+    try {
+      await engine.skip(game, 'p1', optionId(engine, game.draft!), 'skip');
+      expect(!!game.draft!.activeFestaCard).toBe(expectsCard);
+    } finally { random.mockRestore(); }
+  });
+
   it('shares each mobile favorite in the lobby, private state and draft', async () => {
     const engine = new MultiplayerGameEngine();
     const game = room();

@@ -107,14 +107,14 @@ export class MultiplayerGameEngine {
     if (optionId !== this.optionId(turn, turn.currentIndex)) {
       throw new MultiplayerGameError('Ese Pokémon no pertenece a las opciones actuales.');
     }
-    room.draft = {
+    room.draft = await this.maybeActivateFesta({
       ...draft,
       currentTurn: {
         ...turn,
         currentIndex: turn.currentIndex + 1,
         skippedPokemonIds: [...turn.skippedPokemonIds, this.currentOption(turn).id],
       },
-    };
+    });
     this.bump(room);
     this.markAction(room, actionId);
   }
