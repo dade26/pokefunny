@@ -3,7 +3,6 @@ import { Home } from './pages/home/home';
 import { TenPick } from './pages/ten-pick/ten-pick';
 import { DraftHistory } from './pages/draft-history/draft-history';
 import { TenPickHub } from './pages/ten-pick-hub/ten-pick-hub';
-import { PokeGacha } from './pages/poke-gacha/poke-gacha';
 
 export const routes: Routes = [
   ...(['ten-pick', 'ten-pick-monotype', 'ten-pick-festa'] as const).map((base) => ({
@@ -95,7 +94,7 @@ export const routes: Routes = [
   },
   {
     path: 'poke-gacha',
-    component: PokeGacha,
+    loadComponent: () => import('./pages/poke-gacha/poke-gacha').then(module => module.PokeGacha),
     data: {
       title: 'PokeGacha | Pokefunny',
       description: 'PokeGacha on Pokefunny.',

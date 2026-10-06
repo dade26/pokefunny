@@ -1,0 +1,130 @@
+@let g = gacha;
+@if (g.pcOpen()) {
+  <dialog #pcDialog class="collection-panel pc-panel" [class.sunset]="g.boxTheme() === 'sunset'" aria-labelledby="pc-heading" (cancel)="g.pcOpen.set(false)">
+    <header><h1 id="pc-heading">PC <small>{{ g.pc().length }} / 256</small></h1><button type="button" (click)="g.pcOpen.set(false)">{{ g.i18n.t('gachaClose') }}</button></header>
+    <div class="box-tabs" [attr.aria-label]="g.i18n.t('gachaBoxes')">
+      @for (box of g.boxes; track box) {
+        <button type="button" [class.active]="g.currentBox() === box" [attr.aria-pressed]="g.currentBox() === box" (click)="g.currentBox.set(box)" (dragover)="$event.preventDefault()" (drop)="g.dropOnBox($event, box)">{{ g.boxName(box) }}</button>
+      }
+    </div>
+    <div class="toolbar">
+      <label>{{ g.i18n.t('gachaSearchCollection') }}<input type="search" [ngModel]="g.pcQuery()" (ngModelChange)="g.pcQuery.set($event)" /></label>
+      <label>{{ g.i18n.t('gachaType') }}<select [ngModel]="g.pcType()" (ngModelChange)="g.pcType.set($event)"><option value="">{{ g.i18n.t('gachaAllTypes') }}</option>@for (type of g.types; track type) { <option [value]="type">{{ g.i18n.typeName(type) }}</option> }</select></label>
+      <label>{{ g.i18n.t('gachaSort') }}<select [ngModel]="g.pcSort()" (ngModelChange)="g.pcSort.set($event)"><option value="slot">{{ g.i18n.t('gachaSortSlot') }}</option><option value="number">{{ g.i18n.t('gachaSortNumber') }}</option><option value="name">{{ g.i18n.t('gachaSortName') }}</option><option value="recent">{{ g.i18n.t('gachaSortRecent') }}</option><option value="favorite">{{ g.i18n.t('gachaFavorites') }}</option></select></label>
+      <label>{{ g.i18n.t('gachaRenameBox') }}<input maxlength="24" [placeholder]="g.i18n.t('gachaBox', { count: g.currentBox() + 1 })" [ngModel]="g.boxNames()[g.currentBox()]" (ngModelChange)="g.renameBox($event)" /></label>
+      <label class="check"><input type="checkbox" [ngModel]="g.pcFavoritesOnly()" (ngModelChange)="g.pcFavoritesOnly.set($event)" />{{ g.i18n.t('gachaFavoritesOnly') }}</label>
+    </div>
+    <div class="notice" role="status">
+      @if (g.movingUid()) { <span>{{ g.i18n.t('gachaChoosePcSlot') }}</span><button type="button" (click)="g.movingUid.set(null)">{{ g.i18n.t('cancel') }}</button> }
+      @else { <span>{{ g.i18n.t('gachaDragHint') }}</span> }
+      @if (g.canUndoRelease()) { <button class="undo" type="button" (click)="g.undoRelease()">{{ g.i18n.t('gachaUndoRelease') }}</button> }
+    </div>
+    @if (g.showFeedback()) { <p class="feedback" role="status">{{ g.messageText() }}</p> }
+    <div class="pc-layout">
+      <div class="pc-grid">
+        @for (cell of g.visiblePcSlots(); track cell.slot) {
+          @let entry = cell.entry;
+          <button class="pc-slot" type="button" [class.filled]="entry" [class.selected]="entry?.uid === g.selectedPcUid()" [class.move-target]="g.movingUid() || g.dragUid()" [draggable]="!!entry"
+            [attr.aria-label]="entry ? (entry.nickname || entry.pokemon.name) : g.i18n.t('gachaSlot', { count: cell.slot + 1 })"
+            (click)="g.selectSlot(cell.slot)" (dragstart)="entry && g.startDrag($event, entry.uid)" (dragend)="g.dragUid.set('')" (dragover)="$event.preventDefault()" (drop)="g.dropPokemon($event, g.currentBox(), cell.slot)">
+            @if (entry) { <img [src]="entry.pokemon.sprite || entry.pokemon.artwork" alt="" draggable="false" loading="lazy" />
+              @if (entry.favorite) { <span class="favorite-mark" aria-hidden="true">♥</span> }
+              @if (entry.pokemon.shiny) { <span class="shiny-mark" aria-hidden="true">✦</span> }
+            }
+          </button>
+        } @empty { <p class="empty">{{ g.i18n.t('gachaEmptySearch') }}</p> }
+      </div>
+      <aside class="pc-actions">
+        @if (g.selectedPcPokemon(); as entry) {
+          <img [src]="entry.pokemon.artwork || entry.pokemon.sprite" [alt]="entry.pokemon.name" />
+          <strong>#{{ entry.pokemon.id }} {{ entry.pokemon.name }} @if (entry.pokemon.shiny) { <span>✦ {{ g.i18n.t('shiny') }}</span> }</strong>
+          <div class="type-tags">@for (type of entry.pokemon.types; track type) { <span>{{ g.i18n.typeName(type) }}</span> }</div>
+          <label>{{ g.i18n.t('gachaNickname') }}<input type="text" [ngModel]="entry.nickname" (ngModelChange)="g.updateNickname(entry, $event)" maxlength="24" /></label>
+          <button type="button" [attr.aria-pressed]="!!entry.favorite" (click)="g.toggleFavorite(entry.uid)">{{ g.i18n.t(entry.favorite ? 'gachaUnfavorite' : 'gachaFavorite') }}</button>
+          <button type="button" (click)="g.startMove(entry.uid)">{{ g.i18n.t('gachaMove') }}</button>
+          <button class="danger" type="button" (click)="g.release(entry.uid)">{{ g.i18n.t('gachaRelease') }}</button>
+        } @else { <p>{{ g.i18n.t('gachaSelectPcPokemon') }}</p> }
+      </aside>
+    </div>
+  </dialog>
+}
+
+@if (g.pokedexOpen()) {
+  <dialog #dexDialog class="collection-panel dex-panel" aria-labelledby="dex-heading" (cancel)="g.pokedexOpen.set(false)">
+    <header><h1 id="dex-heading">{{ g.i18n.t('gachaPokedex') }} <small>{{ g.i18n.t('gachaCollectionSummary', { count: g.ownedCount(), shiny: g.shinyCount() }) }}</small></h1><button type="button" (click)="g.pokedexOpen.set(false)">{{ g.i18n.t('gachaClose') }}</button></header>
+    <div class="box-tabs" [attr.aria-label]="g.i18n.t('gachaDexCategory')">
+      <button type="button" [class.active]="g.dexCategory() === 'species'" [attr.aria-pressed]="g.dexCategory() === 'species'" (click)="g.setDexCategory('species')">{{ g.i18n.t('gachaSpecies') }}</button>
+      <button type="button" [class.active]="g.dexCategory() === 'forms'" [attr.aria-pressed]="g.dexCategory() === 'forms'" (click)="g.setDexCategory('forms')">{{ g.i18n.t('gachaForms') }}</button>
+      <button type="button" [class.active]="g.dexCategory() === 'shiny'" [attr.aria-pressed]="g.dexCategory() === 'shiny'" (click)="g.setDexCategory('shiny')">✦ {{ g.i18n.t('shiny') }}</button>
+    </div>
+    <div class="toolbar">
+      <label>{{ g.i18n.t('gachaSearchCollection') }}<input type="search" [ngModel]="g.dexQuery()" (ngModelChange)="g.dexQuery.set($event)" /></label>
+      <label>{{ g.i18n.t('generations') }}<select [ngModel]="g.dexGeneration()" (ngModelChange)="g.dexGeneration.set(+$event)"><option [ngValue]="0">{{ g.i18n.t('gachaAllGenerations') }}</option>@for (generation of g.generations; track generation) { <option [ngValue]="generation">{{ g.i18n.t('gachaGeneration', { count: generation }) }}</option> }</select></label>
+      <label>{{ g.i18n.t('gachaType') }}<select [ngModel]="g.dexType()" (ngModelChange)="g.dexType.set($event)"><option value="">{{ g.i18n.t('gachaAllTypes') }}</option>@for (type of g.types; track type) { <option [value]="type">{{ g.i18n.typeName(type) }}</option> }</select></label>
+      <label>{{ g.i18n.t('gachaDexStatus') }}<select [ngModel]="g.dexFilter()" (ngModelChange)="g.dexFilter.set($event)"><option value="all">{{ g.i18n.t('gachaAll') }}</option><option value="owned">{{ g.i18n.t('gachaOwned') }}</option><option value="seen">{{ g.i18n.t('gachaSeen') }}</option><option value="missing">{{ g.i18n.t('gachaMissing') }}</option></select></label>
+    </div>
+    @if (g.selectedDexEntry(); as selected) {
+      <section class="dex-detail" aria-live="polite">
+        <img [class.silhouette]="g.collectionStatus(selected.id) === 'unknown'" [src]="g.dexImage(selected.id)" alt="" />
+        <div>
+          <h2>#{{ selected.id }} {{ g.collectionStatus(selected.id) === 'unknown' ? g.i18n.t('gachaUnknownPokemon') : selected.name }}</h2>
+          @if (g.collectionStatus(selected.id) === 'unknown') { <p>{{ g.i18n.t('gachaDiscoverHint') }}</p> }
+          @else {
+            <p>{{ g.i18n.t('gachaGeneration', { count: selected.generation }) }} · {{ g.i18n.t(g.collectionStatus(selected.id) === 'owned' ? 'gachaOwned' : 'gachaSeen') }}</p>
+            <div class="type-tags">@for (type of selected.types; track type) { <span>{{ g.i18n.typeName(type) }}</span> }</div>
+            @if (g.dexDetailLoading()) { <p>{{ g.i18n.t('loading') }}</p> }
+            @if (g.dexDetailError()) { <p role="alert">{{ g.i18n.t('gachaLoadError') }}</p><button type="button" (click)="g.inspectDex(selected.id)">{{ g.i18n.t('retry') }}</button> }
+            @if (g.dexDetail(); as detail) { <p>{{ detail.name }} @if (g.shinyDex()[selected.id] === 'owned') { <span>✦ {{ g.i18n.t('gachaShinyOwned') }}</span> }</p> }
+          }
+        </div>
+        <button type="button" (click)="g.selectedDexId.set(null)">{{ g.i18n.t('gachaCloseDetails') }}</button>
+      </section>
+    }
+    <div class="dex-generations">
+      @for (group of g.dexGroups(); track group.generation) {
+        <section class="dex-generation">
+          <div class="generation-heading"><h2>{{ g.i18n.t('gachaGeneration', { count: group.generation }) }}</h2><strong>{{ group.percent }}%</strong><span>{{ g.i18n.t('gachaRemaining', { remaining: group.remaining, total: group.total }) }}</span></div>
+          <div class="dex-grid">
+            @for (pokemon of group.entries; track pokemon.id) {
+              @let status = g.collectionStatus(pokemon.id);
+              <button type="button" class="dex-entry" [class.unknown]="status === 'unknown'" [class.seen]="status === 'seen'" [class.owned]="status === 'owned'" [class.selected]="g.selectedDexId() === pokemon.id" (click)="g.inspectDex(pokemon.id)"
+                [attr.aria-label]="'#' + pokemon.id + ' ' + (status === 'unknown' ? g.i18n.t('gachaUnknownPokemon') : pokemon.name)">
+                <img [src]="g.dexImage(pokemon.id)" alt="" loading="lazy" decoding="async" /><span>#{{ pokemon.id }}</span>
+                <small>{{ status === 'unknown' ? '???' : pokemon.name }}</small>
+              </button>
+            }
+          </div>
+        </section>
+      } @empty { <p class="empty">{{ g.i18n.t('gachaEmptySearch') }}</p> }
+    </div>
+  </dialog>
+}
+
+@if (g.questsOpen()) {
+  <dialog #questsDialog class="collection-panel quest-panel" aria-labelledby="quest-heading" (cancel)="g.questsOpen.set(false)">
+    <header><h1 id="quest-heading">{{ g.i18n.t('gachaQuests') }}</h1><button type="button" (click)="g.questsOpen.set(false)">{{ g.i18n.t('gachaClose') }}</button></header>
+    <p class="intro">{{ g.i18n.t('gachaQuestsHint') }}</p>
+    <div class="quest-grid">
+      @for (quest of g.quests(); track quest.id) {
+        <article class="quest" [class.complete]="quest.progress >= quest.goal">
+          <h2>{{ g.i18n.t(quest.name) }}</h2><strong>{{ quest.progress }} / {{ quest.goal }}</strong>
+          <progress [value]="quest.progress" [max]="quest.goal" [attr.aria-label]="g.i18n.t(quest.name)"></progress>
+          <p>{{ g.i18n.t('gachaReward') }}: {{ g.i18n.t(quest.reward) }}</p>
+          <button type="button" [disabled]="quest.claimed || quest.progress < quest.goal" (click)="g.claimQuest(quest.id)">{{ g.i18n.t(quest.claimed ? 'gachaClaimed' : 'gachaClaimReward') }}</button>
+        </article>
+      }
+    </div>
+    @if (g.showFeedback()) { <p class="feedback" role="status">{{ g.messageText() }}</p> }
+    <section class="customize"><h2>{{ g.i18n.t('gachaCustomize') }}</h2><p>{{ g.i18n.t('gachaCustomizeHint') }}</p>
+      @for (kind of ['scene', 'box', 'title']; track kind) {
+        <fieldset><legend>{{ g.i18n.t(kind === 'scene' ? 'gachaScene' : kind === 'box' ? 'gachaBoxTheme' : 'gachaTrainerTitle') }}</legend>
+          @for (cosmetic of cosmetics; track cosmetic.kind + cosmetic.id) {
+            @if (cosmetic.kind === kind) {
+              <button type="button" [class.active]="selected(kind, cosmetic.id)" [attr.aria-pressed]="selected(kind, cosmetic.id)" [disabled]="!g.cosmeticUnlocked(kind, cosmetic.id)" (click)="g.setCosmetic(kind, cosmetic.id)">{{ g.i18n.t(cosmetic.key) }} @if (!g.cosmeticUnlocked(kind, cosmetic.id)) { <span>· {{ g.i18n.t('gachaLocked') }}</span> }</button>
+            }
+          }
+        </fieldset>
+      }
+    </section>
+  </dialog>
+}
