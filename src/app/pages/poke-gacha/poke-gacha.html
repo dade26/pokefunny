@@ -72,7 +72,7 @@
   @if (annoyanceOfferOpen()) {
     <dialog #offerDialog class="draw-popup annoyance-panel speech-bubble" style="--surface: #fff;" aria-labelledby="annoyance-offer-text" (cancel)="$event.preventDefault(); declineAnnoyanceOffer()">
       <div class="speech-content">
-        <p id="annoyance-offer-text">{{ i18n.t('gachaAnnoyedOffer') }}</p>
+        <p id="annoyance-offer-text">{{ i18n.t(secretOfferKey()) }}</p>
         <div class="annoyance-actions">
           <button type="button" (click)="acceptAnnoyanceOffer()">{{ i18n.t('gachaAccept') }}</button>
           <button type="button" (click)="declineAnnoyanceOffer()">{{ i18n.t('gachaDecline') }}</button>

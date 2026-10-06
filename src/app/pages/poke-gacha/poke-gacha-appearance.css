@@ -1,14 +1,11 @@
 .draw-bank { display: grid; gap: 5px; text-align: center; font-size: 13px; }
 .draw-bank small { color: var(--muted, #65746b); font-size: 12px; }
 .manage-pc { display: block; margin: 18px auto 0; min-height: 42px; padding: 8px 14px; font: inherit; font-weight: 800; background: var(--surface, #fff); color: var(--text, #293631); border: 2px solid var(--border-strong, #344b40); border-radius: 6px; cursor: pointer; }
-.scene-stars .machine::after { content: '✦'; position: absolute; top: 27%; right: 23%; color: #6d5100; font-size: 28px; text-shadow: 0 0 8px #ffe6ac; }
 .quests-button, .gacha-feedback button { min-height: 44px; padding: 8px 14px; font: inherit; font-weight: 800; color: var(--text, #293631); background: var(--surface, #fff); border: 2px solid var(--border-strong, #344b40); border-radius: 8px; cursor: pointer; }
 .quests-button { position: fixed; z-index: 8; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); max-width: calc(100% - 190px); font-size: 13px; }
 .quest-count { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: #fff; background: #b52d43; }
 .gacha-feedback { max-width: 900px; margin: 16px auto; padding: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; border-radius: 8px; background: var(--selected, #d9eddf); font-weight: 800; }
-.scene-forest { background-image: radial-gradient(ellipse at 10% 75%, #69ae7335, transparent 45%), radial-gradient(ellipse at 85% 20%, #93cbb946, transparent 40%); }
 .scene-forest .machine-scene::before { content: '♧'; position: absolute; bottom: 20px; left: 4%; font-size: clamp(70px, 12vw, 160px); color: #528866; text-shadow: 28px -25px 0 #7aa078; opacity: .5; }
-.scene-stars { background-image: radial-gradient(circle at 12% 32%, #ba9a4033 2px, transparent 3px), radial-gradient(circle at 75% 68%, #6878b23b 2px, transparent 3px), linear-gradient(145deg, #7162c515, transparent); background-size: 75px 90px, 110px 115px, auto; }
 .reveal-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; min-height: 24px; } .new-badge, .shiny-badge { padding: 4px 7px; border-radius: 5px; font-size: 11px; font-weight: 900; } .new-badge { background: #d2f4dc; color: #225d3b; } .shiny-badge { background: #ffe9a4; color: #6c5000; }
 .shiny-capsule { border-radius: 16px; background: radial-gradient(ellipse, #ffe69850, transparent 72%); }
 .shiny-capsule .pokemon-reveal { animation: shiny-reveal 750ms ease-out both; }

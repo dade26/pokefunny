@@ -26,10 +26,12 @@ export interface GachaSave {
   options?: GachaOption[];
   bonusDraw?: boolean;
   bonusBallPending?: boolean;
-  secretCheckedDay?: string;
+  secretResetAt?: number;
+  secretDrawsUsed?: number;
   secretOfferPending?: boolean;
   claimedQuests?: string[];
   scene?: string;
+  pageBackground?: string;
   boxTheme?: string;
   title?: string;
   boxNames?: string[];

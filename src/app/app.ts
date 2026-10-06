@@ -7,6 +7,7 @@ import { inject as injectAnalytics, pageview } from '@vercel/analytics';
 import { LanguageService } from './services/language.service';
 import { FavoritePokemonService } from './services/favorite-pokemon.service';
 import { FavoritePicker } from './components/favorite-picker/favorite-picker';
+import { PageBackgroundService } from './services/page-background.service';
 import {
   ActivatedRoute,
   NavigationEnd,
@@ -35,6 +36,7 @@ const analyticsRoutes = [
 export class App {
   readonly i18n = inject(LanguageService);
   readonly favorites = inject(FavoritePokemonService);
+  readonly pageBackground = inject(PageBackgroundService);
   private readonly document = inject(DOCUMENT);
   private readonly meta = inject(Meta);
   private readonly route = inject(ActivatedRoute);

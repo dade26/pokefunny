@@ -139,7 +139,7 @@ for (const [browserType, width] of [[chromium, 1440], [chromium, 390], [webkit, 
     assert.deepEqual(errors, []);
     await context.close();
 
-    // One daily secret, accepted ball survives reload, reduced motion still unlocks it.
+    // Three hourly secrets; accepted balls and the limit survive reloads and reduced motion.
     const secretContext = await browser.newContext({ viewport: { width, height: 844 }, reducedMotion: 'reduce' });
     await secretContext.addInitScript(() => {
       localStorage.setItem('pokefunny.favoritePokemon', '25'); localStorage.setItem('pokefunny.language', 'en');
@@ -167,9 +167,29 @@ for (const [browserType, width] of [[chromium, 1440], [chromium, 390], [webkit, 
     await secretPage.locator('.pokemon-reveal button').click();
     await expect(secretPage.locator('.draw-bank')).toContainText('0 / 3');
     await expect(secretPage.locator('.status-line')).toContainText('Your first shiny!');
-    await secretPage.locator('.machine').click();
+    for (let bonus = 2; bonus <= 3; bonus++) {
+      await secretPage.evaluate(async () => {
+        const g = window.ng.getComponent(document.querySelector('app-poke-gacha'));
+        const random = Math.random; Math.random = () => 0;
+        try { await g.pull(); } finally { Math.random = random; }
+      });
+      await expect(secretPage.locator('.annoyance-panel')).toBeVisible();
+      if (bonus === 3) await expect(secretPage.locator('.annoyance-panel')).toContainText('No more after this, okay?');
+      await secretPage.getByRole('button', { name: 'Accept', exact: true }).click();
+      await expect(secretPage.locator('.bonus-pokeball.ready')).toBeEnabled();
+      await secretPage.locator('.bonus-pokeball.ready').click();
+      await secretPage.locator('.bonus-capsules .pokeball').click();
+      await secretPage.locator('.pokemon-reveal button').click();
+    }
+    await secretPage.reload();
+    await secretPage.waitForFunction(() => window.ng?.getComponent(document.querySelector('app-poke-gacha'))?.catalog().length > 0);
+    await secretPage.evaluate(async () => {
+      const g = window.ng.getComponent(document.querySelector('app-poke-gacha'));
+      const random = Math.random; Math.random = () => 0;
+      try { await g.pull(); } finally { Math.random = random; }
+    });
     await expect(secretPage.locator('.annoyance-panel')).toHaveCount(0);
     await secretContext.close();
-    console.log(`${browserType.name()} ${width}px: openings, bank, PC, dex, quests, persistence, translations and daily secret passed`);
+    console.log(`${browserType.name()} ${width}px: openings, bank, PC, dex, quests, persistence, translations and hourly secret passed`);
   } finally { await browser.close(); }
 }

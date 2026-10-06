@@ -1,0 +1,29 @@
+html[data-page-background] body {
+  background-color: var(--gacha-background-color);
+  background-image: var(--gacha-background-image);
+  background-size: var(--gacha-background-size, cover);
+  background-position: center top;
+  background-attachment: fixed;
+}
+html[data-page-background=forest] {
+  --gacha-background-color: #e4efe3;
+  --gacha-background-image: radial-gradient(ellipse at 0% 100%, #80b98d66, transparent 65%), radial-gradient(ellipse at 100% 0%, #bad9ad88, transparent 65%);
+}
+html[data-page-background=stars] {
+  --gacha-background-color: #eeedf7;
+  --gacha-background-image: url('/images/gacha/stars-pattern.svg');
+  --gacha-background-size: 160px 160px;
+}
+html[data-page-background=sunset] {
+  --gacha-background-color: #f4e4df;
+  --gacha-background-image: linear-gradient(160deg, #f9e6cd, #f2d8df 55%, #d8d4ed);
+}
+html[data-theme=dark][data-page-background=forest] {
+  --gacha-background-color: #18291f;
+  --gacha-background-image: radial-gradient(ellipse at 0% 100%, #345b4566, transparent 65%), radial-gradient(ellipse at 100% 0%, #44664055, transparent 65%);
+}
+html[data-theme=dark][data-page-background=stars] { --gacha-background-color: #1e2035; }
+html[data-theme=dark][data-page-background=sunset] {
+  --gacha-background-color: #322530;
+  --gacha-background-image: linear-gradient(160deg, #3d3027, #3c2835 55%, #29283f);
+}

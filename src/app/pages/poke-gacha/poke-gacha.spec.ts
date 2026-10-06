@@ -152,35 +152,60 @@ describe('PokeGacha hourly draws', () => {
     expect(gacha.waiting()).toBe(true);
   });
 
-  it('checks the secret only once per day, including after a reload', async () => {
-    const random = vi.spyOn(Math, 'random').mockReturnValue(0.25);
+  it('checks a one-percent secret chance on each cooldown click, including after a reload', async () => {
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0.01);
+    localStorage.setItem(storageKey, JSON.stringify({ pc: [], pokedex: {},
+      drawCredits: 0, nextDrawAt: new Date(2026, 9, 2, 19).getTime() }));
     const gacha = await createGacha();
-    gacha.nextDrawAt.set(new Date(2026, 9, 2, 19).getTime());
-    await gacha.pull();
-    expect(gacha.annoyanceOfferOpen()).toBe(false);
-    random.mockReturnValue(0);
     await gacha.pull();
     expect(gacha.annoyanceOfferOpen()).toBe(false);
     const restored = await createGacha();
+    random.mockReturnValue(0.0099);
     await restored.pull();
-    expect(restored.annoyanceOfferOpen()).toBe(false);
+    expect(restored.annoyanceOfferOpen()).toBe(true);
     expect(getRandomOptions).not.toHaveBeenCalled();
   });
 
-  it('persists an offered secret and declining cannot generate another that day', async () => {
+  it('persists an offered secret and declining does not consume a bonus draw', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const gacha = await createGacha();
     gacha.nextDrawAt.set(new Date(2026, 9, 2, 19).getTime());
     await gacha.pull();
-    expect(gacha.annoyanceOfferOpen()).toBe(true);
     const restored = await createGacha();
     expect(restored.annoyanceOfferOpen()).toBe(true);
     restored.declineAnnoyanceOffer();
-    await restored.pull();
-    expect(restored.annoyanceOfferOpen()).toBe(false);
     restored.acceptAnnoyanceOffer();
     expect(restored.bonusBallRolling()).toBe(false);
+    await restored.pull();
+    expect(restored.annoyanceOfferOpen()).toBe(true);
+    expect(restored.secretOfferKey()).toBe('gachaAnnoyedOffer');
     expect(getRandomOptions).not.toHaveBeenCalled();
+  });
+
+  it('limits secret draws to three per clock hour across reloads and marks the last offer', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    let gacha = await createGacha();
+    gacha.nextDrawAt.set(new Date(2026, 9, 2, 19).getTime());
+    for (let draw = 0; draw < 3; draw++) {
+      await gacha.pull();
+      expect(gacha.annoyanceOfferOpen()).toBe(true);
+      expect(gacha.secretOfferKey()).toBe(draw === 2 ? 'gachaAnnoyedLastOffer' : 'gachaAnnoyedOffer');
+      gacha.acceptAnnoyanceOffer();
+      gacha = await createGacha();
+      await gacha.openBonusBall();
+      revealAll(gacha);
+      gacha.choose(gacha.options()[0]);
+      gacha = await createGacha();
+    }
+    await gacha.pull();
+    expect(gacha.annoyanceOfferOpen()).toBe(false);
+    expect(getRandomOptions).toHaveBeenCalledTimes(3);
+    // The limit resets at 19:00, rather than one hour after the first bonus.
+    vi.advanceTimersByTime(25 * 60 * 1000);
+    await gacha.pull(); revealAll(gacha); gacha.choose(gacha.options()[0]);
+    await gacha.pull();
+    expect(gacha.annoyanceOfferOpen()).toBe(true);
+    expect(gacha.secretOfferKey()).toBe('gachaAnnoyedOffer');
   });
 
   it('restores an accepted ball and allows retrying a failed bonus load', async () => {
@@ -351,15 +376,16 @@ describe('PokeGacha hourly draws', () => {
     expect((await createGacha()).title()).toBe('collector');
   });
 
-  it('allows another secret check on a new day', async () => {
+  it('resets an offer accepted across the hourly boundary into the new hour', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const gacha = await createGacha();
     gacha.nextDrawAt.set(new Date(2026, 9, 2, 19).getTime());
-    await gacha.pull(); gacha.declineAnnoyanceOffer();
-    vi.advanceTimersByTime(24 * 60 * 60 * 1000);
-    gacha.nextDrawAt.set(new Date(2026, 9, 3, 19).getTime());
     await gacha.pull();
-    expect(gacha.annoyanceOfferOpen()).toBe(true);
+    vi.advanceTimersByTime(25 * 60 * 1000);
+    gacha.acceptAnnoyanceOffer();
+    const save = JSON.parse(localStorage.getItem(storageKey)!);
+    expect(save.secretDrawsUsed).toBe(1);
+    expect(save.secretResetAt).toBe(new Date(2026, 9, 2, 20).getTime());
   });
 
 });

@@ -6,6 +6,7 @@ import { PokemonPoolService } from '../../services/pokemon-pool.service';
 import { GachaCollection } from '../../components/gacha-collection/gacha-collection';
 import { DexStatus, GachaOption, PcPokemon, GachaSave, GACHA_STORAGE_KEY, GACHA_BOX_SIZE, GACHA_BOX_COUNT, GACHA_HOUR, bankedDraws, nextClockHour } from '../../models/poke-gacha.model';
 import { pokemonArtworkUrl } from '../../models/pokemon-images';
+import { PageBackground, PageBackgroundService } from '../../services/page-background.service';
 
 interface GachaMessage {
   key: TranslationKey;
@@ -31,6 +32,7 @@ const waitingMessages: TranslationKey[] = [
 })
 export class PokeGacha implements OnInit {
   readonly i18n = inject(LanguageService);
+  readonly pageBackground = inject(PageBackgroundService);
   private readonly pokemonPool = inject(PokemonPoolService);
   private readonly pokemonService = inject(PokemonService);
 
@@ -111,7 +113,7 @@ export class PokeGacha implements OnInit {
   readonly shinyDex = signal<Record<string, DexStatus>>({});
   readonly questsOpen = signal(false);
   readonly claimedQuests = signal<string[]>([]);
-  readonly scene = signal('default');
+  readonly scene = this.pageBackground.background;
   readonly boxTheme = signal('default');
   readonly title = signal('default');
   readonly boxNames = signal<string[]>(Array(boxCount).fill(''));
@@ -131,7 +133,10 @@ export class PokeGacha implements OnInit {
   readonly dexDetail = signal<Pokemon | null>(null);
   readonly dexDetailLoading = signal(false);
   readonly dexDetailError = signal(false);
-  private secretCheckedDay = '';
+  private secretResetAt = 0;
+  private readonly secretDrawsUsed = signal(0);
+  readonly secretOfferKey = computed<TranslationKey>(() => this.secretResetAt > this.now() && this.secretDrawsUsed() >= 2
+    ? 'gachaAnnoyedLastOffer' : 'gachaAnnoyedOffer');
   private readonly revealTimers = new Set<ReturnType<typeof setTimeout>>();
   private audio?: AudioContext;
   readonly ownedCount = computed(() => Object.values(this.pokedex()).filter(status => status === 'owned').length);
@@ -358,6 +363,9 @@ export class PokeGacha implements OnInit {
 
   acceptAnnoyanceOffer(): void {
     if (!this.annoyanceOfferOpen()) return;
+    this.refreshSecretHour();
+    if (this.secretDrawsUsed() >= 3) { this.declineAnnoyanceOffer(); return; }
+    this.secretDrawsUsed.update(count => count + 1);
     this.annoyanceOfferOpen.set(false);
     this.bonusBallReady.set(false);
     this.bonusBallRolling.set(true);
@@ -487,15 +495,19 @@ export class PokeGacha implements OnInit {
   }
 
   private handleWaitingPull(): void {
-    const day = new Date(this.now()).toLocaleDateString('en-CA');
-    if (this.secretCheckedDay !== day) {
-      this.secretCheckedDay = day;
-      const offer = Math.random() < .25;
-      this.annoyanceOfferOpen.set(offer);
+    this.refreshSecretHour();
+    if (this.secretDrawsUsed() < 3 && Math.random() < .01) {
+      this.annoyanceOfferOpen.set(true);
       this.save();
-      if (offer) return;
+      return;
     }
     this.setRandomWaitingMessage();
+  }
+
+  private refreshSecretHour(): void {
+    if (this.secretResetAt > this.now()) return;
+    this.secretResetAt = nextClockHour(this.now());
+    this.secretDrawsUsed.set(0);
   }
 
   private setRandomWaitingMessage(): void {
@@ -623,12 +635,13 @@ export class PokeGacha implements OnInit {
   }
 
   cosmeticUnlocked(kind: string, cosmetic: string): boolean {
+    if (kind === 'scene' && cosmetic === 'sunset') return this.claimedQuests().includes('kanto');
     return cosmetic === 'default' || this.quests().some(quest => quest.claimed && quest.kind === kind && quest.cosmetic === cosmetic);
   }
 
   setCosmetic(kind: string, cosmetic: string): void {
     if (!this.cosmeticUnlocked(kind, cosmetic)) return;
-    if (kind === 'scene') this.scene.set(cosmetic);
+    if (kind === 'scene') this.scene.set(cosmetic as PageBackground);
     if (kind === 'box') this.boxTheme.set(cosmetic);
     if (kind === 'title') this.title.set(cosmetic);
     this.save();
@@ -665,10 +678,12 @@ export class PokeGacha implements OnInit {
           revealed: option.revealed === true, stage: option.revealed ? 'revealed' : 'sealed',
           isNew: option.isNew ?? (option.pokemon.shiny ? this.shinyDex() : this.pokedex())[option.pokemon.id] !== 'owned' })) : []);
       this.bonusBallReady.set(save.bonusBallPending === true && !this.options().length);
-      this.secretCheckedDay = typeof save.secretCheckedDay === 'string' ? save.secretCheckedDay : '';
+      this.secretResetAt = typeof save.secretResetAt === 'number' && Number.isFinite(save.secretResetAt) ? save.secretResetAt : 0;
+      this.secretDrawsUsed.set(typeof save.secretDrawsUsed === 'number' && Number.isFinite(save.secretDrawsUsed)
+        ? Math.max(0, Math.min(3, Math.floor(save.secretDrawsUsed))) : 0);
+      this.refreshSecretHour();
       this.annoyanceOfferOpen.set(save.secretOfferPending === true && !this.options().length && !this.bonusBallReady());
       this.claimedQuests.set(Array.isArray(save.claimedQuests) ? save.claimedQuests.filter(id => typeof id === 'string') : []);
-      this.scene.set(this.cosmeticUnlocked('scene', save.scene ?? '') ? save.scene! : 'default');
       this.boxTheme.set(this.cosmeticUnlocked('box', save.boxTheme ?? '') ? save.boxTheme! : 'default');
       this.title.set(this.cosmeticUnlocked('title', save.title ?? '') ? save.title! : 'default');
       this.boxNames.set(this.boxes.map(box => typeof save.boxNames?.[box] === 'string' ? save.boxNames[box].slice(0, 24) : ''));
@@ -685,8 +700,9 @@ export class PokeGacha implements OnInit {
       const save: GachaSave = {
         pc: this.pc(), pokedex: this.pokedex(), shinyDex: this.shinyDex(), nextDrawAt: this.nextDrawAt(),
         drawCredits: this.drawCredits(), options: this.options(), bonusDraw: this.bonusDraw(),
-        bonusBallPending: this.bonusBallRolling() || this.bonusBallReady(), secretCheckedDay: this.secretCheckedDay,
-        secretOfferPending: this.annoyanceOfferOpen(), claimedQuests: this.claimedQuests(), scene: this.scene(),
+        bonusBallPending: this.bonusBallRolling() || this.bonusBallReady(), secretResetAt: this.secretResetAt,
+        secretDrawsUsed: this.secretDrawsUsed(),
+        secretOfferPending: this.annoyanceOfferOpen(), claimedQuests: this.claimedQuests(), scene: this.scene(), pageBackground: this.scene(),
         boxTheme: this.boxTheme(), title: this.title(), boxNames: this.boxNames(), soundEnabled: this.soundEnabled(),
         released: this.canUndoRelease() ? this.released()! : undefined,
       };

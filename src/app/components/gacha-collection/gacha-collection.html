@@ -59,7 +59,7 @@
       </div>
       <div class="profile-settings">
         <section class="sound-setting"><h2>{{ g.i18n.t('gachaAudio') }}</h2><label class="check"><input type="checkbox" [checked]="g.soundEnabled()" (change)="g.toggleSound()" />{{ g.i18n.t('gachaOpeningSounds') }}</label></section>
-        @for (kind of ['title', 'scene', 'box']; track kind) {
+        @for (kind of ['title', 'scene']; track kind) {
           <fieldset class="profile-customize"><legend>{{ g.i18n.t(kind === 'scene' ? 'gachaScene' : kind === 'box' ? 'gachaBoxTheme' : 'gachaTrainerTitle') }}</legend>
             <div class="cosmetic-choices">
               @for (cosmetic of cosmetics; track cosmetic.kind + cosmetic.id) {
@@ -75,7 +75,6 @@
         }
       </div>
       <div class="profile-footer"><p>{{ g.i18n.t('gachaProfileUnlockHint') }}</p><button type="button" (click)="g.openQuests()">{{ g.i18n.t('gachaQuests') }}</button></div>
-      <p class="profile-secret">{{ g.i18n.t('gachaSecretHint') }}</p>
     </section>
     }
   </dialog>

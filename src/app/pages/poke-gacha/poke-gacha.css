@@ -2,7 +2,7 @@
   min-height: calc(100vh - 88px);
   padding: 28px 24px 110px;
   color: var(--text, #24352d);
-  background: var(--page, #edf2ee);
+  background: transparent;
 }
 
 .gacha-stage {
