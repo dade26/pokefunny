@@ -2,6 +2,11 @@
 @if (g.pcOpen()) {
   <dialog #pcDialog class="collection-panel pc-panel" [class.sunset]="g.boxTheme() === 'sunset'" aria-labelledby="pc-heading" (cancel)="g.pcOpen.set(false)">
     <header><h1 id="pc-heading">PC <small>{{ g.pc().length }} / 256</small></h1><button type="button" (click)="g.pcOpen.set(false)">{{ g.i18n.t('gachaClose') }}</button></header>
+    <nav class="pc-navigation" [attr.aria-label]="g.i18n.t('gachaPcSections')">
+      <button type="button" [class.active]="g.pcSection() === 'boxes'" [attr.aria-pressed]="g.pcSection() === 'boxes'" (click)="g.pcSection.set('boxes')">{{ g.i18n.t('gachaBoxes') }}</button>
+      <button type="button" [class.active]="g.pcSection() === 'profile'" [attr.aria-pressed]="g.pcSection() === 'profile'" (click)="g.pcSection.set('profile')">{{ g.i18n.t('gachaProfile') }}</button>
+    </nav>
+    @if (g.pcSection() === 'boxes') {
     <div class="box-tabs" [attr.aria-label]="g.i18n.t('gachaBoxes')">
       @for (box of g.boxes; track box) {
         <button type="button" [class.active]="g.currentBox() === box" [attr.aria-pressed]="g.currentBox() === box" (click)="g.currentBox.set(box)" (dragover)="$event.preventDefault()" (drop)="g.dropOnBox($event, box)">{{ g.boxName(box) }}</button>
@@ -46,6 +51,33 @@
         } @else { <p>{{ g.i18n.t('gachaSelectPcPokemon') }}</p> }
       </aside>
     </div>
+    } @else {
+    <section class="profile-page" aria-labelledby="profile-heading">
+      <div class="trainer-profile">
+        <img src="images/gacha/pc.png" alt="" />
+        <div><span class="profile-label">{{ g.i18n.t('gachaProfile') }}</span><h2 id="profile-heading">{{ g.i18n.t(g.selectedTitleKey()) }}</h2><p>{{ g.i18n.t('gachaCollectionSummary', { count: g.ownedCount(), shiny: g.shinyCount() }) }}</p></div>
+      </div>
+      <div class="profile-settings">
+        <section class="sound-setting"><h2>{{ g.i18n.t('gachaAudio') }}</h2><label class="check"><input type="checkbox" [checked]="g.soundEnabled()" (change)="g.toggleSound()" />{{ g.i18n.t('gachaOpeningSounds') }}</label></section>
+        @for (kind of ['title', 'scene', 'box']; track kind) {
+          <fieldset class="profile-customize"><legend>{{ g.i18n.t(kind === 'scene' ? 'gachaScene' : kind === 'box' ? 'gachaBoxTheme' : 'gachaTrainerTitle') }}</legend>
+            <div class="cosmetic-choices">
+              @for (cosmetic of cosmetics; track cosmetic.kind + cosmetic.id) {
+                @if (cosmetic.kind === kind) {
+                  <button type="button" [class.active]="selected(kind, cosmetic.id)" [attr.aria-pressed]="selected(kind, cosmetic.id)" [disabled]="!g.cosmeticUnlocked(kind, cosmetic.id)" (click)="g.setCosmetic(kind, cosmetic.id)">
+                    @if (kind !== 'title') { <span class="cosmetic-preview" [class.forest-preview]="cosmetic.id === 'forest'" [class.stars-preview]="cosmetic.id === 'stars'" [class.sunset-preview]="cosmetic.id === 'sunset'" aria-hidden="true"></span> }
+                    <span>{{ g.i18n.t(cosmetic.key) }}</span>@if (!g.cosmeticUnlocked(kind, cosmetic.id)) { <small>{{ g.i18n.t('gachaLocked') }}</small> }
+                  </button>
+                }
+              }
+            </div>
+          </fieldset>
+        }
+      </div>
+      <div class="profile-footer"><p>{{ g.i18n.t('gachaProfileUnlockHint') }}</p><button type="button" (click)="g.openQuests()">{{ g.i18n.t('gachaQuests') }}</button></div>
+      <p class="profile-secret">{{ g.i18n.t('gachaSecretHint') }}</p>
+    </section>
+    }
   </dialog>
 }
 
@@ -102,29 +134,26 @@
 
 @if (g.questsOpen()) {
   <dialog #questsDialog class="collection-panel quest-panel" aria-labelledby="quest-heading" (cancel)="g.questsOpen.set(false)">
-    <header><h1 id="quest-heading">{{ g.i18n.t('gachaQuests') }}</h1><button type="button" (click)="g.questsOpen.set(false)">{{ g.i18n.t('gachaClose') }}</button></header>
-    <p class="intro">{{ g.i18n.t('gachaQuestsHint') }}</p>
-    <div class="quest-grid">
+    <header><div><span class="quest-board-label">{{ g.i18n.t('gachaQuestBoard') }}</span><h1 id="quest-heading">{{ g.i18n.t('gachaQuests') }}</h1></div><button type="button" (click)="g.questsOpen.set(false)">{{ g.i18n.t('gachaClose') }}</button></header>
+    <p class="quest-intro">{{ g.i18n.t('gachaQuestArchiveHint') }}</p>
+    <div class="quest-list">
       @for (quest of g.quests(); track quest.id) {
-        <article class="quest" [class.complete]="quest.progress >= quest.goal">
-          <h2>{{ g.i18n.t(quest.name) }}</h2><strong>{{ quest.progress }} / {{ quest.goal }}</strong>
-          <progress [value]="quest.progress" [max]="quest.goal" [attr.aria-label]="g.i18n.t(quest.name)"></progress>
-          <p>{{ g.i18n.t('gachaReward') }}: {{ g.i18n.t(quest.reward) }}</p>
-          <button type="button" [disabled]="quest.claimed || quest.progress < quest.goal" (click)="g.claimQuest(quest.id)">{{ g.i18n.t(quest.claimed ? 'gachaClaimed' : 'gachaClaimReward') }}</button>
+        <article class="quest" [class.complete]="quest.progress >= quest.goal" [class.claimed]="quest.claimed">
+          <div class="quest-sprites" [class.starter-sprites]="quest.id === 'starters'" aria-hidden="true">
+            @for (pokemon of questPokemon[quest.id]; track pokemon.id) { <img [src]="'images/pokemon/v1/' + (pokemon.shiny ? 'shiny/' : '') + pokemon.id + '.webp'" alt="" /> }
+          </div>
+          <div class="quest-objective"><h2>{{ g.i18n.t(questTitles[quest.id]) }}</h2><p>{{ g.i18n.t(quest.name) }}</p>
+            <div class="quest-progress"><progress [value]="quest.progress" [max]="quest.goal" [attr.aria-label]="g.i18n.t(quest.name)"></progress><span>{{ quest.progress }} / {{ quest.goal }}</span></div>
+          </div>
+          <div class="quest-reward"><span class="reward-label">{{ g.i18n.t('gachaReward') }}</span><strong>{{ g.i18n.t(quest.reward) }}</strong>
+            @if (quest.claimed) { <span class="claimed-stamp">{{ g.i18n.t('gachaClaimed') }}</span> }
+            @else if (quest.progress >= quest.goal) { <button type="button" (click)="g.claimQuest(quest.id)">{{ g.i18n.t('gachaClaimReward') }}</button> }
+            @else { <span class="quest-pending">{{ g.i18n.t('inProgress') }}</span> }
+          </div>
         </article>
       }
     </div>
-    @if (g.showFeedback()) { <p class="feedback" role="status">{{ g.messageText() }}</p> }
-    <section class="customize"><h2>{{ g.i18n.t('gachaCustomize') }}</h2><p>{{ g.i18n.t('gachaCustomizeHint') }}</p>
-      @for (kind of ['scene', 'box', 'title']; track kind) {
-        <fieldset><legend>{{ g.i18n.t(kind === 'scene' ? 'gachaScene' : kind === 'box' ? 'gachaBoxTheme' : 'gachaTrainerTitle') }}</legend>
-          @for (cosmetic of cosmetics; track cosmetic.kind + cosmetic.id) {
-            @if (cosmetic.kind === kind) {
-              <button type="button" [class.active]="selected(kind, cosmetic.id)" [attr.aria-pressed]="selected(kind, cosmetic.id)" [disabled]="!g.cosmeticUnlocked(kind, cosmetic.id)" (click)="g.setCosmetic(kind, cosmetic.id)">{{ g.i18n.t(cosmetic.key) }} @if (!g.cosmeticUnlocked(kind, cosmetic.id)) { <span>· {{ g.i18n.t('gachaLocked') }}</span> }</button>
-            }
-          }
-        </fieldset>
-      }
-    </section>
+    @if (g.message().key === 'gachaQuestClaimed') { <p class="feedback" role="status">{{ g.messageText() }}</p> }
+    <footer class="quest-footer"><span>{{ g.i18n.t('gachaEquipProfileHint') }}</span><button type="button" (click)="g.openProfile()">{{ g.i18n.t('gachaOpenProfile') }}</button></footer>
   </dialog>
 }

@@ -1,0 +1,22 @@
+.quest-panel { width: min(980px, calc(100% - 24px)); border-radius: 4px; box-shadow: 6px 6px 0 var(--shadow, #344b40); background: var(--surface, #fff); }
+.quest-panel header { background: #c9363d; color: #fff; border-color: #90232c; padding: 20px 24px; }
+.quest-panel header button { color: var(--text, #293631); border-radius: 4px; }
+.quest-board-label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .12em; margin-bottom: 5px; font-weight: 800; }
+.quest-intro { color: var(--muted, #65746b); font-size: 13px; margin: 0; padding: 18px 24px; border-bottom: 2px solid var(--border, #b9c9be); line-height: 1.5; }
+.quest { display: grid; grid-template-columns: 120px minmax(0, 1fr) 185px; align-items: center; gap: 24px; padding: 24px; border-bottom: 2px solid var(--border, #b9c9be); }
+.quest.claimed { background: var(--page, #edf2ee); }
+.quest-sprites { display: flex; justify-content: center; align-items: center; min-height: 96px; background: var(--selected, #e5f1e7); border-bottom: 3px solid var(--success-border, #8ab492); }
+.quest-sprites img { width: 80px; height: 80px; object-fit: contain; } .starter-sprites img { width: 44px; height: 64px; margin: 0 -3px; }
+.quest-objective h2 { font-size: 20px; } .quest-objective p { margin: 8px 0 16px; font-size: 13px; line-height: 1.5; color: var(--muted, #65746b); }
+.quest-progress { display: flex; align-items: center; gap: 12px; } .quest-progress span { font-size: 12px; font-weight: 800; white-space: nowrap; }
+.quest-progress progress { display: block; width: 100%; height: 10px; border: 0; border-radius: 0; background: var(--surface-muted, #e0e9e2); accent-color: #c9363d; }
+.quest-progress progress::-webkit-progress-bar { background: var(--surface-muted, #e0e9e2); } .quest-progress progress::-webkit-progress-value { background: #c9363d; } .quest-progress progress::-moz-progress-bar { background: #c9363d; }
+.quest.complete progress { accent-color: #43824c; } .quest.complete progress::-webkit-progress-value { background: #43824c; } .quest.complete progress::-moz-progress-bar { background: #43824c; }
+.quest-reward { display: grid; gap: 8px; align-content: center; } .reward-label { color: var(--muted, #65746b); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; font-weight: 800; } .quest-reward strong { font-size: 13px; line-height: 1.4; }
+.quest-reward button { background: #c9363d; border-color: #90232c; border-radius: 4px; color: #fff; font-size: 12px; box-shadow: 0 3px 0 #90232c; margin-top: 4px; }
+.quest-reward button:hover { background: #b02c35; transform: translateY(-2px); } .quest-reward button:active { transform: translateY(2px); box-shadow: none; }
+.claimed-stamp { justify-self: start; margin-top: 4px; padding: 5px 8px; border: 2px solid var(--success-border, #43824c); color: var(--text, #293631); font-size: 11px; text-transform: uppercase; font-weight: 800; transform: rotate(-2deg); }
+.quest-pending { margin-top: 4px; font-size: 12px; color: var(--muted, #65746b); }
+.quest-footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 24px; background: var(--page, #edf2ee); }
+.quest-footer span { max-width: 500px; font-size: 13px; line-height: 1.5; color: var(--muted, #65746b); } .quest-footer button { border-radius: 4px; }
+@media (max-width: 640px) { .quest-panel header { padding: 16px; gap: 12px; } .quest-panel h1 { font-size: 21px; } .quest-intro { padding: 14px 16px; } .quest { grid-template-columns: 70px minmax(0, 1fr); gap: 14px; padding: 20px 16px; } .quest-sprites { min-height: 70px; } .quest-sprites img { width: 58px; height: 58px; } .starter-sprites { flex-wrap: wrap; } .starter-sprites img { width: 30px; height: 30px; margin: 0; } .quest-objective h2 { font-size: 18px; } .quest-objective p { margin-bottom: 12px; } .quest-reward { grid-column: 2; gap: 6px; } .quest-reward button { width: 100%; } .quest-footer { padding: 16px; } .quest-footer button { width: 100%; } }

@@ -1,10 +1,4 @@
 <main class="poke-gacha" [class.scene-forest]="scene() === 'forest'" [class.scene-stars]="scene() === 'stars'">
-  <div class="gacha-dashboard">
-    <div><strong>{{ i18n.t(selectedTitleKey()) }}</strong><small>{{ i18n.t('gachaCollectionSummary', { count: ownedCount(), shiny: shinyCount() }) }}</small></div>
-    <div class="draw-bank"><strong>{{ i18n.t('gachaDrawBank', { count: availableDraws() }) }}</strong><small>{{ i18n.t(availableDraws() >= 3 ? 'gachaBankFull' : 'gachaBankRefill', { time: countdown() }) }}</small></div>
-    <button type="button" [attr.aria-pressed]="soundEnabled()" (click)="toggleSound()">{{ i18n.t(soundEnabled() ? 'gachaSoundOn' : 'gachaSoundOff') }}</button>
-  </div>
-  <p class="secret-hint">{{ i18n.t('gachaSecretHint') }}</p>
   <section class="gacha-stage" aria-live="polite">
     <div class="machine-scene" [class.bonus-active]="bonusBallRolling() || bonusBallReady()" [class.celebrating]="!!machineEvent()">
       @if (machineEvent()) { <div class="celebration-sparks" aria-hidden="true"><span>✦</span><span>✧</span><span>✦</span></div> }
@@ -34,6 +28,7 @@
       }
     </div>
 
+    <div class="draw-bank"><strong>{{ i18n.t('gachaDrawBank', { count: availableDraws() }) }}</strong><small>{{ i18n.t(availableDraws() >= 3 ? 'gachaBankFull' : 'gachaBankRefill', { time: countdown() }) }}</small></div>
   </section>
   @if (showFeedback() && !pcOpen() && !pokedexOpen() && !questsOpen()) { <div class="gacha-feedback" role="status"><span>{{ messageText() }}</span>@if (canUndoRelease()) { <button type="button" (click)="undoRelease()">{{ i18n.t('gachaUndoRelease') }}</button> }</div> }
 

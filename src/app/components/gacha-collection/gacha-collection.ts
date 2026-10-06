@@ -7,13 +7,21 @@ import { TranslationKey } from '../../services/language.service';
   selector: 'app-gacha-collection',
   imports: [FormsModule],
   templateUrl: './gacha-collection.html',
-  styleUrl: './gacha-collection.css',
+  styleUrls: ['./gacha-collection.css', './gacha-profile.css', './gacha-quests.css'],
 })
 export class GachaCollection {
   @Input({ required: true }) gacha!: PokeGacha;
   readonly pcDialog = viewChild<ElementRef<HTMLDialogElement>>('pcDialog');
   readonly dexDialog = viewChild<ElementRef<HTMLDialogElement>>('dexDialog');
   readonly questsDialog = viewChild<ElementRef<HTMLDialogElement>>('questsDialog');
+  readonly questTitles: Record<string, TranslationKey> = {
+    water: 'gachaQuestWaterTitle', starters: 'gachaQuestStartersTitle',
+    species: 'gachaQuestSpeciesTitle', shiny: 'gachaQuestShinyTitle', kanto: 'gachaQuestKantoTitle',
+  };
+  readonly questPokemon: Record<string, { id: number; shiny?: boolean }[]> = {
+    water: [{ id: 7 }], starters: [{ id: 1 }, { id: 4 }, { id: 7 }],
+    species: [{ id: 133 }], shiny: [{ id: 25, shiny: true }], kanto: [{ id: 151 }],
+  };
   readonly cosmetics: { kind: string; id: string; key: TranslationKey }[] = [
     { kind: 'scene', id: 'default', key: 'gachaSceneDefault' },
     { kind: 'scene', id: 'forest', key: 'gachaSceneForest' },

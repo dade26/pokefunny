@@ -2,6 +2,21 @@ import { DOCUMENT } from '@angular/common';
 import { Injectable, inject, signal } from '@angular/core';
 
 const en = {
+  gachaProfile: "Profile",
+  gachaPcSections: "PC sections",
+  gachaAudio: "Sound",
+  gachaOpeningSounds: "Opening sounds",
+  gachaOpenProfile: "PC · Profile",
+  gachaProfileUnlockHint: "Complete quests to unlock more options.",
+  gachaEquipProfileHint: "Choose your unlocked rewards in PC · Profile.",
+  gachaQuestBoard: "Trainer notice board",
+  gachaQuestArchiveHint: "Every capture counts, even after a Pokémon leaves your PC.",
+  gachaQuestWaterTitle: "Water team",
+  gachaQuestStartersTitle: "The first trio",
+  gachaQuestSpeciesTitle: "The collection grows",
+  gachaQuestShinyTitle: "A special sparkle",
+  gachaQuestKantoTitle: "A walk through Kanto",
+
   gachaCelebrationFirstShiny: 'Your first shiny! I knew I was hiding a star in here!',
   gachaCelebrationFive: 'Five different Pokémon! This collection is starting to look good!',
   gachaCelebrationTwentyFive: 'Twenty-five! You have earned your place among collectors!',
@@ -318,6 +333,21 @@ export type TranslationKey = keyof typeof en;
 export type Language = 'en' | 'es';
 
 const es: Record<TranslationKey, string> = {
+  gachaProfile: "Perfil",
+  gachaPcSections: "Secciones del PC",
+  gachaAudio: "Sonido",
+  gachaOpeningSounds: "Sonido de las aperturas",
+  gachaOpenProfile: "PC · Perfil",
+  gachaProfileUnlockHint: "Completa retos para desbloquear más opciones.",
+  gachaEquipProfileHint: "Elige tus recompensas desbloqueadas en PC · Perfil.",
+  gachaQuestBoard: "Tablón de entrenadores",
+  gachaQuestArchiveHint: "Cada captura cuenta, aunque el Pokémon ya no esté en tu PC.",
+  gachaQuestWaterTitle: "Equipo de agua",
+  gachaQuestStartersTitle: "El primer trío",
+  gachaQuestSpeciesTitle: "La colección crece",
+  gachaQuestShinyTitle: "Un brillo especial",
+  gachaQuestKantoTitle: "De paseo por Kanto",
+
   gachaCelebrationFirstShiny: '¡Tu primer variocolor! ¡Sabía que escondía una estrella aquí!',
   gachaCelebrationFive: '¡Cinco Pokémon diferentes! ¡Esta colección empieza a tener buena pinta!',
   gachaCelebrationTwentyFive: '¡Veinticinco! ¡Te has ganado un sitio entre los coleccionistas!',

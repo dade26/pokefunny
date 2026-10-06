@@ -58,6 +58,7 @@ export class PokeGacha implements OnInit {
   private readonly drawDialog = viewChild<ElementRef<HTMLDialogElement>>('drawDialog');
   private readonly offerDialog = viewChild<ElementRef<HTMLDialogElement>>('offerDialog');
   readonly pcOpen = signal(false);
+  readonly pcSection = signal<'boxes' | 'profile'>('boxes');
   readonly pokedexOpen = signal(false);
   readonly currentBox = signal(0);
   readonly selectedPcUid = signal<string | null>(null);
@@ -399,9 +400,15 @@ export class PokeGacha implements OnInit {
   }
 
   openPc(): void {
+    this.pcSection.set('boxes');
     this.pcOpen.set(true);
     this.pokedexOpen.set(false);
     this.questsOpen.set(false);
+  }
+
+  openProfile(): void {
+    this.openPc();
+    this.pcSection.set('profile');
   }
 
   openPokedex(): void {

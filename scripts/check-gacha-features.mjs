@@ -43,6 +43,8 @@ for (const [browserType, width] of [[chromium, 1440], [chromium, 390], [webkit, 
       g.pokemonService.getBaseStatsTotal = async () => 600;
     }, draw);
     await expect(page.locator('.draw-bank')).toContainText('3 / 3');
+    await expect(page.locator('.gacha-dashboard')).toHaveCount(0);
+    await expect(page.locator('.sound-setting')).toHaveCount(0);
     await page.screenshot({ path: `${output}/machine-${browserType.name()}-${width}.png` });
     await page.locator('.machine').click();
     await expect(page.locator('.capsule-card')).toHaveCount(3);
@@ -100,16 +102,28 @@ for (const [browserType, width] of [[chromium, 1440], [chromium, 390], [webkit, 
     await expect(page.locator('.dex-entry')).toHaveCount(1);
     await page.locator('.dex-panel header').getByRole('button', { name: 'Close', exact: true }).click();
     await page.locator('.quests-button').click();
+    await expect(page.locator('.quest-sprites img')).toHaveCount(7);
+    await page.waitForFunction(() => [...document.querySelectorAll('.quest-sprites img')].every(image => image.complete && image.naturalWidth > 0));
+    await page.screenshot({ path: `${output}/quests-${browserType.name()}-${width}.png` });
+    await expect(page.locator('.quest-panel .cosmetic-choices')).toHaveCount(0);
     for (const name of ['Capture 5 different Water Pokémon', 'Collect the three Kanto starters', 'Capture your first shiny']) {
       await page.locator('.quest').filter({ hasText: name }).getByRole('button', { name: 'Claim reward', exact: true }).click();
     }
+    await page.getByRole('button', { name: 'PC · Profile', exact: true }).click();
+    await expect(page.locator('.profile-page')).toBeVisible();
+    await page.getByLabel('Opening sounds', { exact: true }).check();
     await page.getByRole('button', { name: 'Forest corner', exact: true }).click();
     await page.getByRole('button', { name: 'Kanto Collector', exact: true }).click();
-    await page.screenshot({ path: `${output}/quests-${browserType.name()}-${width}.png` });
-    await page.locator('.quest-panel header').getByRole('button', { name: 'Close', exact: true }).click();
+    await page.screenshot({ path: `${output}/profile-${browserType.name()}-${width}.png` });
+    await page.locator('.pc-panel header').getByRole('button', { name: 'Close', exact: true }).click();
     await page.reload();
     await expect(page.locator('.poke-gacha')).toHaveClass(/scene-forest/);
-    await expect(page.locator('.gacha-dashboard')).toContainText('Kanto Collector');
+    await expect(page.locator('.gacha-dashboard')).toHaveCount(0);
+    await page.locator('.pc-button').click();
+    await page.locator('.pc-navigation').getByRole('button', { name: 'Profile', exact: true }).click();
+    await expect(page.locator('.trainer-profile')).toContainText('Kanto Collector');
+    await expect(page.getByLabel('Opening sounds', { exact: true })).toBeChecked();
+    await page.locator('.pc-panel header').getByRole('button', { name: 'Close', exact: true }).click();
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('pokefunny.pokeGacha.v1')));
     assert.equal(saved.pc.find(p => p.uid === 'seed-25').favorite, true);
     assert.equal(saved.boxNames[0], 'My team');

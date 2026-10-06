@@ -1,9 +1,8 @@
-.gacha-dashboard { width: min(960px, 100%); margin: 0 auto 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding: 16px; border: 2px solid var(--border-strong, #344b40); border-radius: 12px; background: var(--surface, #fff); }
-.gacha-dashboard > div { display: grid; gap: 5px; } .gacha-dashboard small { font-size: 12px; color: var(--muted, #65746b); } .draw-bank { text-align: center; }
-.secret-hint { max-width: 650px; margin: 0 auto 12px; text-align: center; font-size: 12px; color: var(--muted, #65746b); }
+.draw-bank { display: grid; gap: 5px; text-align: center; font-size: 13px; }
+.draw-bank small { color: var(--muted, #65746b); font-size: 12px; }
 .manage-pc { display: block; margin: 18px auto 0; min-height: 42px; padding: 8px 14px; font: inherit; font-weight: 800; background: var(--surface, #fff); color: var(--text, #293631); border: 2px solid var(--border-strong, #344b40); border-radius: 6px; cursor: pointer; }
 .scene-stars .machine::after { content: '✦'; position: absolute; top: 27%; right: 23%; color: #6d5100; font-size: 28px; text-shadow: 0 0 8px #ffe6ac; }
-.gacha-dashboard button, .quests-button, .gacha-feedback button { min-height: 44px; padding: 8px 14px; font: inherit; font-weight: 800; color: var(--text, #293631); background: var(--surface, #fff); border: 2px solid var(--border-strong, #344b40); border-radius: 8px; cursor: pointer; }
+.quests-button, .gacha-feedback button { min-height: 44px; padding: 8px 14px; font: inherit; font-weight: 800; color: var(--text, #293631); background: var(--surface, #fff); border: 2px solid var(--border-strong, #344b40); border-radius: 8px; cursor: pointer; }
 .quests-button { position: fixed; z-index: 8; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); max-width: calc(100% - 190px); font-size: 13px; }
 .quest-count { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: #fff; background: #b52d43; }
 .gacha-feedback { max-width: 900px; margin: 16px auto; padding: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; border-radius: 8px; background: var(--selected, #d9eddf); font-weight: 800; }
@@ -18,7 +17,7 @@
 @keyframes ball-shake { 0%, 100% { transform: rotate(0); } 20%, 60% { transform: rotate(-18deg) translateX(-5px); } 40%, 80% { transform: rotate(18deg) translateX(5px); } }
 @keyframes silhouette-in { from { opacity: 0; transform: scale(.65); } to { opacity: 1; transform: scale(1); } }
 @keyframes shiny-reveal { 0% { opacity: 0; transform: scale(.65); filter: brightness(3); } 55% { opacity: 1; transform: scale(1.08); filter: brightness(1.4); } 100% { transform: scale(1); filter: brightness(1); } }
-@media (max-width: 540px) { .gacha-dashboard { padding: 10px; gap: 10px; margin-bottom: 12px; } .gacha-dashboard strong { font-size: 12px; } .gacha-dashboard > div { flex: 1 1 100px; } .gacha-dashboard button { width: 100%; font-size: 12px; } .pokemon-reveal { grid-template-rows: 90px minmax(38px, auto) auto auto; } .reveal-badges { min-height: 22px; gap: 3px; } .new-badge, .shiny-badge { font-size: 9px; } .quests-button { padding: 8px; max-width: calc(100% - 170px); font-size: 11px; } }
+@media (max-width: 540px) { .pokemon-reveal { grid-template-rows: 90px minmax(38px, auto) auto auto; } .reveal-badges { min-height: 22px; gap: 3px; } .new-badge, .shiny-badge { font-size: 9px; } .quests-button { padding: 8px; max-width: calc(100% - 170px); font-size: 11px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 .celebration-sparks { position: absolute; inset: 10% 10% 25%; display: flex; align-items: center; justify-content: space-between; pointer-events: none; color: #b88a14; font-size: 56px; z-index: 3; }
 .celebration-sparks span { animation: celebration-spark 900ms ease-in-out 5 alternate; }

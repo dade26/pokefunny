@@ -1,0 +1,21 @@
+.pc-navigation { display: flex; gap: 0; border-bottom: 2px solid var(--border-strong, #344b40); background: var(--surface, #fff); }
+.pc-navigation button { flex: 1; border: 0; border-radius: 0; padding: 14px; color: var(--muted, #65746b); }
+.pc-navigation button.active { color: var(--text, #293631); background: var(--page, #edf2ee); box-shadow: inset 0 -4px #c9363d; }
+.profile-page { max-width: 880px; margin: 0 auto; padding: 28px; }
+.trainer-profile { display: flex; align-items: center; gap: 24px; padding-bottom: 24px; border-bottom: 2px solid var(--border, #b9c9be); }
+.trainer-profile > img { width: 88px; height: 88px; object-fit: contain; }
+.profile-label { display: block; margin-bottom: 8px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted, #65746b); }
+.trainer-profile h2 { font-size: 26px; } .trainer-profile p { margin: 8px 0 0; font-size: 14px; color: var(--muted, #65746b); }
+.profile-settings { display: grid; gap: 24px; margin: 24px 0; }
+.sound-setting { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; }
+.sound-setting h2, .profile-customize legend { font-size: 15px; font-weight: 800; }
+.profile-customize { margin: 0; padding: 0; border: 0; min-width: 0; } .profile-customize legend { padding: 0; margin-bottom: 12px; }
+.cosmetic-choices { display: flex; flex-wrap: wrap; gap: 10px; } .cosmetic-choices button { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; min-width: 145px; border-radius: 4px; padding: 12px; }
+.cosmetic-choices button.active { box-shadow: 3px 3px 0 var(--shadow, #c6d4cb); } .cosmetic-choices small { color: var(--muted, #65746b); font-size: 11px; }
+.cosmetic-preview { width: 100%; height: 48px; border: 1px solid var(--border, #a5b4ab); background: var(--page, #edf2ee); }
+.forest-preview { background: linear-gradient(140deg, #d1e5cf, #7fba9c); }
+.stars-preview { background: radial-gradient(circle at 25% 30%, #ffe8ad 2px, transparent 3px), radial-gradient(circle at 70% 65%, #ffe8ad 2px, transparent 3px), #4c466e; }
+.sunset-preview { background: linear-gradient(140deg, #f6ca98, #e5a1aa, #a7a2d4); }
+.profile-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-top: 2px solid var(--border, #b9c9be); padding-top: 20px; }
+.profile-footer p, .profile-secret { color: var(--muted, #65746b); font-size: 13px; line-height: 1.5; margin: 0; } .profile-secret { margin-top: 24px; }
+@media (max-width: 540px) { .profile-page { padding: 18px 14px; } .trainer-profile { gap: 14px; } .trainer-profile > img { width: 60px; height: 60px; } .trainer-profile h2 { font-size: 20px; } .cosmetic-choices button { flex: 1 1 120px; min-width: 0; } .profile-footer button { width: 100%; } }
