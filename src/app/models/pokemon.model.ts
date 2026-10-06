@@ -24,6 +24,7 @@ export interface FestaHeldItem {
 }
 
 export interface Player {
+  drawnLimitedFestaCardIds?: string[];
   favoritePokemon?: string;
   monotype?: PokemonType;
   id: string;

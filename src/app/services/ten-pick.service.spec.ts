@@ -106,6 +106,43 @@ describe('TenPickService saved drafts', () => {
     }));
   }
 
+  it('draws Ditto and Zoroark only once each per player, including after reopening the draft', async () => {
+    mockFormCatalog();
+    for (const card of service.festaCards) {
+      if (!['reveal-zoroark', 'reveal-ditto'].includes(card.id)) service.toggleFestaCard(card.id);
+    }
+    await service.startDraft({ playerNames: ['Own', 'Rival'], teamSize: 6, mode: 'festa', festaChance: 100 });
+    await service.ensureTurn();
+    const state = service.state()!;
+    service.state.set({ ...state, draftOrder: state.players.map(player => player.id),
+      currentTurn: { ...state.currentTurn!, playerId: state.players[0].id },
+      players: state.players.map((player, index) => ({ ...player, team: [options[index]] })),
+    });
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    for (const cardId of ['reveal-zoroark', 'reveal-ditto']) {
+      service.skip();
+      expect(service.state()!.activeFestaCard?.cardId).toBe(cardId);
+      service.startFestaResolution();
+      await service.prepareFestaTransformation();
+      expect(service.confirmFestaTransformation()).toBe(true);
+    }
+    const reloaded = new TenPickService({ getRandomOptions } as unknown as PokemonPoolService, pokemonService as never, new StorageService());
+    reloaded.openDraft(service.activeDraftId()!);
+    // Replacing the team must not reset the player's card history.
+    reloaded.state.update(current => ({ ...current!, players: current!.players.map(player => ({ ...player, team: [options[4]] })) }));
+    reloaded.skip();
+    expect(reloaded.state()!.activeFestaCard).toBeUndefined();
+    expect(reloaded.state()!.players[0].drawnLimitedFestaCardIds).toEqual(['reveal-zoroark', 'reveal-ditto']);
+    reloaded.state.update(current => ({ ...current!, currentTurnIndex: 1,
+      currentTurn: { ...current!.currentTurn!, playerId: current!.players[1].id },
+    }));
+    reloaded.skip();
+    expect(reloaded.state()!.activeFestaCard?.cardId).toBe('reveal-zoroark');
+    expect(reloaded.state()!.players[1].drawnLimitedFestaCardIds).toEqual(['reveal-zoroark']);
+    await reloaded.startDraft({ playerNames: ['Own', 'Rival'], teamSize: 6, mode: 'festa' });
+    expect(reloaded.state()!.players.every(player => !player.drawnLimitedFestaCardIds?.length)).toBe(true);
+  });
+
   it.each([['reveal-zoroark', 571], ['reveal-ditto', 132]])('transforms a random own Pokemon with %s without consuming the pick', async (cardId, id) => {
     mockFormCatalog();
     await beginModifier(cardId as string);

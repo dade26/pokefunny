@@ -1,4 +1,15 @@
-import { FestaCard } from './pokemon.model';
+import { FestaCard, Player } from './pokemon.model';
+
+const ONCE_PER_PLAYER_CARDS = new Set(['reveal-ditto', 'reveal-zoroark']);
+
+export function canDrawFestaCard(player: Player, cardId: string): boolean {
+  return !ONCE_PER_PLAYER_CARDS.has(cardId) || !player.drawnLimitedFestaCardIds?.includes(cardId);
+}
+
+export function recordFestaCardDraw(player: Player, cardId: string): Player {
+  if (!ONCE_PER_PLAYER_CARDS.has(cardId) || !canDrawFestaCard(player, cardId)) return player;
+  return { ...player, drawnLimitedFestaCardIds: [...(player.drawnLimitedFestaCardIds ?? []), cardId] };
+}
 
 export const FESTA_CARDS: FestaCard[] = [
   ...([

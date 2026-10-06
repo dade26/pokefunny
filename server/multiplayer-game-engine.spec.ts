@@ -64,6 +64,34 @@ function festaRoom(cardId: string): GameRoom {
 }
 
 describe('MultiplayerGameEngine', () => {
+  it('limits Ditto and Zoroark independently per player and preserves the limit in serialized state', async () => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom('trade-any');
+    game.draft!.activeFestaCard = undefined;
+    game.draft!.festaChance = 100;
+    game.draft!.currentTurn!.options = Array.from({ length: 10 }, (_, index) => pokemon(index + 1));
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+    try {
+      for (const cardId of ['reveal-zoroark', 'reveal-ditto']) {
+        await engine.skip(game, 'p1', optionId(engine, game.draft!), cardId);
+        expect(game.draft!.activeFestaCard?.cardId).toBe(cardId);
+        await engine.startFestaResolution(game, 'p1', `resolve-${cardId}`);
+      }
+      game.draft = JSON.parse(JSON.stringify(game.draft));
+      game.draft!.players[0].team = [pokemon(6)];
+      await engine.skip(game, 'p1', optionId(engine, game.draft!), 'after-reconnect');
+      expect(game.draft!.activeFestaCard?.cardId).toBe('change-form');
+      expect(game.draft!.players[0].drawnLimitedFestaCardIds).toEqual(['reveal-zoroark', 'reveal-ditto']);
+      game.draft!.activeFestaCard = undefined;
+      game.draft = forceTurn(game.draft!, 'p2');
+      await engine.skip(game, 'p2', optionId(engine, game.draft!), 'rival');
+      expect(game.draft!.activeFestaCard?.cardId).toBe('reveal-zoroark');
+      expect(game.draft!.players[1].drawnLimitedFestaCardIds).toEqual(['reveal-zoroark']);
+      game.draft = await engine.createInitialDraft(game);
+      expect(game.draft.players.every(player => !player.drawnLimitedFestaCardIds?.length)).toBe(true);
+    } finally { random.mockRestore(); }
+  });
+
   it('rolls the configured FESTA chance independently after every skip, including after resolving a card', async () => {
     const engine = new MultiplayerGameEngine();
     const game = festaRoom('trade-any');

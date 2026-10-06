@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { FESTA_CARDS, getFestaCard, pickRandomActiveFestaCard } from '../src/app/models/festa-cards';
+import { FESTA_CARDS, canDrawFestaCard, getFestaCard, pickRandomActiveFestaCard, recordFestaCardDraw } from '../src/app/models/festa-cards';
 import {
   ALL_GENERATIONS,
   BANNED_POKEMON_ID,
@@ -572,10 +572,13 @@ export class MultiplayerGameEngine {
     if (draft.players.some((player) => player.team.length === 0)) return draft;
     const chance = this.clampChance(draft.festaChance ?? 5);
     if (chance <= 0 || Math.random() >= chance / 100) return draft;
-    const card = pickRandomActiveFestaCard(FESTA_CARDS.map((candidate) => candidate.id));
+    const player = this.currentPlayer(draft);
+    const card = pickRandomActiveFestaCard(FESTA_CARDS.map((candidate) => candidate.id)
+      .filter((cardId) => canDrawFestaCard(player, cardId)));
     return card ? this.withHistory({
       ...draft,
       activeFestaCard: { cardId: card.id, phase: 'revealed' },
+      players: draft.players.map((candidate) => candidate.id === player.id ? recordFestaCardDraw(candidate, card.id) : candidate),
     }, `${this.currentPlayer(draft).name} activated a Festa Card: ${card.name}.`) : draft;
   }
 

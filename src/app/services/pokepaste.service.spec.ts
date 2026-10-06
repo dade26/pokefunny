@@ -109,8 +109,12 @@ describe('PokepasteService', () => {
   it.each([
     ['kyogre-primal', 'kyogre', 'Kyogre @ Blue Orb\nAbility: Drizzle'],
     ['zacian-crowned', 'zacian', 'Zacian @ Rusted Sword\nAbility: Intrepid Sword'],
-    ['dialga-origin', 'dialga', 'Dialga @ Adamant Crystal\nAbility: Pressure'],
-  ])('exports the object transformation %s as its base species', async (name, base, expected) => {
+    ['groudon-primal', 'groudon', 'Groudon @ Red Orb\nAbility: Drought'],
+    ['zamazenta-crowned', 'zamazenta', 'Zamazenta @ Rusted Shield\nAbility: Dauntless Shield'],
+    ['necrozma-ultra', 'necrozma', 'Necrozma-Dawn-Wings @ Ultranecrozium Z\nAbility: Prism Armor'],
+    ['ogerpon-wellspring-tera', 'ogerpon', 'Ogerpon-Wellspring (F) @ Wellspring Mask\nAbility: Water Absorb'],
+    ['magearna-original-mega', 'magearna', 'Magearna-Original @ Magearnite\nAbility: Soul-Heart'],
+  ])('exports the battle transformation %s from its correct starting form', async (name, base, expected) => {
     getDetail.mockResolvedValue({
       name, is_default: false, species: { name: base },
       abilities: [{ ability: { name: 'transformed-ability' }, is_hidden: false, slot: 1 }],
@@ -122,10 +126,39 @@ describe('PokepasteService', () => {
   });
 
   it.each([
+    ['palkia-origin', 'palkia', 'Palkia-Origin @ Lustrous Globe\nAbility: Pressure'],
+    ['dialga-origin', 'dialga', 'Dialga-Origin @ Adamant Crystal\nAbility: Pressure'],
+    ['giratina-origin', 'giratina', 'Giratina-Origin @ Griseous Core\nAbility: Levitate'],
+    ['arceus-water', 'arceus', 'Arceus-Water @ Splash Plate\nAbility: Multitype'],
+    ['silvally-fire', 'silvally', 'Silvally-Fire @ Fire Memory\nAbility: RKS System'],
+    ['genesect-douse', 'genesect', 'Genesect-Douse @ Douse Drive\nAbility: Download'],
+    ['ogerpon-wellspring-mask', 'ogerpon', 'Ogerpon-Wellspring (F) @ Wellspring Mask\nAbility: Water Absorb'],
+    ['ogerpon-hearthflame-mask', 'ogerpon', 'Ogerpon-Hearthflame (F) @ Hearthflame Mask\nAbility: Mold Breaker'],
+    ['ogerpon-cornerstone-mask', 'ogerpon', 'Ogerpon-Cornerstone (F) @ Cornerstone Mask\nAbility: Sturdy'],
+  ])('preserves the item-dependent form %s with its own ability and required item', async (name, base, expected) => {
+    getDetail.mockResolvedValue({
+      name, is_default: false, species: { name: base },
+      abilities: [{ ability: { name: 'pressure' }, is_hidden: false, slot: 1 }],
+    });
+    expect(await TestBed.inject(PokepasteService).createText([{ ...team[0], name, rawName: name }]))
+      .toBe(expected);
+  });
+
+  it('preserves Origin with a nickname, shiny status and a FESTA ability', async () => {
+    getDetail.mockResolvedValue({
+      name: 'palkia-origin', is_default: false, species: { name: 'palkia' },
+      abilities: [{ ability: { name: 'pressure' }, is_hidden: false, slot: 1 }],
+    });
+    expect(await TestBed.inject(PokepasteService).createText([
+      { ...team[0], nickname: 'Space Buddy', shiny: true, abilityOverride: 'Levitate', heldItem: 'Leftovers' },
+    ])).toBe('Space Buddy (Palkia-Origin) @ Lustrous Globe\nAbility: Levitate\nShiny: Yes');
+  });
+
+  it.each([
     ['meowstic-male', 'Meowstic (M)'],
     ['meowstic-female', 'Meowstic-F (F)'],
     ['meowstic-male-mega', 'Meowstic (M) @ Meowsticite\nAbility: Keen Eye'],
-    ['meowstic-female-mega', 'Meowstic (M) @ Meowsticite\nAbility: Keen Eye'],
+    ['meowstic-female-mega', 'Meowstic-F (F) @ Meowsticite\nAbility: Keen Eye'],
     ['indeedee-male', 'Indeedee (M)'],
     ['indeedee-female', 'Indeedee-F (F)'],
     ['basculegion-male', 'Basculegion (M)'],

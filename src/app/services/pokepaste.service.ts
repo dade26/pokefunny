@@ -26,14 +26,18 @@ export class PokepasteService {
         throw new PokepasteError('unknownForm', pokemon.name);
       }
       const transformationItem = fixedFormItem({ ...pokemon, rawName: detail.name });
-      const exportSpecies = transformationItem
-        ? Dex.species.get(species.baseSpecies || detail.species.name)
+      // Required items also belong to permanent forms such as Palkia-Origin.
+      // Only battle transformations must start as their pre-transformation form.
+      const battleOnly = transformationItem ? species.battleOnly : undefined;
+      const startingForm = species.changesFrom || (Array.isArray(battleOnly) ? battleOnly[0] : battleOnly);
+      const exportSpecies = battleOnly
+        ? Dex.species.get(startingForm || species.baseSpecies)
         : species;
       if (!exportSpecies.exists) throw new PokepasteError('unknownForm', pokemon.name);
       const abilitySlot = [...detail.abilities]
         .sort((a, b) => Number(a.is_hidden) - Number(b.is_hidden) || a.slot - b.slot)[0];
-      const baseAbility = transformationItem ? exportSpecies.abilities['0'] : undefined;
-      const ability = Dex.abilities.get(pokemon.abilityOverride || baseAbility || abilitySlot?.ability.name || '');
+      const formAbility = transformationItem ? exportSpecies.abilities['0'] : undefined;
+      const ability = Dex.abilities.get(pokemon.abilityOverride || formAbility || abilitySlot?.ability.name || '');
       if (pokemon.abilityOverride && !ability.exists) throw new PokepasteError('unknownAbility', pokemon.name);
       const fixedGender = exportSpecies.gender === 'M' || exportSpecies.gender === 'F'
         ? exportSpecies.gender

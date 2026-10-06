@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { FESTA_CARDS, getFestaCard, pickRandomActiveFestaCard } from '../models/festa-cards';
+import { FESTA_CARDS, canDrawFestaCard, getFestaCard, pickRandomActiveFestaCard, recordFestaCardDraw } from '../models/festa-cards';
 import { ALL_GENERATIONS, BANNED_POKEMON_ID, DraftSetup, DraftState, FestaEffectType, FestaHeldItem, FestaPokemonChoiceKind, Player, Pokemon, SavedDraft, TenPickTurn } from '../models/pokemon.model';
 import { assignMonotypes } from '../models/monotype';
 import { InsufficientPoolError, PokemonPoolService } from './pokemon-pool.service';
@@ -866,12 +866,14 @@ export class TenPickService {
     const card = pickRandomActiveFestaCard(FESTA_CARDS
       .map((candidate) => candidate.id)
       .filter((cardId) => this.isFestaCardEnabled(cardId))
+      .filter((cardId) => canDrawFestaCard(player, cardId))
       .filter((cardId) => !this.isFestaTransformation(getFestaCard(cardId)!.effect)
         || this.getFestaTransformationTargets(state, getFestaCard(cardId)!.effect).length > 0));
     if (!card) return false;
     this.commit(this.withHistory({
       ...state,
       activeFestaCard: { cardId: card.id, phase: 'revealed' },
+      players: state.players.map((candidate) => candidate.id === player.id ? recordFestaCardDraw(candidate, card.id) : candidate),
     }, `${player.name} activated a Festa Card: ${card.name}.`));
     return true;
   }
