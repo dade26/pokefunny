@@ -29,10 +29,12 @@
       <div class="pc-grid">
         @for (cell of g.visiblePcSlots(); track cell.slot) {
           @let entry = cell.entry;
-          <button class="pc-slot" type="button" [class.filled]="entry" [class.selected]="entry?.uid === g.selectedPcUid()" [class.move-target]="g.movingUid() || g.dragUid()" [draggable]="!!entry"
+          @let nickname = entry ? customNickname(entry) : '';
+          <button class="pc-slot" type="button" [class.filled]="entry" [class.has-nickname]="!!nickname" [class.selected]="entry?.uid === g.selectedPcUid()" [class.move-target]="g.movingUid() || g.dragUid()" [draggable]="!!entry" [attr.title]="nickname || null"
             [attr.aria-label]="entry ? (entry.nickname || entry.pokemon.name) : g.i18n.t('gachaSlot', { count: cell.slot + 1 })"
             (click)="g.selectSlot(cell.slot)" (dragstart)="entry && g.startDrag($event, entry.uid)" (dragend)="g.dragUid.set('')" (dragover)="$event.preventDefault()" (drop)="g.dropPokemon($event, g.currentBox(), cell.slot)">
             @if (entry) { <img [src]="entry.pokemon.sprite || entry.pokemon.artwork" alt="" draggable="false" loading="lazy" />
+              @if (nickname) { <span class="pc-nickname">{{ nickname }}</span> }
               @if (entry.favorite) { <span class="favorite-mark" aria-hidden="true">♥</span> }
               @if (entry.pokemon.shiny) { <span class="shiny-mark" aria-hidden="true">✦</span> }
             }

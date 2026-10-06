@@ -2,6 +2,7 @@ import { Component, ElementRef, Input, effect, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import type { PokeGacha } from '../../pages/poke-gacha/poke-gacha';
 import { TranslationKey } from '../../services/language.service';
+import type { PcPokemon } from '../../models/poke-gacha.model';
 
 @Component({
   selector: 'app-gacha-collection',
@@ -43,5 +44,10 @@ export class GachaCollection {
 
   selected(kind: string, id: string): boolean {
     return (kind === 'scene' ? this.gacha.scene() : kind === 'box' ? this.gacha.boxTheme() : this.gacha.title()) === id;
+  }
+
+  customNickname(entry: PcPokemon): string {
+    const nickname = entry.nickname?.trim() ?? '';
+    return nickname.toLowerCase() === entry.pokemon.name.trim().toLowerCase() ? '' : nickname;
   }
 }
