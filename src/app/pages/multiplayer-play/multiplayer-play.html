@@ -1,28 +1,28 @@
 <main class="play">
   @if (!socket.deletedRoom()) {
     <div class="exit-bar">
-      <button class="leave-game" type="button" (click)="leaveGame()">Salir de la partida</button>
+      <button class="leave-game" type="button" (click)="leaveGame()">{{ i18n.t('onlineLeave') }}</button>
     </div>
   }
   @if (socket.deletedRoom()) {
     <section class="status">
-      <h1>Partida borrada</h1>
-      <p>El host ha borrado la sala {{ socket.deletedRoom() }}. Podéis crear otra partida online.</p>
-      <a routerLink="/">Volver al inicio</a>
+      <h1>{{ i18n.t('onlineDeleted') }}</h1>
+      <p>{{ i18n.t('onlineDeletedHint', { code: socket.deletedRoom() }) }}</p>
+      <a routerLink="/">{{ i18n.t('onlineHome') }}</a>
     </section>
   } @else if (!state()) {
     <section class="status">
-      <h1>Reconectando...</h1>
+      <h1>{{ i18n.t('onlineReconnecting') }}</h1>
       @if (socket.error()) {
-        <p>{{ socket.error() }}</p>
-        <a [routerLink]="['/join', socket.roomCode()]">Volver a entrar</a>
+        <p>{{ i18n.onlineError(socket.error()) }}</p>
+        <a [routerLink]="['/join', socket.roomCode()]">{{ i18n.t('onlineRejoin') }}</a>
       }
     </section>
   } @else {
     @let player = state()!;
     <header>
       <div>
-        <span>Sala {{ player.roomCode }}</span>
+        <span>{{ i18n.t('onlineRoom') }} {{ player.roomCode }}</span>
         <strong><app-player-name [name]="player.playerName" [favoritePokemon]="player.favoritePokemon" /></strong>
       </div>
       <small [class.connected]="socket.connected()">{{ socket.connected() ? 'online' : 'offline' }}</small>
@@ -32,16 +32,16 @@
       @if (player.festaAnimation; as animation) {
         <app-festa-resolution-animation [animation]="animation" />
       } @else if (player.draft?.currentTurn?.finished) {
-        <app-ten-pick-result [turn]="player.draft!.currentTurn!" [playerName]="resultPlayer()?.name ?? 'Jugador'" [favoritePokemon]="resultPlayer()?.favoritePokemon"
+        <app-ten-pick-result [turn]="player.draft!.currentTurn!" [playerName]="resultPlayer()?.name ?? i18n.t('player')" [favoritePokemon]="resultPlayer()?.favoritePokemon"
           [showNext]="player.canAct && player.controls?.kind === 'turn-result'" [nextDisabled]="advancing() || !socket.connected()"
           [finalDraft]="finalResult()"
           (next)="advanceResult()" />
       } @else if (player.phase === 'lobby') {
-        <h1>Esperando al host...</h1>
+        <h1>{{ i18n.t('onlineWaitingHost') }}</h1>
       } @else if (player.phase === 'finished') {
-        <h1>Equipos finales</h1>
+        <h1>{{ i18n.t('finalTeams') }}</h1>
       } @else if (!player.canAct) {
-        <h1>Esperando a <app-player-name [name]="activePlayer()?.name ?? 'otro jugador'" [favoritePokemon]="activePlayer()?.favoritePokemon" />...</h1>
+        <h1>{{ i18n.t('onlineWaitingFor') }} <app-player-name [name]="activePlayer()?.name ?? i18n.t('onlineOtherPlayer')" [favoritePokemon]="activePlayer()?.favoritePokemon" />...</h1>
       } @else if (player.controls; as controls) {
         @if (controls.kind === 'pick') {
           <article class="pokemon-card">
@@ -49,27 +49,27 @@
             <img [src]="controls.option.artwork || controls.option.sprite" [alt]="controls.option.name" />
             <h1>{{ controls.option.name }}</h1>
             @if (requireNicknames()) {
-              <label>Mote
+              <label>{{ i18n.t('draftNickname') }}
                 <input maxlength="18" [ngModel]="nickname()" (ngModelChange)="nickname.set($event)" />
               </label>
             }
-            <button class="pick" type="button" [disabled]="requireNicknames() && !nickname().trim()" (click)="pick(controls.turnId)">Elegir</button>
+            <button class="pick" type="button" [disabled]="requireNicknames() && !nickname().trim()" (click)="pick(controls.turnId)">{{ i18n.t('pick') }}</button>
             @if (controls.canSkip) {
-              <button class="skip" type="button" (click)="skip(controls.turnId)">Skip</button>
+              <button class="skip" type="button" (click)="skip(controls.turnId)">{{ i18n.t('skip') }}</button>
             } @else {
-              <p>Último encuentro: debes quedártelo.</p>
+              <p>{{ i18n.t('onlineLastEncounter') }}</p>
             }
           </article>
         } @else if (controls.kind === 'festa-revealed' && activeCard(); as card) {
           <article class="festa">
             <app-festa-card [card]="card" />
-            <button class="pick" type="button" (click)="socket.startFestaResolution()">Resolver</button>
+            <button class="pick" type="button" (click)="socket.startFestaResolution()">{{ i18n.t('festaResolve') }}</button>
           </article>
         } @else if (controls.kind === 'festa-pokemon-choice' && activeCard(); as card) {
           <article class="festa">
             <app-festa-card [card]="card" />
             @if (requireNicknames()) {
-              <label>Mote
+              <label>{{ i18n.t('draftNickname') }}
                 <input maxlength="18" [ngModel]="nickname()" (ngModelChange)="nickname.set($event)" />
               </label>
             }
@@ -84,45 +84,45 @@
           </article>
         } @else if (controls.kind === 'festa-modifier') {
           <article class="festa">
-            <h1>{{ controls.modifierKind === 'item' ? 'Objeto FESTA' : controls.modifierKind === 'ability' ? 'Habilidad FESTA' : 'Movimiento FESTA' }}</h1>
+            <h1>{{ controls.modifierKind === 'item' ? i18n.t('onlineFestaItem') : controls.modifierKind === 'ability' ? i18n.t('onlineFestaAbility') : i18n.t('onlineFestaMove') }}</h1>
             @if (controls.targetMode === 'choose') {
               <select [ngModel]="modifierTarget()" (ngModelChange)="modifierTarget.set($event)">
-                <option value="">Elige un Pokémon</option>
+                <option value="">{{ i18n.t('onlineChoosePokemon') }}</option>
                 @for (target of controls.targets; track target.key) {
                   <option [value]="target.key">{{ target.playerName }} - {{ target.pokemon.name }}</option>
                 }
               </select>
             }
             @if (!controls.randomValue) {
-              <label for="modifier-search">{{ controls.modifierKind === 'item' ? 'Buscar objeto' : controls.modifierKind === 'ability' ? 'Buscar habilidad' : 'Buscar movimiento' }}</label>
+              <label for="modifier-search">{{ controls.modifierKind === 'item' ? i18n.t('onlineSearchItem') : controls.modifierKind === 'ability' ? i18n.t('onlineSearchAbility') : i18n.t('onlineSearchMove') }}</label>
               <input id="modifier-search" type="search" inputmode="search" autocomplete="off"
-                placeholder="Nombre en español o inglés" [ngModel]="modifierQuery()" (ngModelChange)="modifierQuery.set($event)" />
-              <div class="modifier-options" role="group" aria-label="Resultados de búsqueda">
+                [placeholder]="i18n.t('onlineSearchHint')" [ngModel]="modifierQuery()" (ngModelChange)="modifierQuery.set($event)" />
+              <div class="modifier-options" role="group" [attr.aria-label]="i18n.t('onlineSearchResults')">
                 @for (value of visibleModifierValues(); track value.id) {
                   <button type="button" [class.selected]="modifierValue() === value.id"
                     [attr.aria-pressed]="modifierValue() === value.id" (click)="modifierValue.set(value.id)">
-                    <span>{{ value.es || value.name }}</span>
-                    @if (value.es && value.es !== value.name) { <small>{{ value.name }}</small> }
+                    <span>{{ i18n.language() === 'es' ? value.es || value.name : value.name }}</span>
+                    @if (i18n.language() === 'es' && value.es && value.es !== value.name) { <small>{{ value.name }}</small> }
                   </button>
                 } @empty {
-                  <p role="status">No hay resultados. Prueba con otro nombre.</p>
+                  <p role="status">{{ i18n.t('onlineNoResults') }}</p>
                 }
               </div>
               @if (selectedModifierValue(); as selected) {
-                <p class="modifier-selection" role="status">Selección: <strong>{{ selected.es || selected.name }}</strong></p>
+                <p class="modifier-selection" role="status">{{ i18n.t('onlineSelection') }} <strong>{{ i18n.language() === 'es' ? selected.es || selected.name : selected.name }}</strong></p>
               }
             } @else {
-              <p>El objeto se elegirá al azar.</p>
+              <p>{{ i18n.t('onlineRandomItem') }}</p>
             }
             <button class="pick" type="button"
               [disabled]="controls.targetMode === 'choose' && !modifierTarget() || !controls.randomValue && !selectedModifierValue()"
-              (click)="socket.resolveFestaModifier(modifierTarget(), modifierValue())">Confirmar</button>
+              (click)="socket.resolveFestaModifier(modifierTarget(), modifierValue())">{{ i18n.t('festaConfirm') }}</button>
           </article>
         } @else if (controls.kind === 'festa-reroll') {
           <article class="festa">
-            <h1>Elige un pick para rerollear</h1>
+            <h1>{{ i18n.t('onlineReroll') }}</h1>
             @if (requireNicknames()) {
-              <label>Mote
+              <label>{{ i18n.t('draftNickname') }}
                 <input maxlength="18" [ngModel]="nickname()" (ngModelChange)="nickname.set($event)" />
               </label>
             }
@@ -137,7 +137,7 @@
           </article>
         } @else if (controls.kind === 'festa-form-choice') {
           <article class="festa">
-            <h1>Elige un Pokémon para cambiar de forma</h1>
+            <h1>{{ i18n.t('onlineChangeForm') }}</h1>
             <div class="choice-grid">
               @for (target of controls.targets; track target.key) {
                 <button type="button" (click)="socket.resolveFestaTransformation(target.key)">
@@ -149,41 +149,41 @@
           </article>
         } @else if (controls.kind === 'festa-trade-any') {
           <article class="festa">
-            <h1>Intercambio</h1>
+            <h1>{{ i18n.t('onlineTrade') }}</h1>
             <select [ngModel]="selectedFirst()" (ngModelChange)="selectedFirst.set($event)">
-              <option value="">Primer Pokémon</option>
+              <option value="">{{ i18n.t('festaFirstPokemon') }}</option>
               @for (pick of allPicks(); track pick.key) { <option [value]="pick.key">{{ pick.player.name }} - {{ pick.pokemonName }}</option> }
             </select>
             <select [ngModel]="selectedSecond()" (ngModelChange)="selectedSecond.set($event)">
-              <option value="">Segundo Pokémon</option>
+              <option value="">{{ i18n.t('festaSecondPokemon') }}</option>
               @for (pick of allPicks(); track pick.key) { <option [value]="pick.key">{{ pick.player.name }} - {{ pick.pokemonName }}</option> }
             </select>
-            <button class="pick" type="button" [disabled]="!selectedFirst() || !selectedSecond() || selectedFirst() === selectedSecond()" (click)="socket.resolveFestaTrade(selectedFirst(), selectedSecond())">Confirmar</button>
+            <button class="pick" type="button" [disabled]="!selectedFirst() || !selectedSecond() || selectedFirst() === selectedSecond()" (click)="socket.resolveFestaTrade(selectedFirst(), selectedSecond())">{{ i18n.t('festaConfirm') }}</button>
           </article>
         } @else if (controls.kind === 'festa-trade-last') {
           <article class="festa">
-            <h1>Cambia tu último pick</h1>
+            <h1>{{ i18n.t('onlineTradeLast') }}</h1>
             <select [ngModel]="selectedSecond()" (ngModelChange)="selectedSecond.set($event)">
-              <option value="">Pokémon rival</option>
+              <option value="">{{ i18n.t('onlineRivalPokemon') }}</option>
               @for (pick of rivalPicks(); track pick.key) { <option [value]="pick.key">{{ pick.player.name }} - {{ pick.pokemonName }}</option> }
             </select>
-            <button class="pick" type="button" [disabled]="!selectedSecond()" (click)="socket.resolveFestaTrade('', selectedSecond())">Confirmar</button>
+            <button class="pick" type="button" [disabled]="!selectedSecond()" (click)="socket.resolveFestaTrade('', selectedSecond())">{{ i18n.t('festaConfirm') }}</button>
           </article>
         } @else {
           <article class="festa">
-            <h1>No se pudo preparar la carta</h1>
-            <p>El servidor no ha enviado una acción para resolverla. Actualiza la partida; si continúa, el organizador debe actualizar el servidor Online.</p>
-            <button class="pick" type="button" [disabled]="refreshing()" (click)="refreshState()">{{ refreshing() ? 'Actualizando...' : 'Actualizar partida' }}</button>
+            <h1>{{ i18n.t('onlineCardError') }}</h1>
+            <p>{{ i18n.t('onlineCardErrorHint') }}</p>
+            <button class="pick" type="button" [disabled]="refreshing()" (click)="refreshState()">{{ refreshing() ? i18n.t('onlineRefreshing') : i18n.t('onlineRefresh') }}</button>
           </article>
         }
       } @else {
         <article class="festa">
-          <h1>Recuperando tu turno</h1>
-          <p>No se han recibido las acciones de tu turno.</p>
-          <button class="pick" type="button" [disabled]="refreshing()" (click)="refreshState()">{{ refreshing() ? 'Actualizando...' : 'Actualizar partida' }}</button>
+          <h1>{{ i18n.t('onlineRecovering') }}</h1>
+          <p>{{ i18n.t('onlineNoControls') }}</p>
+          <button class="pick" type="button" [disabled]="refreshing()" (click)="refreshState()">{{ refreshing() ? i18n.t('onlineRefreshing') : i18n.t('onlineRefresh') }}</button>
         </article>
       }
-      @if (socket.error()) { <p class="error">{{ socket.error() }}</p> }
+      @if (socket.error()) { <p class="error">{{ i18n.onlineError(socket.error()) }}</p> }
     </section>
     @if (player.draft; as draft) {
       <section class="team-strip">

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { vi } from 'vitest';
 import { MultiplayerJoin } from './multiplayer-join';
+import { LanguageService } from '../../services/language.service';
 import { MultiplayerSocketService } from '../../services/multiplayer/multiplayer-socket.service';
 
 describe('Join a Game', () => {
@@ -21,6 +22,7 @@ describe('Join a Game', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => code } } } },
       ],
     }).overrideComponent(MultiplayerJoin, { set: { imports: [FormsModule], schemas: [NO_ERRORS_SCHEMA] } });
+    TestBed.inject(LanguageService).setLanguage('en');
     const fixture = TestBed.createComponent(MultiplayerJoin);
     fixture.detectChanges();
     return { fixture, page: fixture.componentInstance, socket, router };
@@ -67,6 +69,9 @@ describe('Join a Game', () => {
     await page.join();
     fixture.detectChanges();
     expect(page.joining()).toBe(false);
+    expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain('Room not found.');
+    fixture.componentInstance.i18n.setLanguage('es');
+    fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain('Sala inexistente.');
     expect(router.navigate).not.toHaveBeenCalled();
   });

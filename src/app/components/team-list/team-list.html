@@ -2,7 +2,7 @@
   <h2>{{ i18n.t('teams') }}</h2>
   <div class="teams">
     @for (player of orderedPlayers(); track player.id) {
-      <article class="team" [class.active]="player.id === activePlayerId">
+      <article class="team" [attr.data-player-id]="player.id" [class.active]="player.id === activePlayerId">
         <div class="team-header">
           <strong><app-player-name [name]="player.name" [favoritePokemon]="player.favoritePokemon" /></strong>
           <span>{{ player.team.length }} / {{ state.teamSize }}</span>

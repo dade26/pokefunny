@@ -1,3 +1,4 @@
+import { LanguageService } from '../../services/language.service';
 import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -19,6 +20,7 @@ import { PlayerName } from '../../components/player-name/player-name';
   styleUrl: './multiplayer-host.css',
 })
 export class MultiplayerHost implements OnInit {
+  readonly i18n = inject(LanguageService);
   readonly socket = inject(MultiplayerSocketService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);

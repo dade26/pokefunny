@@ -217,7 +217,7 @@ export class MultiplayerSocketService {
           return;
         }
         if (timeout) {
-          this.error.set('No se pudo contactar con el servidor.');
+          this.error.set('No se pudo contactar con el servidor. Espera 1 minuto a que el servidor se despierte, por favor.');
           reject(timeout);
           return;
         }

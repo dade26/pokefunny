@@ -1,5 +1,5 @@
 import { LanguageService, TranslationKey } from '../../services/language.service';
-import { Component, Input, inject, signal } from '@angular/core';
+import { Component, ElementRef, Input, afterEveryRender, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideCopy, LucideFileText, LucideX } from '@lucide/angular';
 import { DraftState, FestaHeldItem, Player, Pokemon, typeIcon } from '../../models/pokemon.model';
@@ -30,12 +30,39 @@ export class TeamList {
   readonly typeIcon = typeIcon;
   @Input({ required: true }) state!: DraftState;
   @Input() activePlayerId = '';
+  @Input() rotateWithTurn = false;
   @Input() allowExport = false;
   @Input() playerId = '';
   @Input() tournamentView = false;
   private readonly pokepaste = inject(PokepasteService);
   readonly itemSprites = inject(ItemSpriteService);
   readonly pastes = signal<Record<string, PasteState>>({});
+
+  constructor() {
+    const host = inject<ElementRef<HTMLElement>>(ElementRef);
+    let previousPositions = new Map<string, number>();
+    let previousOrder = '';
+    afterEveryRender(() => {
+      if (!this.rotateWithTurn) return;
+      const teams = Array.from(host.nativeElement.querySelectorAll<HTMLElement>('.team'));
+      const order = teams.map(team => team.dataset['playerId']).join(',');
+      const positions = new Map(teams.map(team => [team.dataset['playerId']!, team.offsetTop]));
+      if (previousOrder && order !== previousOrder && !this.state.finished
+        && !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+        for (const team of teams) {
+          const before = previousPositions.get(team.dataset['playerId']!);
+          if (before === undefined || before === team.offsetTop) continue;
+          team.getAnimations?.().forEach(animation => animation.cancel());
+          team.animate?.([
+            { transform: `translateY(${before - team.offsetTop}px)` },
+            { transform: 'translateY(0)' },
+          ], { duration: 400, easing: 'ease-in-out' });
+        }
+      }
+      previousPositions = positions;
+      previousOrder = order;
+    });
+  }
 
   async preparePaste(player: Player): Promise<void> {
     if (this.pastes()[player.id]?.loading) return;
@@ -82,7 +109,14 @@ export class TeamList {
 
   orderedPlayers(): Player[] {
     const playersById = new Map(this.state.players.map((player) => [player.id, player]));
-    return this.state.draftOrder
+    let order = this.state.draftOrder;
+    if (this.rotateWithTurn && !this.state.finished) {
+      order = this.state.currentRound % 2 === 0 ? [...order] : [...order].reverse();
+      const currentId = this.state.currentTurn?.playerId ?? order[this.state.currentTurnIndex];
+      const index = order.indexOf(currentId);
+      if (index >= 0) order = [...order.slice(index), ...order.slice(0, index)];
+    }
+    return order
       .map((playerId) => playersById.get(playerId))
       .filter((player): player is Player => player !== undefined && (!this.playerId || player.id === this.playerId));
   }

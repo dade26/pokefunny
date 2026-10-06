@@ -1,7 +1,7 @@
 <main class="join">
   <a routerLink="/ten-pick">Ten Pick</a>
   <section>
-    <h1>Join a Game</h1>
+    <h1>{{ i18n.t('onlineJoinTitle') }}</h1>
     <form (ngSubmit)="join()">
       @if (manualCode()) {
         <label for="room-code">{{ i18n.t('joinRoomCode') }}</label>
@@ -13,7 +13,7 @@
       <label for="player-name">{{ i18n.t('joinPlayerName') }}</label>
       <input id="player-name" name="playerName" maxlength="24" autocomplete="name" required [ngModel]="name()" (ngModelChange)="name.set($event)" />
       <button type="submit" [disabled]="!validCode() || !name().trim() || joining()">{{ i18n.t(joining() ? 'joiningGame' : 'joinGameButton') }}</button>
-      @if (socket.error()) { <p class="error" role="alert">{{ socket.error() }}</p> }
+      @if (socket.error()) { <p class="error" role="alert">{{ i18n.onlineError(socket.error()) }}</p> }
     </form>
   </section>
 </main>

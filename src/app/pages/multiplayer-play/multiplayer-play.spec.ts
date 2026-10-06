@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { vi } from 'vitest';
+import { LanguageService } from '../../services/language.service';
 import { MultiplayerPlay } from './multiplayer-play';
 import { MultiplayerSocketService } from '../../services/multiplayer/multiplayer-socket.service';
 import { MultiplayerPlayerState } from '../../models/multiplayer/multiplayer.model';
@@ -30,6 +31,7 @@ describe('Online card controller recovery', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => 'TEST12' } } } },
       ],
     }).overrideComponent(MultiplayerPlay, { set: { imports: [FormsModule], schemas: [NO_ERRORS_SCHEMA] } });
+    TestBed.inject(LanguageService).setLanguage('es');
     const fixture = TestBed.createComponent(MultiplayerPlay);
     fixture.detectChanges();
     return { fixture, socket, router, controller: () => fixture.nativeElement.querySelector('.controller') as HTMLElement };
@@ -44,6 +46,18 @@ describe('Online card controller recovery', () => {
     await fixture.whenStable();
     expect(socket.reconnectPlayer).toHaveBeenCalledWith('TEST12');
     expect(socket.playerState()).toEqual(state);
+  });
+
+  it('switches online controls and deletion notices to English immediately', () => {
+    const { fixture, socket, controller } = setup(state);
+    TestBed.inject(LanguageService).setLanguage('en');
+    fixture.detectChanges();
+    expect(controller().textContent).toContain('Could not prepare the card');
+    expect(controller().textContent).toContain('update the Online server');
+    expect(fixture.nativeElement.querySelector('.leave-game').textContent).toContain('Leave game');
+    socket.deletedRoom.set('TEST12');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('The host deleted room TEST12');
   });
 
   it('shows recovery when the active player receives no controls', () => {

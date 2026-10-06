@@ -4,67 +4,67 @@
   @if (!room()) {
     <section class="setup">
       <h1>{{ modeName() }} Online</h1>
-      <p>Crea la sala y comparte el enlace. Cada jugador elige su nombre al entrar; el número de jugadores se decide al empezar.</p>
+      <p>{{ i18n.t('onlineSetupHint') }}</p>
       <div class="setup-grid">
-        <label>Pokémon por jugador
+        <label>{{ i18n.t('teamSize') }}
           <input type="number" min="1" max="12" [ngModel]="teamSize()" (ngModelChange)="teamSize.set(+$event)" />
         </label>
         @if (mode() === 'festa') {
-          <label>Probabilidad FESTA
+          <label>{{ i18n.t('festaChance') }}
             <input type="number" min="0" max="100" [ngModel]="festaChance()" (ngModelChange)="festaChance.set(+$event)" />
           </label>
         }
-        <label class="check"><input type="checkbox" [ngModel]="requireNicknames()" (ngModelChange)="requireNicknames.set($event)" /> Motes obligatorios</label>
+        <label class="check"><input type="checkbox" [ngModel]="requireNicknames()" (ngModelChange)="requireNicknames.set($event)" /> {{ i18n.t('draftNicknamesRequired') }}</label>
         <label class="check"><input type="checkbox" [ngModel]="mega()" (ngModelChange)="mega.set($event)" /> Mega</label>
-        <label class="check"><input type="checkbox" [ngModel]="gigantamax()" (ngModelChange)="gigantamax.set($event)" /> Gigantamax</label>
+        <label class="check"><input type="checkbox" [ngModel]="gigantamax()" (ngModelChange)="gigantamax.set($event)" /> {{ i18n.t('gigantamax') }}</label>
       </div>
       <fieldset class="generations">
-        <legend>Generaciones</legend>
+        <legend>{{ i18n.t('generations') }}</legend>
         @for (generation of allGenerations; track generation) {
           <label class="check"><input type="checkbox" [checked]="generations().includes(generation)" (change)="toggleGeneration(generation)" /> Gen {{ generation }}</label>
         }
       </fieldset>
-      @if (!generations().length) { <p class="error">Selecciona al menos una generación.</p> }
-      <button class="primary" type="button" [disabled]="creating() || !generations().length" (click)="createRoom()">{{ creating() ? 'Creando...' : 'Crear sala' }}</button>
-      @if (socket.error()) { <p class="error">{{ socket.error() }}</p> }
+      @if (!generations().length) { <p class="error">{{ i18n.t('selectGeneration') }}</p> }
+      <button class="primary" type="button" [disabled]="creating() || !generations().length" (click)="createRoom()">{{ creating() ? i18n.t('onlineCreating') : i18n.t('onlineCreate') }}</button>
+      @if (socket.error()) { <p class="error">{{ i18n.onlineError(socket.error()) }}</p> }
     </section>
   } @else {
     @let state = room()!;
     <section class="room-banner">
       <div>
-        <span>Sala</span>
+        <span>{{ i18n.t('onlineRoom') }}</span>
         <strong>{{ state.roomCode }}</strong>
       </div>
       <div class="join-link">
-        <span>Enlace</span>
+        <span>{{ i18n.t('onlineLink') }}</span>
         <code>{{ originJoinUrl() }}</code>
       </div>
     </section>
 
     <section class="room-actions">
       @if (confirmingDelete()) {
-        <p>¿Borrar la partida para todos? Se eliminarán la sala y la partida guardada en este dispositivo.</p>
-        <button class="danger" type="button" [disabled]="deleting()" (click)="deleteRoom()">{{ deleting() ? 'Borrando...' : 'Sí, borrar partida' }}</button>
-        <button class="primary" type="button" [disabled]="deleting()" (click)="confirmingDelete.set(false)">Cancelar</button>
+        <p>{{ i18n.t('onlineDeleteQuestion') }}</p>
+        <button class="danger" type="button" [disabled]="deleting()" (click)="deleteRoom()">{{ deleting() ? i18n.t('onlineDeleting') : i18n.t('onlineConfirmDelete') }}</button>
+        <button class="primary" type="button" [disabled]="deleting()" (click)="confirmingDelete.set(false)">{{ i18n.t('cancel') }}</button>
       } @else {
-        <button class="danger" type="button" (click)="confirmingDelete.set(true)">Borrar partida</button>
+        <button class="danger" type="button" (click)="confirmingDelete.set(true)">{{ i18n.t('onlineDelete') }}</button>
       }
-      @if (socket.error() && state.phase !== 'lobby') { <p class="error" role="alert">{{ socket.error() }}</p> }
+      @if (socket.error() && state.phase !== 'lobby') { <p class="error" role="alert">{{ i18n.onlineError(socket.error()) }}</p> }
     </section>
 
     @if (state.phase === 'lobby') {
       <section class="lobby">
-        <h1>Sala de espera · {{ connectedPlayers().length }} jugadores</h1>
-        <p>Comparte el enlace y empieza cuando estéis todos. Participarán los jugadores conectados en ese momento.</p>
+        <h1>{{ i18n.t('onlineLobby', { count: connectedPlayers().length }) }}</h1>
+        <p>{{ i18n.t('onlineLobbyHint') }}</p>
         <div class="players">
           @for (player of state.players; track player.id) {
-            <div><strong><app-player-name [name]="player.name" [favoritePokemon]="player.favoritePokemon" /></strong><span [class.offline]="!player.connected">{{ player.connected ? 'Conectado' : 'Desconectado' }}</span></div>
+            <div><strong><app-player-name [name]="player.name" [favoritePokemon]="player.favoritePokemon" /></strong><span [class.offline]="!player.connected">{{ player.connected ? i18n.t('onlineConnected') : i18n.t('onlineDisconnected') }}</span></div>
           } @empty {
-            <p>Esperando jugadores...</p>
+            <p>{{ i18n.t('onlineWaitingPlayers') }}</p>
           }
         </div>
-        <button class="primary" type="button" [disabled]="starting() || connectedPlayers().length < 1" (click)="startGame()">{{ starting() ? 'Empezando...' : 'Empezar partida (' + connectedPlayers().length + ')' }}</button>
-        @if (socket.error()) { <p class="error" role="alert">{{ socket.error() }}</p> }
+        <button class="primary" type="button" [disabled]="starting() || connectedPlayers().length < 1" (click)="startGame()">{{ starting() ? i18n.t('onlineStarting') : i18n.t('onlineStart', { count: connectedPlayers().length }) }}</button>
+        @if (socket.error()) { <p class="error" role="alert">{{ i18n.onlineError(socket.error()) }}</p> }
       </section>
     } @else if (state.draft; as draft) {
       <section class="board" [class.finished]="state.phase === 'finished'">
@@ -77,27 +77,27 @@
           @if (state.festaAnimation; as animation) {
             <app-festa-resolution-animation [animation]="animation" />
           } @else if (state.phase === 'finished') {
-            <h1>Equipos finales</h1>
+            <h1>{{ i18n.t('finalTeams') }}</h1>
             <app-team-list [state]="draft" [allowExport]="true" />
-            <a class="primary" [routerLink]="savedDraftUrl()">Consultar partida y crear torneo</a>
+            <a class="primary" [routerLink]="savedDraftUrl()">{{ i18n.t('onlineViewGame') }}</a>
           } @else if (draft.activeFestaCard && activeFestaCard(); as card) {
             <article class="watch-card">
-              <h1>Turno de <app-player-name [name]="activePlayer()?.name ?? ''" [favoritePokemon]="activePlayer()?.favoritePokemon" /></h1>
+              <h1>{{ i18n.t('onlineTurnPrefix') }} <app-player-name [name]="activePlayer()?.name ?? ''" [favoritePokemon]="activePlayer()?.favoritePokemon" /></h1>
               <app-festa-card [card]="card" />
               @if (draft.activeFestaCard.rivalPlayerId) {
                 <p class="chooser-info"><app-player-name [name]="activePlayer()?.name ?? ''" [favoritePokemon]="activePlayer()?.favoritePokemon" />
-                  elige el Pok&#233;mon para <app-player-name [name]="festaAffectedPlayer()?.name ?? ''" [favoritePokemon]="festaAffectedPlayer()?.favoritePokemon" />.</p>
-                <p>Esperando la elecci&#243;n del rival desde su dispositivo.</p>
+                  {{ i18n.t('onlineChoosesFor') }} <app-player-name [name]="festaAffectedPlayer()?.name ?? ''" [favoritePokemon]="festaAffectedPlayer()?.favoritePokemon" />.</p>
+                <p>{{ i18n.t('onlineWaitingRival') }}</p>
               } @else {
-                <p>El jugador activo resuelve la carta desde su dispositivo.</p>
+                <p>{{ i18n.t('onlineResolveDevice') }}</p>
               }
             </article>
           } @else if (draft.currentTurn?.finished) {
-            <app-ten-pick-result [celebratePick]="true" [showNext]="false" [turn]="draft.currentTurn!" [playerName]="activePlayer()?.name ?? 'Jugador'" [favoritePokemon]="activePlayer()?.favoritePokemon" />
-            <p>El jugador avanza al siguiente turno desde su m&#243;vil.</p>
+            <app-ten-pick-result [celebratePick]="true" [showNext]="false" [turn]="draft.currentTurn!" [playerName]="activePlayer()?.name ?? i18n.t('player')" [favoritePokemon]="activePlayer()?.favoritePokemon" />
+            <p>{{ i18n.t('onlineAdvanceDevice') }}</p>
           } @else if (currentPokemon(); as pokemon) {
             <article class="watch-card">
-              <h1>Turno de <app-player-name [name]="activePlayer()?.name ?? ''" [favoritePokemon]="activePlayer()?.favoritePokemon" /></h1>
+              <h1>{{ i18n.t('onlineTurnPrefix') }} <app-player-name [name]="activePlayer()?.name ?? ''" [favoritePokemon]="activePlayer()?.favoritePokemon" /></h1>
               <strong>{{ draft.currentTurn!.currentIndex + 1 }} / {{ draft.currentTurn!.options.length }}</strong>
               <img [src]="pokemon.artwork || pokemon.sprite" [alt]="pokemon.name" />
               <h2>{{ pokemon.name }}</h2>
@@ -106,7 +106,7 @@
         </section>
         @if (state.phase !== 'finished') {
           <aside class="teams-column">
-            <app-team-list [state]="draft" [activePlayerId]="state.activePlayerId ?? ''" />
+            <app-team-list [state]="draft" [rotateWithTurn]="true" [activePlayerId]="draft.currentTurn?.playerId ?? ''" />
           </aside>
         }
       </section>

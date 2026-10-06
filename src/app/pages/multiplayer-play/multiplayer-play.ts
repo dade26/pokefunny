@@ -1,3 +1,4 @@
+import { LanguageService } from '../../services/language.service';
 import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -17,6 +18,7 @@ import { PlayerName } from '../../components/player-name/player-name';
   styleUrl: './multiplayer-play.css',
 })
 export class MultiplayerPlay implements OnInit {
+  readonly i18n = inject(LanguageService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly socket = inject(MultiplayerSocketService);
