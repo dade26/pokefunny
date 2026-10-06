@@ -5,7 +5,6 @@
 .quests-button { position: fixed; z-index: 8; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); max-width: calc(100% - 190px); font-size: 13px; }
 .quest-count { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: #fff; background: #b52d43; }
 .gacha-feedback { max-width: 900px; margin: 16px auto; padding: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; border-radius: 8px; background: var(--selected, #d9eddf); font-weight: 800; }
-.scene-forest .machine-scene::before { content: '♧'; position: absolute; bottom: 20px; left: 4%; font-size: clamp(70px, 12vw, 160px); color: #528866; text-shadow: 28px -25px 0 #7aa078; opacity: .5; }
 .reveal-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; min-height: 24px; } .new-badge, .shiny-badge { padding: 4px 7px; border-radius: 5px; font-size: 11px; font-weight: 900; } .new-badge { background: #d2f4dc; color: #225d3b; } .shiny-badge { background: #ffe9a4; color: #6c5000; }
 .shiny-capsule { border-radius: 16px; background: radial-gradient(ellipse, #ffe69850, transparent 72%); }
 .shiny-capsule .pokemon-reveal { animation: shiny-reveal 750ms ease-out both; }

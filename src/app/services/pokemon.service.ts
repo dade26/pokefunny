@@ -7,6 +7,7 @@ import { FestaCatalog } from '../models/festa-modifiers';
 
 export interface PokemonCatalogEntry {
   id: number;
+  speciesId?: number;
   name: string;
   generation: number;
   family: string;

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <defs>
+    <g id="clover" fill="#6c9c78">
+      <path d="M0 0C-20-6-12-22 0-12C12-22 20-6 0 0Z"/>
+      <path d="M0 0C-20-6-12-22 0-12C12-22 20-6 0 0Z" transform="rotate(90)"/>
+      <path d="M0 0C-20-6-12-22 0-12C12-22 20-6 0 0Z" transform="rotate(180)"/>
+      <path d="M0 0C-20-6-12-22 0-12C12-22 20-6 0 0Z" transform="rotate(270)"/>
+      <path d="M1 3Q9 16 5 24" fill="none" stroke="#6c9c78" stroke-width="2" stroke-linecap="round"/>
+    </g>
+  </defs>
+  <use href="#clover" x="40" y="40" opacity=".35"/>
+  <use href="#clover" x="120" y="120" opacity=".35"/>
+</svg>

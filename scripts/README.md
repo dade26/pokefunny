@@ -15,7 +15,7 @@ The image command can run independently; it resumes by skipping existing files.
 Commit the catalog and generated images when updating the available Pokemon. Builds and drafts
 do not require access to these repositories.
 
-The catalog contains API Pokemon IDs, names, original-species generations,
+The catalog contains API Pokemon IDs, base-species IDs (`speciesId`), names, original-species generations,
 evolution-chain family keys, form-specific types, and image availability.
 `images` is a bitmask: 1 = sprite, 2 = shiny sprite, 4 = official artwork,
 8 = shiny official artwork. Missing artwork falls back to a converted sprite.

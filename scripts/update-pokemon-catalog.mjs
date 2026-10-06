@@ -65,7 +65,7 @@ const entries = pokemon.filter((entry) => entry.id !== '10190' && entry.identifi
   const images = Number(sprites.has(filename)) | (Number(shinySprites.has(filename)) << 1)
     | (Number(artwork.has(filename)) << 2) | (Number(shinyArtwork.has(filename)) << 3);
   return {
-    id: Number(entry.id), name: entry.identifier, generation: Number(original.generation_id),
+    id: Number(entry.id), speciesId: Number(entry.species_id), name: entry.identifier, generation: Number(original.generation_id),
     family: original.evolution_chain_id ? `chain:${original.evolution_chain_id}` : `species:${original.id}`,
     types: names, images,
   };

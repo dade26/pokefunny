@@ -13,7 +13,8 @@
 .cosmetic-choices { display: flex; flex-wrap: wrap; gap: 10px; } .cosmetic-choices button { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; min-width: 145px; border-radius: 4px; padding: 12px; }
 .cosmetic-choices button.active { box-shadow: 3px 3px 0 var(--shadow, #c6d4cb); } .cosmetic-choices small { color: var(--muted, #65746b); font-size: 11px; }
 .cosmetic-preview { width: 100%; height: 48px; border: 1px solid var(--border, #a5b4ab); background: var(--page, #edf2ee); }
-.forest-preview { background: linear-gradient(140deg, #d1e5cf, #7fba9c); }
+.forest-preview { background: #e4efe3 url('/images/gacha/clovers-pattern.svg') center / 80px 80px; }
+:host-context([data-theme=dark]) .forest-preview { background-color: #18291f; }
 .stars-preview { background: #eeedf7 url('/images/gacha/stars-pattern.svg') center / 80px 80px; }
 :host-context([data-theme=dark]) .stars-preview { background-color: #1e2035; }
 .sunset-preview { background: linear-gradient(140deg, #f6ca98, #e5a1aa, #a7a2d4); }

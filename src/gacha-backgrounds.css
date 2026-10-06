@@ -7,7 +7,8 @@ html[data-page-background] body {
 }
 html[data-page-background=forest] {
   --gacha-background-color: #e4efe3;
-  --gacha-background-image: radial-gradient(ellipse at 0% 100%, #80b98d66, transparent 65%), radial-gradient(ellipse at 100% 0%, #bad9ad88, transparent 65%);
+  --gacha-background-image: url('/images/gacha/clovers-pattern.svg');
+  --gacha-background-size: 160px 160px;
 }
 html[data-page-background=stars] {
   --gacha-background-color: #eeedf7;
@@ -20,7 +21,6 @@ html[data-page-background=sunset] {
 }
 html[data-theme=dark][data-page-background=forest] {
   --gacha-background-color: #18291f;
-  --gacha-background-image: radial-gradient(ellipse at 0% 100%, #345b4566, transparent 65%), radial-gradient(ellipse at 100% 0%, #44664055, transparent 65%);
 }
 html[data-theme=dark][data-page-background=stars] { --gacha-background-color: #1e2035; }
 html[data-theme=dark][data-page-background=sunset] {

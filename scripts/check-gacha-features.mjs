@@ -96,9 +96,8 @@ for (const [browserType, width] of [[chromium, 1440], [chromium, 390], [webkit, 
     await expect(page.locator('.dex-detail')).toContainText(/water/i);
     await page.screenshot({ path: `${output}/dex-${browserType.name()}-${width}.png` });
     await page.getByLabel('Type').selectOption('');
-    await page.getByRole('button', { name: 'Forms', exact: true }).click();
-    await expect(page.locator('.dex-entry')).toHaveCount(1);
-    await page.locator('.dex-panel .box-tabs button').nth(2).click();
+    await expect(page.getByRole('button', { name: 'Forms', exact: true })).toHaveCount(0);
+    await page.locator('.dex-panel .box-tabs button').nth(1).click();
     await expect(page.locator('.dex-entry')).toHaveCount(1);
     await page.locator('.dex-panel header').getByRole('button', { name: 'Close', exact: true }).click();
     await page.locator('.quests-button').click();

@@ -87,7 +87,6 @@
     <header><h1 id="dex-heading">{{ g.i18n.t('gachaPokedex') }} <small>{{ g.i18n.t('gachaCollectionSummary', { count: g.ownedCount(), shiny: g.shinyCount() }) }}</small></h1><button type="button" (click)="g.pokedexOpen.set(false)">{{ g.i18n.t('gachaClose') }}</button></header>
     <div class="box-tabs" [attr.aria-label]="g.i18n.t('gachaDexCategory')">
       <button type="button" [class.active]="g.dexCategory() === 'all'" [attr.aria-pressed]="g.dexCategory() === 'all'" (click)="g.setDexCategory('all')">{{ g.i18n.t('gachaAllPokemon') }}</button>
-      <button type="button" [class.active]="g.dexCategory() === 'forms'" [attr.aria-pressed]="g.dexCategory() === 'forms'" (click)="g.setDexCategory('forms')">{{ g.i18n.t('gachaForms') }}</button>
       <button type="button" [class.active]="g.dexCategory() === 'shiny'" [attr.aria-pressed]="g.dexCategory() === 'shiny'" (click)="g.setDexCategory('shiny')">✦ {{ g.i18n.t('shiny') }}</button>
     </div>
     <div class="toolbar">
@@ -107,7 +106,7 @@
             <div class="type-tags">@for (type of selected.types; track type) { <span>{{ g.i18n.typeName(type) }}</span> }</div>
             @if (g.dexDetailLoading()) { <p>{{ g.i18n.t('loading') }}</p> }
             @if (g.dexDetailError()) { <p role="alert">{{ g.i18n.t('gachaLoadError') }}</p><button type="button" (click)="g.inspectDex(selected.id)">{{ g.i18n.t('retry') }}</button> }
-            @if (g.dexDetail(); as detail) { <p>{{ detail.name }} @if (g.shinyDex()[selected.id] === 'owned') { <span>✦ {{ g.i18n.t('gachaShinyOwned') }}</span> }</p> }
+            @if (g.dexDetail(); as detail) { <p>{{ detail.name }} @if (g.shinyStatus(selected.id) === 'owned') { <span>✦ {{ g.i18n.t('gachaShinyOwned') }}</span> }</p> }
           }
         </div>
         <button type="button" (click)="g.selectedDexId.set(null)">{{ g.i18n.t('gachaCloseDetails') }}</button>

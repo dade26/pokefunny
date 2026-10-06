@@ -40,7 +40,10 @@ export class PokeGacha implements OnInit {
   readonly pc = signal<PcPokemon[]>([]);
   readonly pokedex = signal<Record<string, DexStatus>>({});
   readonly catalog = signal<PokemonCatalogEntry[]>([]);
-  private readonly collectionCatalog = computed(() => this.catalog().filter(entry => entry.id !== BANNED_POKEMON_ID));
+  private readonly collectionCatalog = computed(() => this.catalog().filter(entry => entry.id < 10000 && entry.id !== BANNED_POKEMON_ID));
+  private readonly speciesById = computed(() => new Map(this.catalog().map(entry => [entry.id, entry.speciesId ?? entry.id])));
+  private readonly speciesDex = computed(() => this.combineForms(this.pokedex()));
+  private readonly speciesShinyDex = computed(() => this.combineForms(this.shinyDex()));
   readonly loading = signal(false);
   readonly bonusDraw = signal(false);
   readonly bonusBallReady = signal(false);
@@ -87,7 +90,7 @@ export class PokeGacha implements OnInit {
   readonly slots = Array.from({ length: boxSize }, (_, index) => index);
   readonly generations = [1, 2, 3, 4, 5, 6, 7, 8, 9];
   readonly generationProgress = computed(() => {
-    const pokedex = this.pokedex();
+    const pokedex = this.speciesDex();
     return this.generations.map((generation) => {
       const entries = this.generationEntries(generation);
       const total = entries.length;
@@ -140,8 +143,8 @@ export class PokeGacha implements OnInit {
     ? 'gachaAnnoyedLastOffer' : 'gachaAnnoyedOffer');
   private readonly revealTimers = new Set<ReturnType<typeof setTimeout>>();
   private audio?: AudioContext;
-  readonly ownedCount = computed(() => Object.values(this.pokedex()).filter(status => status === 'owned').length);
-  readonly shinyCount = computed(() => Object.values(this.shinyDex()).filter(status => status === 'owned').length);
+  readonly ownedCount = computed(() => Object.values(this.speciesDex()).filter(status => status === 'owned').length);
+  readonly shinyCount = computed(() => Object.values(this.speciesShinyDex()).filter(status => status === 'owned').length);
   readonly readyPhrase = computed<TranslationKey>(() => this.shinyCount() ? 'gachaMachineShiny'
     : this.ownedCount() >= 25 ? 'gachaMachineCollector' : this.ownedCount() >= 5 ? 'gachaMachineGrowing' : 'gachaReady');
   readonly showFeedback = computed(() => ['gachaLoadError', 'gachaSaveError', 'gachaPcFull', 'gachaSavedToPc',
@@ -165,7 +168,7 @@ export class PokeGacha implements OnInit {
   });
   readonly dexGroups = computed(() => this.generations.map(generation => {
     const all = this.generationEntries(generation).filter(entry =>
-      this.dexCategory() === 'forms' ? entry.id >= 10000 : this.dexCategory() === 'shiny' ? !!(entry.images & 10) : true);
+      this.dexCategory() === 'shiny' ? !!(entry.images & 10) : true);
     const owned = all.filter(entry => this.collectionStatus(entry.id) === 'owned').length;
     const query = this.normalize(this.dexQuery());
     const entries = all.filter(entry => (!this.dexGeneration() || generation === this.dexGeneration())
@@ -177,10 +180,12 @@ export class PokeGacha implements OnInit {
   }).filter(group => group.entries.length));
   readonly selectedDexEntry = computed(() => this.catalog().find(entry => entry.id === this.selectedDexId()));
   readonly quests = computed(() => {
-    const owned = new Set(Object.keys(this.pokedex()).filter(id => this.pokedex()[id] === 'owned').map(Number));
+    const dex = this.speciesDex();
+    const owned = new Set(Object.keys(dex).filter(id => dex[id] === 'owned').map(Number));
     const collected = this.collectionCatalog().filter(entry => owned.has(entry.id));
     const kanto = this.generationEntries(1);
-    const water = collected.filter(entry => entry.types.includes('water')).length;
+    const water = new Set(this.catalog().filter(entry => entry.types.includes('water') && this.pokedex()[entry.id] === 'owned')
+      .map(entry => this.speciesId(entry.id))).size;
     return [
       { id: 'water', name: 'gachaQuestWater', goal: 5, progress: water, reward: 'gachaSceneForest', kind: 'scene', cosmetic: 'forest' },
       { id: 'starters', name: 'gachaQuestStarters', goal: 3, progress: [1, 4, 7].filter(id => owned.has(id)).length, reward: 'gachaTitleCollector', kind: 'title', cosmetic: 'collector' },
@@ -255,7 +260,7 @@ export class PokeGacha implements OnInit {
         baseStatsTotal: await this.pokemonService.getBaseStatsTotal(pokemon.id).catch(() => 0),
       })));
       this.options.set(options.map((pokemon) => ({ pokemon, revealed: false, stage: 'sealed',
-        isNew: (pokemon.shiny ? this.shinyDex() : this.pokedex())[pokemon.id] !== 'owned' })));
+        isNew: this.discoveryStatus(pokemon.id, !!pokemon.shiny) !== 'owned' })));
       this.now.set(Date.now());
       this.drawCredits.set(this.availableDraws() - 1);
       if (!this.nextDrawAt() || this.nextDrawAt() <= this.now()) this.nextDrawAt.set(nextClockHour(this.now()));
@@ -395,7 +400,7 @@ export class PokeGacha implements OnInit {
       })));
       if (!pokemon) throw new Error('No drawable Pokemon');
       this.options.set([{ pokemon, revealed: false, stage: 'sealed',
-        isNew: (pokemon.shiny ? this.shinyDex() : this.pokedex())[pokemon.id] !== 'owned' }]);
+        isNew: this.discoveryStatus(pokemon.id, !!pokemon.shiny) !== 'owned' }]);
       this.setMessage('gachaRevealAll');
       this.save();
     } catch {
@@ -473,7 +478,29 @@ export class PokeGacha implements OnInit {
   }
 
   dexStatus(id: number): DexStatus | 'unknown' {
-    return this.pokedex()[id] ?? 'unknown';
+    return this.speciesDex()[this.speciesId(id)] ?? 'unknown';
+  }
+
+  private speciesId(id: number): number {
+    return this.speciesById().get(id) ?? id;
+  }
+
+  private combineForms(dex: Record<string, DexStatus>): Record<string, DexStatus> {
+    const combined: Record<string, DexStatus> = {};
+    for (const [id, status] of Object.entries(dex)) {
+      const speciesId = this.speciesId(Number(id));
+      if (speciesId >= 10000 || speciesId === BANNED_POKEMON_ID) continue;
+      if (combined[speciesId] !== 'owned') combined[speciesId] = status;
+    }
+    return combined;
+  }
+
+  private discoveryStatus(id: number, shiny: boolean): DexStatus | 'unknown' {
+    return (shiny ? this.speciesShinyDex() : this.speciesDex())[this.speciesId(id)] ?? 'unknown';
+  }
+
+  shinyStatus(id: number): DexStatus | 'unknown' {
+    return this.discoveryStatus(id, true);
   }
 
   spriteUrl(id: number): string {
@@ -601,7 +628,7 @@ export class PokeGacha implements OnInit {
   }
 
   collectionStatus(id: number): DexStatus | 'unknown' {
-    return this.dexCategory() === 'shiny' ? this.shinyDex()[id] ?? 'unknown' : this.dexStatus(id);
+    return this.discoveryStatus(id, this.dexCategory() === 'shiny');
   }
 
   dexImage(id: number): string {
@@ -677,7 +704,7 @@ export class PokeGacha implements OnInit {
       this.options.set(Array.isArray(save.options) && save.options.length > 0 && save.options.length <= (this.bonusDraw() ? 1 : 3)
         ? save.options.filter(option => option && validPokemon(option.pokemon)).map(option => ({ ...option,
           revealed: option.revealed === true, stage: option.revealed ? 'revealed' : 'sealed',
-          isNew: option.isNew ?? (option.pokemon.shiny ? this.shinyDex() : this.pokedex())[option.pokemon.id] !== 'owned' })) : []);
+          isNew: option.isNew ?? this.discoveryStatus(option.pokemon.id, !!option.pokemon.shiny) !== 'owned' })) : []);
       this.bonusBallReady.set(save.bonusBallPending === true && !this.options().length);
       this.secretResetAt = typeof save.secretResetAt === 'number' && Number.isFinite(save.secretResetAt) ? save.secretResetAt : 0;
       this.secretDrawsUsed.set(typeof save.secretDrawsUsed === 'number' && Number.isFinite(save.secretDrawsUsed)
