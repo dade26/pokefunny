@@ -13,7 +13,7 @@ export class Changelog {
   readonly releases: { date: string; groups: { title: string; changes: TranslationKey[] }[] }[] = [
     { date: '2026-10-06', groups: [
       { title: 'Pokefunny', changes: ['changelogInfo'] },
-      { title: 'PokeGacha', changes: ['changelogGachaOpening', 'changelogGachaPc', 'changelogGachaDex', 'changelogGachaQuests', 'changelogGachaProfile', 'changelogGachaBackgrounds', 'changelogGachaDraws'] },
+      { title: 'PokeGacha', changes: ['changelogGachaOpening', 'changelogGachaPc', 'changelogGachaDex', 'changelogGachaForms', 'changelogGachaQuests', 'changelogGachaProfile', 'changelogGachaBackgrounds', 'changelogGachaDraws'] },
       { title: 'Ten Pick Online', changes: ['changelogOnlineEnglish', 'changelogOnlineQueue'] },
     ] },
     { date: '2026-10-04', groups: [

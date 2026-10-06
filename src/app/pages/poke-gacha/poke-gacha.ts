@@ -40,6 +40,7 @@ export class PokeGacha implements OnInit {
   readonly pc = signal<PcPokemon[]>([]);
   readonly pokedex = signal<Record<string, DexStatus>>({});
   readonly catalog = signal<PokemonCatalogEntry[]>([]);
+  private readonly collectionCatalog = computed(() => this.catalog().filter(entry => entry.id !== BANNED_POKEMON_ID));
   readonly loading = signal(false);
   readonly bonusDraw = signal(false);
   readonly bonusBallReady = signal(false);
@@ -128,7 +129,7 @@ export class PokeGacha implements OnInit {
   readonly dexGeneration = signal(0);
   readonly dexType = signal('');
   readonly dexFilter = signal('all');
-  readonly dexCategory = signal('species');
+  readonly dexCategory = signal('all');
   readonly selectedDexId = signal<number | null>(null);
   readonly dexDetail = signal<Pokemon | null>(null);
   readonly dexDetailLoading = signal(false);
@@ -163,8 +164,8 @@ export class PokeGacha implements OnInit {
     });
   });
   readonly dexGroups = computed(() => this.generations.map(generation => {
-    const all = this.catalog().filter(entry => entry.generation === generation && entry.id !== BANNED_POKEMON_ID
-      && (this.dexCategory() === 'forms' ? entry.id >= 10000 : this.dexCategory() === 'shiny' ? !!(entry.images & 10) : entry.id < 10000));
+    const all = this.generationEntries(generation).filter(entry =>
+      this.dexCategory() === 'forms' ? entry.id >= 10000 : this.dexCategory() === 'shiny' ? !!(entry.images & 10) : true);
     const owned = all.filter(entry => this.collectionStatus(entry.id) === 'owned').length;
     const query = this.normalize(this.dexQuery());
     const entries = all.filter(entry => (!this.dexGeneration() || generation === this.dexGeneration())
@@ -177,13 +178,13 @@ export class PokeGacha implements OnInit {
   readonly selectedDexEntry = computed(() => this.catalog().find(entry => entry.id === this.selectedDexId()));
   readonly quests = computed(() => {
     const owned = new Set(Object.keys(this.pokedex()).filter(id => this.pokedex()[id] === 'owned').map(Number));
-    const species = this.catalog().filter(entry => entry.id < 10000 && owned.has(entry.id));
-    const kanto = this.catalog().filter(entry => entry.generation === 1 && entry.id < 10000);
-    const water = species.filter(entry => entry.types.includes('water')).length;
+    const collected = this.collectionCatalog().filter(entry => owned.has(entry.id));
+    const kanto = this.generationEntries(1);
+    const water = collected.filter(entry => entry.types.includes('water')).length;
     return [
       { id: 'water', name: 'gachaQuestWater', goal: 5, progress: water, reward: 'gachaSceneForest', kind: 'scene', cosmetic: 'forest' },
       { id: 'starters', name: 'gachaQuestStarters', goal: 3, progress: [1, 4, 7].filter(id => owned.has(id)).length, reward: 'gachaTitleCollector', kind: 'title', cosmetic: 'collector' },
-      { id: 'species', name: 'gachaQuestSpecies', goal: 25, progress: species.length, reward: 'gachaSceneStars', kind: 'scene', cosmetic: 'stars' },
+      { id: 'species', name: 'gachaQuestSpecies', goal: 25, progress: collected.length, reward: 'gachaSceneStars', kind: 'scene', cosmetic: 'stars' },
       { id: 'shiny', name: 'gachaQuestShiny', goal: 1, progress: this.shinyCount(), reward: 'gachaTitleShiny', kind: 'title', cosmetic: 'shiny' },
       { id: 'kanto', name: 'gachaQuestKanto', goal: Math.max(1, Math.ceil(kanto.length / 4)), progress: kanto.filter(entry => owned.has(entry.id)).length, reward: 'gachaBoxSunset', kind: 'box', cosmetic: 'sunset' },
     ].map(quest => ({ ...quest, name: quest.name as TranslationKey, reward: quest.reward as TranslationKey,
@@ -468,7 +469,7 @@ export class PokeGacha implements OnInit {
   }
 
   generationEntries(generation: number): PokemonCatalogEntry[] {
-    return this.catalog().filter((pokemon) => pokemon.generation === generation && pokemon.id < 10000);
+    return this.collectionCatalog().filter(pokemon => pokemon.generation === generation);
   }
 
   dexStatus(id: number): DexStatus | 'unknown' {

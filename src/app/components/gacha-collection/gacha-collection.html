@@ -86,7 +86,7 @@
   <dialog #dexDialog class="collection-panel dex-panel" aria-labelledby="dex-heading" (cancel)="g.pokedexOpen.set(false)">
     <header><h1 id="dex-heading">{{ g.i18n.t('gachaPokedex') }} <small>{{ g.i18n.t('gachaCollectionSummary', { count: g.ownedCount(), shiny: g.shinyCount() }) }}</small></h1><button type="button" (click)="g.pokedexOpen.set(false)">{{ g.i18n.t('gachaClose') }}</button></header>
     <div class="box-tabs" [attr.aria-label]="g.i18n.t('gachaDexCategory')">
-      <button type="button" [class.active]="g.dexCategory() === 'species'" [attr.aria-pressed]="g.dexCategory() === 'species'" (click)="g.setDexCategory('species')">{{ g.i18n.t('gachaSpecies') }}</button>
+      <button type="button" [class.active]="g.dexCategory() === 'all'" [attr.aria-pressed]="g.dexCategory() === 'all'" (click)="g.setDexCategory('all')">{{ g.i18n.t('gachaAllPokemon') }}</button>
       <button type="button" [class.active]="g.dexCategory() === 'forms'" [attr.aria-pressed]="g.dexCategory() === 'forms'" (click)="g.setDexCategory('forms')">{{ g.i18n.t('gachaForms') }}</button>
       <button type="button" [class.active]="g.dexCategory() === 'shiny'" [attr.aria-pressed]="g.dexCategory() === 'shiny'" (click)="g.setDexCategory('shiny')">✦ {{ g.i18n.t('shiny') }}</button>
     </div>
