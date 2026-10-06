@@ -3,6 +3,9 @@ import { Pokemon } from '../models/pokemon.model';
 import { PokemonPoolService } from './pokemon-pool.service';
 import { StorageService } from './storage.service';
 import { TenPickService } from './ten-pick.service';
+import { createSwissTournament, recordSwissWinner } from '../models/swiss';
+import { createTournament } from '../models/tournament';
+import { DraftState } from '../models/pokemon.model';
 
 describe('TenPickService saved drafts', () => {
   const options: Pokemon[] = Array.from({ length: 10 }, (_, index) => ({
@@ -141,6 +144,63 @@ describe('TenPickService saved drafts', () => {
     expect(reloaded.state()!.players[1].drawnLimitedFestaCardIds).toEqual(['reveal-zoroark']);
     await reloaded.startDraft({ playerNames: ['Own', 'Rival'], teamSize: 6, mode: 'festa' });
     expect(reloaded.state()!.players.every(player => !player.drawnLimitedFestaCardIds?.length)).toBe(true);
+  });
+
+  it.each([3, 5, 7])('creates and retains a recommended Swiss tournament after an online draft with %s players', async count => {
+    const online: DraftState = {
+      players: Array.from({ length: count }, (_, index) => ({ id: `p${index}`, name: `Player ${index}`, team: [options[index]] })),
+      draftOrder: Array.from({ length: count }, (_, index) => `p${index}`),
+      currentRound: 1, currentTurnIndex: 0, teamSize: 1, finished: true,
+    };
+    const id = service.saveMultiplayerDraft('SWISS1', online);
+    service.openDraft(id);
+    service.saveSwissTournament(createSwissTournament(online.draftOrder), service.state()!);
+    const swiss = service.state()!.swissTournament!;
+    expect(swiss.roundLimit).toBe(Math.ceil(Math.log2(count)));
+    const match = swiss.rounds[0].matches.find(match => match.player2)!;
+    service.saveSwissTournament(recordSwissWinner(swiss, match.id, match.player1), service.state()!);
+    const withResult = service.state()!.swissTournament;
+    service.saveMultiplayerDraft('SWISS1', structuredClone(online));
+    expect(service.state()!.swissTournament).toEqual(withResult);
+    expect(service.state()!.tournament).toBeUndefined();
+    const reloaded = new TenPickService({ getRandomOptions } as unknown as PokemonPoolService, pokemonService as never, new StorageService());
+    reloaded.openDraft(id);
+    expect(reloaded.state()!.swissTournament).toEqual(withResult);
+  });
+
+  it('keeps only the selected competition format when synchronizing an online draft', async () => {
+    const online: DraftState = {
+      players: ['a', 'b', 'c'].map(id => ({ id, name: id, team: [] })),
+      draftOrder: ['a', 'b', 'c'], currentRound: 1, currentTurnIndex: 0, teamSize: 1, finished: true,
+    };
+    const tournament = await createTournament(online.draftOrder);
+    const swissTournament = createSwissTournament(online.draftOrder);
+    const id = service.saveMultiplayerDraft('SWISS1', { ...online, tournament });
+    service.openDraft(id);
+    service.saveMultiplayerDraft('SWISS1', { ...online, swissTournament });
+    expect(service.state()!.tournament).toBeUndefined();
+    expect(service.state()!.swissTournament).toBe(swissTournament);
+    service.saveMultiplayerDraft('SWISS1', { ...online, tournament });
+    expect(service.state()!.tournament).toBe(tournament);
+    expect(service.state()!.swissTournament).toBeUndefined();
+  });
+
+  it('repairs an older online save containing both competition formats when opened', async () => {
+    const ids = ['a', 'b', 'c'];
+    const now = new Date().toISOString();
+    new StorageService().saveDrafts([{
+      id: 'online-mixed', createdAt: now, updatedAt: now,
+      state: {
+        players: ids.map(id => ({ id, name: id, team: [] })), draftOrder: ids,
+        currentRound: 1, currentTurnIndex: 0, teamSize: 1, finished: true,
+        tournament: await createTournament(ids), swissTournament: createSwissTournament(ids),
+      },
+    }]);
+    const reloaded = new TenPickService({ getRandomOptions } as unknown as PokemonPoolService, pokemonService as never, new StorageService());
+    reloaded.openDraft('online-mixed');
+    expect(reloaded.state()!.swissTournament).toBeDefined();
+    expect(reloaded.state()!.tournament).toBeUndefined();
+    expect(new StorageService().loadDrafts()[0].state.tournament).toBeUndefined();
   });
 
   it.each([['reveal-zoroark', 571], ['reveal-ditto', 132]])('transforms a random own Pokemon with %s without consuming the pick', async (cardId, id) => {

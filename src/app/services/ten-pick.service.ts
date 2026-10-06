@@ -638,11 +638,13 @@ export class TenPickService {
     this.state.set(draft.state);
     const prematureFestaCard = draft.state.activeFestaCard
       && draft.state.players.some((player) => player.team.length === 0);
-    if (prematureFestaCard || draft.state.finished && draft.state.currentTurn) {
+    const conflictingCompetition = draft.state.swissTournament && draft.state.tournament;
+    if (prematureFestaCard || conflictingCompetition || draft.state.finished && draft.state.currentTurn) {
       this.commit({
         ...draft.state,
         ...(prematureFestaCard ? { activeFestaCard: undefined } : {}),
         ...(draft.state.finished ? { currentTurn: undefined } : {}),
+        ...(conflictingCompetition ? { tournament: undefined } : {}),
       });
     }
     return true;
@@ -652,15 +654,19 @@ export class TenPickService {
     const id = `online-${roomCode.toLowerCase()}`;
     const now = new Date().toISOString();
     const previous = this.drafts().find((draft) => draft.id === id);
+    // Competition results are managed locally after the online draft finishes.
+    // A reconnect must preserve the entire chosen format, not merge both formats.
+    const competition = state.tournament || state.swissTournament ? state : previous?.state;
     const savedState: DraftState = {
       ...state,
-      ...(previous?.state.tournament && !state.tournament ? { tournament: previous.state.tournament } : {}),
-      ...(previous?.state.swissTournament && !state.swissTournament ? { swissTournament: previous.state.swissTournament } : {}),
+      tournament: competition?.swissTournament ? undefined : competition?.tournament,
+      swissTournament: competition?.swissTournament,
     };
     const saved: SavedDraft = { id, createdAt: previous?.createdAt ?? now, updatedAt: now, state: savedState };
     const drafts = [...this.drafts().filter((draft) => draft.id !== id), saved];
     this.storageService.saveDrafts(drafts);
     this.drafts.set(drafts);
+    if (this.activeDraftId() === id) this.state.set(savedState);
     return id;
   }
 
