@@ -1,0 +1,21 @@
+.info-page { max-width: 920px; margin: 0 auto; padding: 56px 24px 80px; animation: reveal 350ms ease both; }
+h1 { margin: 0 0 30px; font-size: 36px; }
+h2 { margin: 0 0 12px; font-size: 24px; }
+p { margin: 0; color: var(--muted, #65746b); line-height: 1.7; }
+.info-card { padding: 28px; border: 2px solid var(--border-strong, #344b40); border-radius: 4px; background: var(--surface, #fff); box-shadow: 4px 4px 0 var(--shadow, #c6d4cb); }
+.info-card + .info-card { margin-top: 24px; }
+.eyebrow { display: block; margin-bottom: 12px; color: var(--muted, #65746b); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.contact-links { margin: 24px 0 0; }
+.contact-links > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; padding: 16px 0; border-top: 1px solid var(--border, #b9c9be); }
+dt { font-weight: 700; } dd { margin: 0; overflow-wrap: anywhere; }
+a { color: var(--text, #293631); text-underline-offset: 4px; } a:hover { text-decoration-thickness: 2px; }
+.update-card { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 24px; }
+.update-card > div { flex: 1 1 300px; }
+.action { display: inline-flex; justify-content: center; align-items: center; min-height: 46px; padding: 12px 20px; border: 2px solid #90232c; border-radius: 4px; background: #c9363d; color: #fff; font-weight: 700; text-decoration: none; box-shadow: 0 3px 0 #90232c; }
+.action:hover { background: #b02c35; transform: translateY(-2px); } .action:active { transform: translateY(2px); box-shadow: none; }
+.back-link { display: inline-block; margin-bottom: 24px; font-weight: 700; }
+.page-intro { margin: -14px 0 28px; }
+.release h2 { padding-bottom: 18px; border-bottom: 2px solid var(--border, #b9c9be); }
+.release-group { margin-top: 24px; } h3 { margin: 0 0 12px; font-size: 18px; }
+ul { margin: 0; padding-left: 22px; line-height: 1.65; } li + li { margin-top: 8px; } li::marker { color: #c9363d; }
+@media (max-width: 600px) { .info-page { padding: 36px 18px 60px; } h1 { font-size: 28px; } h2 { font-size: 21px; } .info-card { padding: 20px; } .contact-links > div { grid-template-columns: 1fr; gap: 8px; } .action { width: 100%; } }

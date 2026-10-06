@@ -1,0 +1,16 @@
+<main class="info-page changelog-page">
+  <a class="back-link" routerLink="/info">← {{ i18n.t('changelogBack') }}</a>
+  <h1>Changelog</h1>
+  <p class="page-intro">{{ i18n.t('changelogDescription') }}</p>
+  @for (release of releases; track release.date) {
+    <article class="info-card release" [attr.aria-labelledby]="'release-' + release.date">
+      <h2 [id]="'release-' + release.date"><time [attr.datetime]="release.date">{{ formatDate(release.date) }}</time></h2>
+      @for (group of release.groups; track group.title) {
+        <section class="release-group">
+          <h3>{{ group.title }}</h3>
+          <ul>@for (change of group.changes; track change) { <li>{{ i18n.t(change) }}</li> }</ul>
+        </section>
+      }
+    </article>
+  }
+</main>

@@ -5,6 +5,16 @@ import { DraftHistory } from './pages/draft-history/draft-history';
 import { TenPickHub } from './pages/ten-pick-hub/ten-pick-hub';
 
 export const routes: Routes = [
+  {
+    path: 'info',
+    loadComponent: () => import('./pages/info/info').then(module => module.Info),
+    data: { title: 'Info | Pokefunny', description: 'About Pokefunny, contact details and project updates.', canonicalPath: '/info' },
+  },
+  {
+    path: 'info/changelog',
+    loadComponent: () => import('./pages/info/changelog').then(module => module.Changelog),
+    data: { title: 'Changelog | Pokefunny', description: 'The latest improvements to Pokefunny games.', canonicalPath: '/info/changelog' },
+  },
   ...(['ten-pick', 'ten-pick-monotype', 'ten-pick-festa'] as const).map((base) => ({
     path: `${base}/:draftId/tournament`,
     loadComponent: () => import('./pages/tournament/tournament').then((module) => module.TournamentPage),

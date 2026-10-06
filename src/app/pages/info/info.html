@@ -1,0 +1,16 @@
+<main class="info-page">
+  <h1>{{ i18n.t('info') }}</h1>
+  <section class="info-card" aria-labelledby="about-heading">
+    <span class="eyebrow">Pokefunny</span>
+    <h2 id="about-heading">{{ i18n.t('infoAboutTitle') }}</h2>
+    <p>{{ i18n.t('infoAboutDescription') }}</p>
+    <dl class="contact-links">
+      <div><dt>{{ i18n.t('infoEmail') }}</dt><dd><a href="mailto:davidjiad@gmail.com">davidjiad&#64;gmail.com</a></dd></div>
+      <div><dt>{{ i18n.t('infoWebsite') }}</dt><dd><a href="https://dade.es" target="_blank" rel="noopener noreferrer">dade.es <span aria-hidden="true">↗</span></a></dd></div>
+    </dl>
+  </section>
+  <section class="info-card update-card" aria-labelledby="updates-heading">
+    <div><h2 id="updates-heading">{{ i18n.t('infoUpdatesTitle') }}</h2><p>{{ i18n.t('infoUpdatesDescription') }}</p></div>
+    <a class="action" routerLink="/info/changelog">{{ i18n.t('infoOpenChangelog') }}</a>
+  </section>
+</main>
