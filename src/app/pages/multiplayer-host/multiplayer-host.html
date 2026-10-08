@@ -24,6 +24,26 @@
           <label class="check"><input type="checkbox" [checked]="generations().includes(generation)" (change)="toggleGeneration(generation)" /> Gen {{ generation }}</label>
         }
       </fieldset>
+      @if (mode() === 'festa') {
+        <details class="festa-deck">
+          <summary>
+            <img src="images/festa/poke-ball-alcove-flip-deck-box-for-pokemon-183273.png" alt="" />
+            <span>{{ i18n.t('festaDeck') }}</span>
+            <strong aria-live="polite">{{ festaDeckCount() }}/{{ festaCards.length }}</strong>
+          </summary>
+          <section class="deck-grid" [attr.aria-label]="i18n.t('festaDeck')">
+            @for (card of festaCards; track card.id) {
+              <button type="button" class="deck-card"
+                [class.disabled]="!drafts.isFestaCardEnabled(card.id)"
+                [attr.aria-label]="festaCardName(card.nameKey)"
+                [attr.aria-pressed]="drafts.isFestaCardEnabled(card.id)"
+                (click)="drafts.toggleFestaCard(card.id)">
+                <app-festa-card [card]="card" [compact]="true" [confetti]="false" />
+              </button>
+            }
+          </section>
+        </details>
+      }
       @if (!generations().length) { <p class="error">{{ i18n.t('selectGeneration') }}</p> }
       <button class="primary" type="button" [disabled]="creating() || !generations().length" (click)="createRoom()">{{ creating() ? i18n.t('onlineCreating') : i18n.t('onlineCreate') }}</button>
       @if (socket.error()) { <p class="error">{{ i18n.onlineError(socket.error()) }}</p> }

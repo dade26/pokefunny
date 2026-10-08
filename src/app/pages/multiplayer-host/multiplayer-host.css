@@ -14,6 +14,14 @@ input, select { min-height: 42px; border: 2px solid var(--border-strong, #111); 
 .primary:hover:not(:disabled) { background: #f4bb2f; }
 .primary:disabled { opacity: .55; cursor: not-allowed; }
 .error { color: var(--error, #9b1c31); font-weight: 800; }
+.festa-deck { margin: 18px 0; }
+.festa-deck summary { display: flex; align-items: center; gap: 12px; width: fit-content; cursor: pointer; font-weight: 800; }
+.festa-deck summary img { width: 64px; height: 80px; object-fit: contain; }
+.deck-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; margin-top: 16px; }
+.deck-card { display: flex; justify-content: center; padding: 0; border: 0; border-radius: 8px; background: transparent; cursor: pointer; font: inherit; }
+.deck-card app-festa-card { height: 100%; }
+.deck-card.disabled { filter: grayscale(1); }
+.deck-card:focus-visible, .festa-deck summary:focus-visible { outline: 3px solid #c9363d; outline-offset: 4px; }
 .room-actions { margin: 16px 0; }
 .room-actions button { margin: 4px 8px 4px 0; }
 .danger { min-height: 44px; padding: 8px 16px; border: 2px solid var(--error, #9b1c31); border-radius: 8px; background: var(--surface, #fff); color: var(--error, #9b1c31); font: inherit; font-weight: 800; cursor: pointer; }

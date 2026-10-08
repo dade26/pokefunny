@@ -61,7 +61,10 @@ export class MultiplayerGameEngine {
       requireNicknames: room.setup.requireNicknames ?? false,
       finished: false,
       filters: room.setup.filters,
-      ...(room.setup.mode === 'festa' ? { festaChance: this.clampChance(room.setup.festaChance ?? 5) } : {}),
+      ...(room.setup.mode === 'festa' ? {
+        festaChance: this.clampChance(room.setup.festaChance ?? 5),
+        disabledFestaCardIds: [...(room.setup.disabledFestaCardIds ?? [])],
+      } : {}),
     };
     return this.withPreparedTurn(draft);
   }
@@ -574,6 +577,7 @@ export class MultiplayerGameEngine {
     if (chance <= 0 || Math.random() >= chance / 100) return draft;
     const player = this.currentPlayer(draft);
     const card = pickRandomActiveFestaCard(FESTA_CARDS.map((candidate) => candidate.id)
+      .filter((cardId) => !draft.disabledFestaCardIds?.includes(cardId))
       .filter((cardId) => canDrawFestaCard(player, cardId)));
     return card ? this.withHistory({
       ...draft,

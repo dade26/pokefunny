@@ -7,6 +7,7 @@ export interface MultiplayerSetup {
   mode: DraftMode;
   teamSize: number;
   festaChance?: number;
+  disabledFestaCardIds?: string[];
   requireNicknames?: boolean;
   filters: DraftFilters;
 }

@@ -1,4 +1,4 @@
-import { LanguageService } from '../../services/language.service';
+import { LanguageService, TranslationKey } from '../../services/language.service';
 import { Component, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -24,7 +24,13 @@ export class MultiplayerHost implements OnInit {
   readonly socket = inject(MultiplayerSocketService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly drafts = inject(TenPickService);
+  readonly drafts = inject(TenPickService);
+  readonly festaCards = this.drafts.festaCards;
+  readonly festaDeckCount = computed(() => this.festaCards.filter((card) => this.drafts.isFestaCardEnabled(card.id)).length);
+
+  festaCardName(key: string): string {
+    return this.i18n.t(key as TranslationKey);
+  }
   readonly room = this.socket.roomState;
   readonly mode = signal<DraftMode>('normal');
   readonly modeName = computed(() => this.mode() === 'festa' ? 'Ten Pick Festa'
@@ -94,6 +100,7 @@ export class MultiplayerHost implements OnInit {
         mode: this.mode(),
         teamSize: this.teamSize(),
         festaChance: this.festaChance(),
+        ...(this.mode() === 'festa' ? { disabledFestaCardIds: [...this.drafts.disabledFestaCardIds()] } : {}),
         requireNicknames: this.requireNicknames(),
         filters: { generations: this.generations(), mega: this.mega(), gigantamax: this.gigantamax() },
       });

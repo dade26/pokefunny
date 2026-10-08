@@ -98,6 +98,7 @@ export interface DraftHistoryEvent {
 }
 
 export interface DraftState {
+  disabledFestaCardIds?: string[];
   swissTournament?: import('./swiss').SwissTournament;
   tournament?: import('./tournament').TournamentState;
   mode?: DraftMode;

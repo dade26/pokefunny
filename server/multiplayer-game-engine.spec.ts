@@ -64,6 +64,25 @@ function festaRoom(cardId: string): GameRoom {
 }
 
 describe('MultiplayerGameEngine', () => {
+  it.each([false, true])('respects the online deck after serialization (empty: %s)', async (empty) => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom('trade-any');
+    const disabled = FESTA_CARDS.filter((card) => empty || card.id !== 'reveal-ditto').map((card) => card.id);
+    game.setup = { ...setup, mode: 'festa', festaChance: 100, disabledFestaCardIds: disabled };
+    const initial = await engine.createInitialDraft(game);
+    expect(initial.disabledFestaCardIds).toEqual(disabled);
+    game.draft = JSON.parse(JSON.stringify({
+      ...game.draft!, disabledFestaCardIds: initial.disabledFestaCardIds,
+      festaChance: 100, activeFestaCard: undefined,
+      currentTurn: { ...game.draft!.currentTurn!, options: [pokemon(1), pokemon(2)] },
+    }));
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+    try {
+      await engine.skip(game, 'p1', optionId(engine, game.draft!), 'deck-skip');
+      expect(game.draft!.activeFestaCard?.cardId).toBe(empty ? undefined : 'reveal-ditto');
+    } finally { random.mockRestore(); }
+  });
+
   it('limits Ditto and Zoroark independently per player and preserves the limit in serialized state', async () => {
     const engine = new MultiplayerGameEngine();
     const game = festaRoom('trade-any');

@@ -75,6 +75,22 @@ describe('Online room lifecycle over Socket.IO', () => {
     await command(host, 'deleteRoom', { roomCode: created.roomCode, hostToken: created.hostToken });
   });
 
+  it('keeps the selected FESTA deck from room creation through start and reconnect', async () => {
+    const host = client(), player = client();
+    const created = await command(host, 'createRoom', {
+      ...setup, mode: 'festa', disabledFestaCardIds: ['reveal-ditto', 'invalid', 'reveal-ditto'],
+    });
+    const joined = await command(player, 'joinRoom', { roomCode: created.roomCode, name: 'Player' });
+    const playing = nextEvent(host, 'roomState', state => state.phase === 'playing');
+    await command(host, 'startGame', { roomCode: created.roomCode, hostToken: created.hostToken });
+    const state = await playing;
+    expect(state.setup.disabledFestaCardIds).toEqual(['reveal-ditto']);
+    expect(state.draft.disabledFestaCardIds).toEqual(['reveal-ditto']);
+    const rejoined = await command(player, 'joinRoom', { roomCode: created.roomCode, playerToken: joined.playerToken });
+    expect(rejoined.state.draft.disabledFestaCardIds).toEqual(['reveal-ditto']);
+    await command(host, 'deleteRoom', { roomCode: created.roomCode, hostToken: created.hostToken });
+  });
+
   it('shows all encounters on both devices and accepts Next only from the phone', async () => {
     const host = client(), player = client();
     const created = await command(host, 'createRoom', { ...setup, teamSize: 1 });

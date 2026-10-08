@@ -8,6 +8,7 @@ import { MultiplayerSetup } from '../src/app/models/multiplayer/multiplayer.mode
 import { MultiplayerGameEngine, MultiplayerGameError } from './multiplayer-game-engine';
 import { GameRoom, InMemoryRoomRepository, RoomPlayer } from './room-repository';
 import { favoritePokemonImage } from '../src/app/models/favorite-pokemon';
+import { getFestaCard } from '../src/app/models/festa-cards';
 
 const port = Number(process.env['MULTIPLAYER_PORT'] ?? process.env['PORT'] ?? 3000);
 const clientOrigin = process.env['CLIENT_ORIGIN'] ?? 'http://localhost:4200';
@@ -355,6 +356,9 @@ function normalizeSetup(setup: Partial<MultiplayerSetup>): MultiplayerSetup {
     mode: setup.mode === 'festa' ? 'festa' : setup.mode === 'monotype' ? 'monotype' : 'normal',
     teamSize: Math.max(1, Math.min(12, Number(setup.teamSize) || 6)),
     festaChance: Math.max(0, Math.min(100, Number(setup.festaChance) || 0)),
+    disabledFestaCardIds: Array.isArray(setup.disabledFestaCardIds)
+      ? [...new Set(setup.disabledFestaCardIds.filter((id) => typeof id === 'string' && getFestaCard(id)))]
+      : [],
     requireNicknames: !!setup.requireNicknames,
     filters: {
       generations: setup.filters?.generations?.length ? setup.filters.generations : ALL_GENERATIONS,
