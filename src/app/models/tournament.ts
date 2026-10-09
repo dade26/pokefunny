@@ -5,12 +5,21 @@ export interface TournamentState {
   undo: Database[];
 }
 
+async function loadTournamentLibraries() {
+  const [managerModule, storageModule] = await Promise.all([
+    import('brackets-manager'), import('brackets-memory-db'),
+  ]);
+  // Production bundles expose these CommonJS exports under `default`.
+  const { BracketsManager } = managerModule.default ?? managerModule;
+  const { InMemoryDatabase } = storageModule.default ?? storageModule;
+  return { BracketsManager, InMemoryDatabase };
+}
+
 export async function createTournament(playerIds: string[]): Promise<TournamentState> {
   if (playerIds.length < 2 || new Set(playerIds).size !== playerIds.length) {
     throw new Error('A tournament needs at least two distinct participants.');
   }
-  const { BracketsManager } = await import('brackets-manager');
-  const { InMemoryDatabase } = await import('brackets-memory-db');
+  const { BracketsManager, InMemoryDatabase } = await loadTournamentLibraries();
   const manager = new BracketsManager(new InMemoryDatabase());
   const seeding = [...playerIds];
   for (let index = seeding.length - 1; index > 0; index--) {
@@ -32,8 +41,7 @@ export async function recordTournamentWinner(
     || ![match.opponent1.id, match.opponent2.id].includes(participantId)) {
     throw new Error('This match is not ready or this participant cannot win it.');
   }
-  const { BracketsManager } = await import('brackets-manager');
-  const { InMemoryDatabase } = await import('brackets-memory-db');
+  const { BracketsManager, InMemoryDatabase } = await loadTournamentLibraries();
   const storage = new InMemoryDatabase();
   // The manager mutates storage; keep saved state and undo snapshots independent.
   storage.setData(structuredClone(tournament.data));
