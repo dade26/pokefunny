@@ -87,7 +87,7 @@
         @if (socket.error()) { <p class="error" role="alert">{{ i18n.onlineError(socket.error()) }}</p> }
       </section>
     } @else if (state.draft; as draft) {
-      <section class="board" [class.finished]="state.phase === 'finished'">
+      <section class="board" [style.--team-columns]="teamColumns()" [class.finished]="state.phase === 'finished'">
         @if (state.phase !== 'finished') {
           <aside class="order-column">
             <app-draft-order [state]="draft" />
@@ -126,7 +126,7 @@
         </section>
         @if (state.phase !== 'finished') {
           <aside class="teams-column">
-            <app-team-list [state]="draft" [rotateWithTurn]="true" [activePlayerId]="draft.currentTurn?.playerId ?? ''" />
+            <app-team-list [state]="draft" [fitViewport]="true" [rotateWithTurn]="true" [activePlayerId]="draft.currentTurn?.playerId ?? ''" />
           </aside>
         }
       </section>

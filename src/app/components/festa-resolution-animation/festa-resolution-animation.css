@@ -21,3 +21,16 @@ p { margin: 0; max-width: 100%; overflow-wrap: anywhere; }
 @keyframes recipient-reveal { from { opacity: 0; transform: translateY(20px) scale(.7); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes countdown { to { transform: scaleX(0); } }
 @media (prefers-reduced-motion: reduce) { .resolved-card, figure, .progress span, .random-draw.rolling { animation: none; } }
+
+.receiving { position: relative; padding: 12px; animation: receive-glow 1.4s ease both; }
+.applied-modifier { display: grid; justify-items: center; gap: 4px; padding: 8px 12px; border-radius: 12px; background: var(--surface, #fff); border: 2px solid var(--success-border, #43824c); animation: apply-modifier 1.1s cubic-bezier(.2,.8,.2,1) both; }
+.applied-modifier .item-sprite { width: 48px; height: 48px; image-rendering: pixelated; }
+.applied-modifier.ability { border-color: #9c6ade; }
+.applied-modifier.move { border-color: #db8a35; }
+@keyframes apply-modifier { 0% { opacity: 0; transform: translate(70px,-80px) scale(.5) rotate(20deg); } 60% { opacity: 1; transform: translateY(-12px) scale(1.15); } 100% { transform: translateY(0) scale(1); } }
+@keyframes receive-glow { 50% { filter: drop-shadow(0 0 16px #7acb79); } }
+@media (prefers-reduced-motion: reduce) { .receiving, .applied-modifier { animation: none; } }
+
+.resolved-card.modifier-card { width: 140px; }
+figure.receiving { width: min(240px, 100%); box-sizing: border-box; }
+.receiving > img { height: 180px; }

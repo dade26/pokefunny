@@ -24,6 +24,7 @@ export interface GameRoom {
   createdAt: number;
   updatedAt: number;
   lastEmptyAt?: number;
+  festaAnimationBefore?: DraftState;
   festaAnimation?: MultiplayerFestaAnimation;
   festaResultTarget?: { cardId: string; key: string };
   festaChoices?: { cardId: string; choices: Pokemon[] };

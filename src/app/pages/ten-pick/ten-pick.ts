@@ -16,13 +16,16 @@ import { PokemonService } from '../../services/pokemon.service';
 import { FestaSetupService } from '../../services/festa-setup.service';
 import { ItemSpriteService } from '../../services/item-sprite.service';
 import { FestaCard as FestaCardView } from '../../components/festa-card/festa-card';
+import { FestaResolutionAnimation } from '../../components/festa-resolution-animation/festa-resolution-animation';
+import { MultiplayerFestaAnimation } from '../../models/multiplayer/multiplayer.model';
+import { DraftState } from '../../models/pokemon.model';
 import { FestaCatalogEntry, festaModifierRule, normalizeFestaName } from '../../models/festa-modifiers';
 
 @Component({
   selector: 'app-ten-pick',
-  imports: [FormsModule, RouterLink, DraftOrder, TeamList, TenPickResult, LucideChevronDown, LucideTrophy, FestaCardView, CompetitionSetup],
+  imports: [FormsModule, RouterLink, DraftOrder, TeamList, TenPickResult, LucideChevronDown, LucideTrophy, FestaCardView, CompetitionSetup, FestaResolutionAnimation],
   templateUrl: './ten-pick.html',
-  styleUrls: ['./ten-pick.css', './draft-filters.css', './monotype.css', './festa-rival.css'],
+  styleUrls: ['./ten-pick.css', './draft-filters.css', './monotype.css', './festa-rival.css', '../../components/team-list/desktop-board.css'],
   host: { '(document:click)': 'closeFilters($event)', '(document:keydown.escape)': 'closeFilters()' },
 })
 export class TenPick implements OnInit {
@@ -73,6 +76,10 @@ export class TenPick implements OnInit {
     const card = this.state()?.activeFestaCard;
     return card ? this.tenPickService.getFestaCard(card.cardId) : null;
   });
+  readonly modifierAnimation = signal<MultiplayerFestaAnimation | null>(null);
+  readonly animationBefore = signal<DraftState | null>(null);
+  readonly visibleState = computed(() => this.modifierAnimation() ? this.animationBefore() ?? this.state() : this.state());
+  readonly teamColumns = computed(() => Math.max(1, Math.ceil((this.state()?.players.length ?? 0) / 3)));
   readonly festaChoices = signal<Pokemon[]>([]);
   readonly rerollReveal = signal<{ index: number; previous: Pokemon; result?: Pokemon } | null>(null);
   readonly rerollError = signal(false);
@@ -164,6 +171,8 @@ export class TenPick implements OnInit {
   ngOnInit(): void {
     void this.pokemonService.getPokemonList().catch(() => undefined);
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.modifierAnimation.set(null);
+      this.animationBefore.set(null);
       const id = params.get('draftId');
       if (!id) {
         this.tenPickService.reset();
@@ -380,7 +389,7 @@ export class TenPick implements OnInit {
 
   async confirmFestaModifier(): Promise<void> {
     const rule = this.activeModifierRule();
-    if (!rule || this.service.loadingTurn() || this.festaTargetRolling()) return;
+    if (!rule || this.modifierAnimation() || this.service.loadingTurn() || this.festaTargetRolling()) return;
     const value = rule.kind === 'item' ? this.festaItemQuery() : rule.kind === 'ability' ? this.festaAbilityQuery() : this.festaMoveQuery();
     const target = this.parseTradeKey(this.festaTargetKey());
     try {
@@ -393,15 +402,36 @@ export class TenPick implements OnInit {
         }
         if (!await this.rollFestaModifierTarget(targets, chosen)) return;
       }
+      const before = this.state();
+      const cardId = before?.activeFestaCard?.cardId;
+      const selected = rule.target === 'random' ? before?.activeFestaCard?.target : target;
       const success = await this.tenPickService.resolveFestaModifier(value, target ?? undefined);
       if (!success) {
         this.festaModifierError.set(rule.learnable ? 'festaInvalidMove' : 'festaNoTargets');
         return;
       }
+      const pokemon = this.state()?.players.find((player) => player.id === selected?.playerId)?.team[selected?.index ?? -1];
+      if (before && cardId && pokemon) {
+        const applied = rule.kind === 'item' ? (typeof pokemon.heldItem === 'string' ? pokemon.heldItem : pokemon.heldItem?.name) ?? ''
+          : rule.kind === 'ability' ? pokemon.abilityOverride ?? '' : pokemon.moveStickers?.at(-1) ?? '';
+        await this.showModifierAnimation(before, { cardId, endsAt: Date.now() + 3000, pokemon: [pokemon], message: '', application: { kind: rule.kind, value: applied } });
+      }
       this.clearFestaSelection();
     } catch {
       this.festaTargetRolling.set(false);
       this.festaModifierError.set('turnError');
+    }
+  }
+
+  private async showModifierAnimation(before: DraftState, animation: MultiplayerFestaAnimation): Promise<void> {
+    const draftId = this.service.activeDraftId();
+    this.animationBefore.set(before);
+    this.modifierAnimation.set(animation);
+    await new Promise<void>((resolve) => setTimeout(resolve, 3000));
+    if (this.destroyRef.destroyed || this.service.activeDraftId() !== draftId) return;
+    if (this.modifierAnimation() === animation) {
+      this.modifierAnimation.set(null);
+      this.animationBefore.set(null);
     }
   }
 
@@ -538,7 +568,13 @@ export class TenPick implements OnInit {
         this.pokemonService.getFestaCatalog(),
         this.tenPickService.getAssignableFestaItems(),
       ]);
+      const before = this.state();
       await this.tenPickService.prepareFestaModifier();
+      const prepared = this.state()?.activeFestaCard;
+      if (before && active && !active.item && prepared?.cardId === active.cardId && prepared.item && !this.modifierAnimation()) {
+        await this.showModifierAnimation(before, { cardId: active.cardId, endsAt: Date.now() + 3000, pokemon: [], message: '',
+          draws: [{ kind: 'item', candidates: items.map((item) => ({ name: item.name })), selected: { name: prepared.item.name } }] });
+      }
       if (this.destroyRef.destroyed || this.state()?.activeFestaCard?.cardId !== active?.cardId) return;
       this.festaItems.set(items);
       this.festaAbilities.set(catalog.abilities);

@@ -1,4 +1,8 @@
 .panel { padding: 0; }
+.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.team-pages { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+.team-pages button { width: 28px; height: 28px; border: 1px solid var(--border, #b9c9be); border-radius: 4px; background: var(--surface, #fff); color: var(--text, #394c41); font-size: 20px; cursor: pointer; }
+.team-pages button:disabled { opacity: .35; cursor: default; }
 h2 { margin: 0 0 16px; font-size: 13px; text-transform: uppercase; color: var(--muted, #64766c); }
 .teams { display: grid; gap: 20px; }
 .team { border-top: 2px solid var(--border, #b9c9be); padding-top: 12px; transition: border-color 250ms ease; }
@@ -44,3 +48,29 @@ h2 { margin: 0 0 16px; font-size: 13px; text-transform: uppercase; color: var(--
 .export svg { width: 16px; height: 16px; flex-shrink: 0; }
 .export-error { color: var(--error, #a72932); font-size: 13px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* The desktop overview fills the remaining viewport, three teams per column. */
+:host(.viewport-teams) { display: block; height: var(--roster-height); min-width: 0; }
+:host(.viewport-teams) .panel { height: 100%; display: grid; grid-template-rows: 28px minmax(0, 1fr); gap: 6px; }
+:host(.viewport-teams) h2 { margin: 0; }
+:host(.viewport-teams) .teams { min-height: 0; grid-auto-flow: column; grid-template-rows: repeat(3, minmax(0, 1fr)); grid-template-columns: repeat(var(--roster-columns), minmax(0, 1fr)); gap: 10px; }
+:host(.viewport-teams) .team { min-width: 0; min-height: 0; padding: 6px; border: 1px solid var(--border, #b9c9be); border-top: 3px solid var(--border, #b9c9be); border-radius: 6px; background: var(--surface, #fff); display: flex; flex-direction: column; gap: 3px; }
+:host(.viewport-teams) .team.active { border-top-color: #c9363d; }
+:host(.viewport-teams) .team-header { margin: 0; gap: 4px; font-size: 11px; }
+:host(.viewport-teams) .team-type { margin: 0; gap: 4px; font-size: 9px; }
+:host(.viewport-teams) .team-type img { width: 14px; height: 14px; }
+:host(.viewport-teams) .slots, :host(.viewport-teams) .slots.six-slots { flex: 1; min-height: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: auto; gap: 3px; }
+:host(.viewport-teams) .slot, :host(.viewport-teams) .six-slots .slot { position: relative; min-width: 0; min-height: 0; padding: 3px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2px; border-width: 1px; }
+:host(.viewport-teams) .pokemon-frame { display: contents; }
+:host(.viewport-teams) .slot .pokemon-art { width: 30px; height: 30px; flex-shrink: 1; min-height: 12px; }
+:host(.viewport-teams) .slot small { font-size: 10px; line-height: 1.1; }
+:host(.viewport-teams) .nickname-sticker { position: static; max-width: 100%; width: auto; white-space: normal; overflow-wrap: anywhere; transform: none; padding: 1px 3px; font-size: 9px; box-shadow: none; }
+:host(.viewport-teams) .held-item { right: 1px; bottom: 1px; min-width: 18px; min-height: 18px; padding: 1px; font-size: 8px; border-width: 1px; }
+:host(.viewport-teams) .held-item img { width: 18px; height: 18px; }
+:host(.viewport-teams) .move-stickers { position: static; padding: 0; gap: 1px; }
+:host(.viewport-teams) .move-sticker { padding: 1px 2px; font-size: 9px; line-height: 1.1; transform: none; box-shadow: none; }
+
+:host(.viewport-teams) .ability-label { display: none; }
+:host(.viewport-teams) .dense-slots .pokemon-art { display: none; }
+
+:host(.viewport-teams.short-roster) .pokemon-art { display: none; }

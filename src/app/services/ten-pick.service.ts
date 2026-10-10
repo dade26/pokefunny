@@ -6,6 +6,7 @@ import { InsufficientPoolError, PokemonPoolService } from './pokemon-pool.servic
 import { PokemonCatalogEntry, PokemonService } from './pokemon.service';
 import { StorageService } from './storage.service';
 import { festaModifierRule, FestaTarget, normalizeFestaName } from '../models/festa-modifiers';
+import { isAssignableFestaItem } from '../models/festa-items';
 import { fixedFormItem, withFixedFormItem } from '../models/fixed-form-items';
 import { createTournament } from '../models/tournament';
 import { createSwissTournament, SwissTournament } from '../models/swiss';
@@ -768,13 +769,7 @@ export class TenPickService {
   async getAssignableFestaItems() {
     const { Dex } = await import('@pkmn/dex');
     const { items } = await this.pokemonService.getFestaCatalog();
-    return items.filter((entry) => {
-      const item = Dex.items.get(entry.id);
-      if (!item.exists) return false;
-      if (item.megaStone) return false;
-      if (item.zMove && item.itemUser?.length) return false;
-      return true;
-    });
+    return items.filter((entry) => isAssignableFestaItem(Dex.items.get(entry.id)));
   }
 
   private getNextPosition(state: DraftState): { round: number; turnIndex: number } {

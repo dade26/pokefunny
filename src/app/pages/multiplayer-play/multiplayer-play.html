@@ -187,7 +187,7 @@
     </section>
     @if (player.draft; as draft) {
       <section class="team-strip">
-        <app-team-list [state]="draft" [playerId]="player.phase === 'finished' ? '' : player.playerId" [allowExport]="player.phase === 'finished'" />
+        <app-team-list [state]="draft" [fitViewport]="player.phase !== 'finished'" [playerId]="player.phase === 'finished' ? '' : player.playerId" [allowExport]="player.phase === 'finished'" />
       </section>
     }
   }

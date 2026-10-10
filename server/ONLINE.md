@@ -8,6 +8,10 @@ Este cambio requiere actualizar el servidor Online. `/health` debe mostrar `game
 
 ## Resultados y animaciones FESTA
 
+Durante los sorteos, los equipos y el historial muestran el estado anterior para no adelantar el resultado. Al revelarse, los objetos, habilidades y movimientos se aplican con una animaci?n sobre el Pok?mon destinatario. El temporizador visual usa tiempo transcurrido en el navegador para no depender de que su reloj coincida con el servidor.
+
+Local y Online comparten el filtro de objetos FESTA: se excluyen MT/DT, Pok? Balls, correo, bayas sin efecto en combate y objetos de uso externo (evoluci?n, venta o entrenamiento). Las bayas de combate y Tarjeta Roja siguen disponibles. Estos cambios requieren publicar tanto la web como el servidor.
+
 Los sorteos FESTA se ven en el host y los móviles: rival, Pokémon destinatario, objeto, forma y reroll. La animación recorre candidatos y termina mostrando el resultado real del servidor. En las cartas de Rival, primero se sortea quién elige; al terminar los tres segundos, ese rival recibe los controles y el host muestra quién elige el Pokémon para quién. Reconectarse conserva el mismo rival y el mismo resultado.
 
 En el host, el Pokémon elegido aparece destacado con una animación. Si tiene mote, su etiqueta entra después y se pega sobre la imagen. La etiqueta permanece visible junto al resumen del turno; con movimiento reducido se muestra directamente.

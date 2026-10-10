@@ -1,7 +1,16 @@
 <section class="panel">
-  <h2>{{ i18n.t('teams') }}</h2>
+  <div class="panel-heading">
+    <h2>{{ i18n.t('teams') }}</h2>
+    @if (viewportActive() && pageCount() > 1) {
+      <nav class="team-pages" [attr.aria-label]="i18n.t('teams')">
+        <button type="button" (click)="changePage(-1)" [disabled]="page() === 0" [attr.aria-label]="i18n.t('previousTeams')">‹</button>
+        <span aria-live="polite">{{ page() + 1 }} / {{ pageCount() }}</span>
+        <button type="button" (click)="changePage(1)" [disabled]="page() + 1 === pageCount()" [attr.aria-label]="i18n.t('nextTeams')">›</button>
+      </nav>
+    }
+  </div>
   <div class="teams">
-    @for (player of orderedPlayers(); track player.id) {
+    @for (player of visiblePlayers(); track player.id) {
       <article class="team" [attr.data-player-id]="player.id" [class.active]="player.id === activePlayerId">
         <div class="team-header">
           <strong><app-player-name [name]="player.name" [favoritePokemon]="player.favoritePokemon" /></strong>
@@ -13,7 +22,7 @@
             @else { {{ i18n.t('random') }} }
           </div>
         }
-        <div class="slots" [class.six-slots]="state.teamSize === 6">
+        <div class="slots" [class.six-slots]="state.teamSize === 6" [class.dense-slots]="state.teamSize > 6">
           @for (slot of slots(); track slot) {
             <div class="slot">
               @if (player.team[slot]) {
@@ -30,7 +39,7 @@
                   }
                   @if (!tournamentView || state.mode === 'festa') {
                   <div class="move-stickers">
-                    @if (player.team[slot].abilityOverride; as ability) { <span class="move-sticker">{{ i18n.t('festaAbility') }}: {{ ability }}</span> }
+                    @if (player.team[slot].abilityOverride; as ability) { <span class="move-sticker"><span class="ability-label">{{ i18n.t('festaAbility') }}: </span>{{ ability }}</span> }
                     @for (move of player.team[slot].moveStickers ?? []; track $index) { <span class="move-sticker">{{ move }}</span> }
                   </div>
                   }

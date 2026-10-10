@@ -17,7 +17,7 @@ import { PlayerName } from '../../components/player-name/player-name';
   selector: 'app-multiplayer-host',
   imports: [FormsModule, RouterLink, DraftOrder, TeamList, TenPickResult, FestaCardView, PlayerName, FestaResolutionAnimation],
   templateUrl: './multiplayer-host.html',
-  styleUrl: './multiplayer-host.css',
+  styleUrls: ['./multiplayer-host.css', '../../components/team-list/desktop-board.css'],
 })
 export class MultiplayerHost implements OnInit {
   readonly i18n = inject(LanguageService);
@@ -31,6 +31,7 @@ export class MultiplayerHost implements OnInit {
   festaCardName(key: string): string {
     return this.i18n.t(key as TranslationKey);
   }
+  readonly teamColumns = computed(() => Math.max(1, Math.ceil((this.room()?.draft?.players.length ?? 0) / 3)));
   readonly room = this.socket.roomState;
   readonly mode = signal<DraftMode>('normal');
   readonly modeName = computed(() => this.mode() === 'festa' ? 'Ten Pick Festa'

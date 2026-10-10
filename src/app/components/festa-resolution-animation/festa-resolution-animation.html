@@ -1,8 +1,11 @@
 <section class="resolution" role="status" aria-live="polite">
   <h1>{{ animation().kind === 'rival' ? (rolling() ? i18n.t('onlineRollingRival') : i18n.t('onlineRivalChosen')) : (rolling() ? i18n.t('onlineRollingFesta') : i18n.t('onlineFestaResolved')) }}</h1>
   @if (card(); as resolvedCard) {
-    <div class="resolved-card"><app-festa-card [card]="resolvedCard" [compact]="true" /></div>
+    @if (rolling() || !animation().application) {
+    <div class="resolved-card" [class.modifier-card]="!!animation().application"><app-festa-card [card]="resolvedCard" [compact]="true" /></div>
   }
+  }
+  @if (rolling() || !animation().application) {
   <div class="draws">
     @for (draw of animation().draws ?? []; track $index) {
       @let candidate = preview(draw);
@@ -16,6 +19,7 @@
       </div>
     }
   </div>
+  }
   @if (!rolling()) {
   @if (animation().choosingPlayer; as chooser) {
     @if (animation().affectedPlayer; as affected) {
@@ -26,11 +30,20 @@
   }
   <div class="recipients">
     @for (pokemon of animation().pokemon; track $index) {
-      <figure>
+      <figure [class.receiving]="!!animation().application">
         <img [src]="pokemon.artwork || pokemon.sprite" [alt]="pokemon.name" />
         <figcaption>{{ pokemon.name }}</figcaption>
-        @if (pokemon.abilityOverride) { <strong>{{ pokemon.abilityOverride }}</strong> }
-        @if (pokemon.heldItem; as item) { <span>{{ $any(item).name || item }}</span> }
+        @if (animation().application; as application) {
+          <div class="applied-modifier" [class]="'applied-modifier ' + application.kind">
+            @if (application.kind === 'item' && itemSprites.image(pokemon.heldItem); as sprite) {
+              <img class="item-sprite" [src]="sprite" alt="" (error)="itemSprites.markFailed(sprite)" />
+            }
+            <small>{{ i18n.t(application.kind === 'item' ? 'festaItem' : application.kind === 'ability' ? 'festaAbility' : 'festaMove') }}</small>
+            <strong>{{ application.value }}</strong>
+          </div>
+        }
+        @if (!animation().application && pokemon.abilityOverride) { <strong>{{ pokemon.abilityOverride }}</strong> }
+        @if (!animation().application && pokemon.heldItem; as item) { <span>{{ $any(item).name || item }}</span> }
       </figure>
     }
   </div>

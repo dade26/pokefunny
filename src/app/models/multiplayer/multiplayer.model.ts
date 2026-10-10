@@ -41,6 +41,7 @@ export interface MultiplayerFestaDraw {
 export interface MultiplayerFestaAnimation {
   cardId: string;
   endsAt: number;
+  application?: { kind: 'item' | 'ability' | 'move'; value: string };
   kind?: 'rival' | 'resolved';
   draws?: MultiplayerFestaDraw[];
   choosingPlayer?: MultiplayerFestaParticipant;

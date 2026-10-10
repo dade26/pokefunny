@@ -1,6 +1,7 @@
 import { LanguageService, TranslationKey } from '../../services/language.service';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { MultiplayerFestaAnimation, MultiplayerFestaDraw } from '../../models/multiplayer/multiplayer.model';
+import { ItemSpriteService } from '../../services/item-sprite.service';
 import { getFestaCard } from '../../models/festa-cards';
 import { FestaCard } from '../festa-card/festa-card';
 import { PlayerName } from '../player-name/player-name';
@@ -12,6 +13,8 @@ import { PlayerName } from '../player-name/player-name';
   styleUrl: './festa-resolution-animation.css',
 })
 export class FestaResolutionAnimation {
+  readonly itemSprites = inject(ItemSpriteService);
+  readonly elapsed = signal(0);
   readonly i18n = inject(LanguageService);
   readonly animation = input.required<MultiplayerFestaAnimation>();
   readonly card = computed(() => getFestaCard(this.animation().cardId));
@@ -33,26 +36,26 @@ export class FestaResolutionAnimation {
       .replace(/^La carta FESTA /, 'The FESTA card ')
       .replace(/^Carta resuelta$/, 'Card resolved');
   });
-  readonly now = signal(Date.now());
   readonly reducedMotion = signal(false);
-  readonly rolling = computed(() => !this.reducedMotion() && !!this.animation().draws?.length && this.now() < this.animation().endsAt - 900);
+  readonly rolling = computed(() => !this.reducedMotion() && !!this.animation().draws?.length && this.elapsed() < (this.animation().application ? 1500 : 2100));
 
   constructor() {
     effect((onCleanup) => {
       this.animation();
-      this.now.set(Date.now());
+      this.elapsed.set(0);
+      const started = performance.now();
       const media = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
       const updateMotion = () => this.reducedMotion.set(media?.matches ?? false);
       updateMotion();
       media?.addEventListener('change', updateMotion);
-      const timer = setInterval(() => this.now.set(Date.now()), 130);
+      const timer = setInterval(() => this.elapsed.set(performance.now() - started), 130);
       onCleanup(() => { clearInterval(timer); media?.removeEventListener('change', updateMotion); });
     });
   }
 
   preview(draw: MultiplayerFestaDraw) {
     if (!this.rolling() || !draw.candidates.length) return draw.selected;
-    const elapsed = Math.max(0, this.now() - (this.animation().endsAt - 3000));
+    const elapsed = this.elapsed();
     return draw.candidates[Math.floor(elapsed / 130) % draw.candidates.length];
   }
 

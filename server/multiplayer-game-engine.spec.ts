@@ -64,6 +64,39 @@ function festaRoom(cardId: string): GameRoom {
 }
 
 describe('MultiplayerGameEngine', () => {
+  it.each([
+    ['item-random-rival', 'leftovers', 'item', 'Leftovers'],
+    ['ability-rival-any', 'wonderguard', 'ability', 'Wonder Guard'],
+    ['move-rival-any', 'tackle', 'move', 'Tackle'],
+  ])('keeps teams and history unspoiled during %s and describes the application', async (cardId, value, kind, label) => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom(cardId);
+    await engine.startFestaResolution(game, 'p1', 'start');
+    const before = game.draft!;
+    await engine.resolveModifier(game, 'p1', '', value, 'resolve');
+    await engine.animateResolvedFesta(game, before);
+    const host = engine.hostState(game);
+    const rival = await engine.playerState(game, game.players[1]);
+    expect(host.draft).toEqual(before);
+    expect(rival.draft).toEqual(before);
+    expect(rival.myTeam).toEqual(before.players[1].team);
+    expect(host.festaAnimation?.application).toEqual({ kind, value: label });
+    expect(host.festaAnimation?.pokemon).toEqual([game.draft!.players[1].team[0]]);
+    engine.finishFestaAnimation(game);
+    expect(engine.hostState(game).draft).toEqual(game.draft);
+    expect((await engine.playerState(game, game.players[1])).myTeam).toEqual(game.draft!.players[1].team);
+    expect(game.festaAnimationBefore).toBeUndefined();
+  });
+
+  it.each(['pokeball', 'diveball', 'tr33', 'mail', 'razzberry', 'bottlecap'])('rejects forbidden item %s online', async (item) => {
+    const engine = new MultiplayerGameEngine();
+    const game = festaRoom('item-chosen-rival');
+    await engine.startFestaResolution(game, 'p1', 'start');
+    const before = game.draft;
+    await expect(engine.resolveModifier(game, 'p1', 'p2:0', item, 'resolve')).rejects.toThrow();
+    expect(game.draft).toBe(before);
+  });
+
   it.each([false, true])('respects the online deck after serialization (empty: %s)', async (empty) => {
     const engine = new MultiplayerGameEngine();
     const game = festaRoom('trade-any');

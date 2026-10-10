@@ -1,0 +1,35 @@
+@media (min-width: 1001px) {
+  .ten-pick, .multiplayer-host { max-width: none; padding: 12px 20px; }
+  .draft-navigation { max-width: none; margin-bottom: 12px; }
+  .draft-layout:not(.is-complete), .board:not(.finished) {
+    --max-team-columns: 2;
+    display: grid;
+    grid-template-columns: minmax(300px, 1fr) minmax(0, calc(230px * min(var(--team-columns, 1), var(--max-team-columns))));
+    grid-template-rows: auto 1fr;
+    align-items: start;
+    gap: 12px 20px;
+    max-width: none;
+  }
+  .draft-layout:not(.is-complete) .sidebar { display: contents; }
+  .draft-layout:not(.is-complete) .sidebar > app-draft-order, .board:not(.finished) .order-column { grid-column: 1; grid-row: 1; }
+  .draft-layout:not(.is-complete) .stage, .board:not(.finished) .stage { grid-column: 1; grid-row: 2; min-width: 0; }
+  .draft-layout:not(.is-complete) .sidebar > app-team-list, .board:not(.finished) .teams-column {
+    grid-column: 2; grid-row: 1 / span 2;
+    position: sticky; top: 16px;
+    min-width: 0;
+  }
+  .board:not(.finished) .teams-column { padding: 10px; }
+  .board:not(.finished) .order-column { padding: 10px 14px; }
+  .multiplayer-host:has(.board:not(.finished)) { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 16px; }
+  .multiplayer-host:has(.board:not(.finished)) .back { grid-column: 1 / -1; }
+  .multiplayer-host:has(.board:not(.finished)) .room-banner { grid-column: 1; margin: 8px 0 12px; padding: 6px 12px; gap: 14px; box-shadow: none; }
+  .multiplayer-host:has(.board:not(.finished)) .room-banner strong { font-size: 24px; }
+  .multiplayer-host:has(.board:not(.finished)) .room-actions { grid-column: 2; margin: 8px 0 12px; align-self: center; }
+  .multiplayer-host:has(.board:not(.finished)) .board { grid-column: 1 / -1; }
+}
+@media (min-width: 1280px) {
+  .draft-layout:not(.is-complete), .board:not(.finished) { --max-team-columns: 3; }
+}
+@media (min-width: 1800px) {
+  .draft-layout:not(.is-complete), .board:not(.finished) { --max-team-columns: 4; }
+}

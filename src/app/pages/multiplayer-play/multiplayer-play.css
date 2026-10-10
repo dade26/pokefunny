@@ -37,3 +37,11 @@ button:disabled { opacity: .55; cursor: not-allowed; }
   .play { padding: 10px; }
   .controller { padding: 14px; }
 }
+
+@media (min-width: 1001px) {
+  .play:has(.viewport-teams) { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px 20px; max-width: 1400px; }
+  .play:has(.viewport-teams) .exit-bar, .play:has(.viewport-teams) > header { grid-column: 1 / -1; }
+  .play:has(.viewport-teams) > header { margin: 0; }
+  .play:has(.viewport-teams) .controller { grid-column: 1; min-width: 0; }
+  .play:has(.viewport-teams) .team-strip { grid-column: 2; grid-row: 3; margin: 0; position: sticky; top: 16px; min-width: 0; }
+}

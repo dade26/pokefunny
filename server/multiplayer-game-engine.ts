@@ -18,6 +18,7 @@ import {
 import { GameRoom, RoomPlayer } from './room-repository';
 import { assignMonotypes } from '../src/app/models/monotype';
 import { festaModifierRule } from '../src/app/models/festa-modifiers';
+import { isAssignableFestaItem } from '../src/app/models/festa-items';
 import { fixedFormItem, withFixedFormItem } from '../src/app/models/fixed-form-items';
 
 interface CatalogEntry {
@@ -343,7 +344,7 @@ export class MultiplayerGameEngine {
   }
 
   hostState(room: GameRoom, origin?: string): MultiplayerRoomState {
-    const draft = room.draft;
+    const draft = room.festaAnimation ? room.festaAnimationBefore ?? room.draft : room.draft;
     return {
       roomCode: room.roomCode,
       phase: room.phase,
@@ -356,7 +357,7 @@ export class MultiplayerGameEngine {
         teamSize: draft?.players.find((draftPlayer) => draftPlayer.id === player.id)?.team.length ?? 0,
       })),
       draft,
-      activePlayerId: draft ? draft.activeFestaCard?.resolvingPlayerId ?? this.currentPlayer(draft).id : undefined,
+      activePlayerId: room.draft ? room.draft.activeFestaCard?.resolvingPlayerId ?? this.currentPlayer(room.draft).id : undefined,
       stateVersion: room.stateVersion,
       festaAnimation: room.festaAnimation,
       joinUrl: origin ? `${origin}/join/${room.roomCode}` : undefined,
@@ -364,7 +365,7 @@ export class MultiplayerGameEngine {
   }
 
   async playerState(room: GameRoom, player: RoomPlayer): Promise<MultiplayerPlayerState> {
-    const draft = room.draft;
+    const draft = room.festaAnimation ? room.festaAnimationBefore ?? room.draft : room.draft;
     const draftPlayer = draft?.players.find((candidate) => candidate.id === player.id);
     return {
       roomCode: room.roomCode,
@@ -375,7 +376,7 @@ export class MultiplayerGameEngine {
       connected: player.connected,
       myTeam: draftPlayer?.team ?? [],
       draft,
-      activePlayerId: draft ? draft.activeFestaCard?.resolvingPlayerId ?? this.currentPlayer(draft).id : undefined,
+      activePlayerId: room.draft ? room.draft.activeFestaCard?.resolvingPlayerId ?? this.currentPlayer(room.draft).id : undefined,
       canAct: !!draft && !room.festaAnimation && this.canPlayerAct(draft, player.id),
       stateVersion: room.stateVersion,
       festaAnimation: room.festaAnimation,
@@ -482,6 +483,7 @@ export class MultiplayerGameEngine {
       if (before.activeFestaCard?.phase !== 'revealed' || !active.rivalPlayerId) return false;
       const rival = participant(active.rivalPlayerId)!;
       const affected = participant(active.affectedPlayerId)!;
+      room.festaAnimationBefore = before;
       room.festaAnimation = { cardId, kind: 'rival', endsAt: Date.now() + 3000, pokemon: [],
         choosingPlayer: rival, affectedPlayer: affected, message: `${rival.name} elige el Pok\u00e9mon para ${affected.name}.`,
         draws: [{ kind: 'rival', candidates: before.players.filter((player) => player.id !== affected.id)
@@ -504,6 +506,7 @@ export class MultiplayerGameEngine {
       : changed[0];
     // Choosing the existing item or ability still has a real random recipient.
     if (selected && !changed.some((pick) => pick.key === selected.key)) changed.push(selected);
+    room.festaAnimationBefore = before;
     // Hold player actions while the local catalogs prepare the shared draw.
     room.festaAnimation = { cardId, kind: 'resolved', endsAt: Date.now() + 3000,
       pokemon: changed.map((pick) => pick.pokemon), message: after.history?.at(-1)?.message ?? 'Carta resuelta',
@@ -541,6 +544,9 @@ export class MultiplayerGameEngine {
       });
     }
     room.festaAnimation = { cardId, kind: 'resolved', endsAt: Date.now() + 3000, pokemon: changed.map((pick) => pick.pokemon), draws,
+      application: rule && selected ? { kind: rule.kind, value: rule.kind === 'item'
+        ? (typeof selected.pokemon.heldItem === 'string' ? selected.pokemon.heldItem : selected.pokemon.heldItem?.name) ?? ''
+        : rule.kind === 'ability' ? selected.pokemon.abilityOverride ?? '' : selected.pokemon.moveStickers?.at(-1) ?? '' } : undefined,
       choosingPlayer: participant(before.activeFestaCard?.resolvingPlayerId), affectedPlayer: participant(selected?.player.id ?? before.activeFestaCard?.affectedPlayerId),
       message: after.history?.at(-1)?.message ?? 'Carta resuelta',
     };
@@ -550,6 +556,7 @@ export class MultiplayerGameEngine {
 
   finishFestaAnimation(room: GameRoom): void {
     room.festaAnimation = undefined;
+    room.festaAnimationBefore = undefined;
     this.bump(room);
   }
 
@@ -738,7 +745,7 @@ export class MultiplayerGameEngine {
     const { Dex } = await import('@pkmn/dex');
     return catalog.items.filter((entry) => {
       const item = Dex.items.get(entry.id);
-      return item.exists && !item.megaStone && !(item.zMove && item.itemUser?.length);
+      return isAssignableFestaItem(item);
     });
   }
 

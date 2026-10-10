@@ -102,18 +102,20 @@
       </div>
     </section>
   } @else {
-    @let draft = state()!;
+    @let draft = visibleState()!;
     @let player = currentPlayer();
-    <section class="draft-layout" [class.is-complete]="draft.finished && !draft.currentTurn">
+    <section class="draft-layout" [style.--team-columns]="teamColumns()" [class.is-complete]="draft.finished && !draft.currentTurn">
       @if (!draft.finished || draft.currentTurn) {
         <aside class="sidebar">
           <app-draft-order [state]="draft" />
-          <app-team-list [state]="draft" [activePlayerId]="player?.id ?? ''" />
+          <app-team-list [state]="draft" [fitViewport]="true" [activePlayerId]="player?.id ?? ''" />
         </aside>
       }
 
       <section class="stage">
-        @if (draft.finished && !draft.currentTurn) {
+        @if (modifierAnimation(); as animation) {
+          <app-festa-resolution-animation [animation]="animation" />
+        } @else if (draft.finished && !draft.currentTurn) {
           <div class="complete">
             <h1>{{ i18n.t('finalTeams') }}</h1>
             @if (draft.players.length >= 2) {

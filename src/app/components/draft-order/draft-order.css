@@ -7,3 +7,8 @@ li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-l
 li.active { background: var(--surface, #fff); border-color: #c9363d; color: var(--error, #a72932); }
 li span { color: var(--muted, #819489); font-size: 12px; }
 li strong { overflow-wrap: anywhere; }
+@media (min-width: 1001px) {
+  :host-context(.draft-layout) ol, :host-context(.board) ol { grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); }
+  :host-context(.draft-layout) .heading, :host-context(.board) .heading { margin-bottom: 6px; }
+  :host-context(.draft-layout) li, :host-context(.board) li { gap: 5px; padding: 5px 6px; font-size: 11px; }
+}

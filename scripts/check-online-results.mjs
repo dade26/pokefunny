@@ -113,7 +113,7 @@ for (const [browserType, width] of [[chromium, 1280], [webkit, 390]]) {
       const rival = await engine.playerState(room, room.players[1]);
       assert.equal(rival.controls.kind, 'festa-pokemon-choice');
     }
-    for (const cardId of ['ability-rival-any', 'item-random-own', 'reveal-ditto', 'random-change-form', 'forced-reroll']) {
+    for (const cardId of ['ability-rival-any', 'item-random-rival', 'move-rival-any', 'item-random-own', 'reveal-ditto', 'random-change-form', 'forced-reroll']) {
       const charizard = { id: 6, name: 'Charizard', rawName: 'charizard', artwork: 'images/pokemon/v1/6.webp', sprite: '', types: ['Fire'] };
       const gengar = { id: 94, name: 'Gengar', rawName: 'gengar', artwork: 'images/pokemon/v1/94.webp', sprite: '', types: ['Ghost'] };
       room.draft = { ...room.draft, players: [{ id: 'p1', name: 'Ana', team: [charizard] }, { id: 'p2', name: 'Luis', team: [gengar] }],
@@ -133,9 +133,16 @@ for (const [browserType, width] of [[chromium, 1280], [webkit, 390]]) {
       snapshot.festaAnimation.endsAt = Date.now() + 4000;
       await show('host', snapshot);
       await expect(page.locator('.random-draw.rolling').first()).toBeVisible();
-      await expect(page.locator('.random-draw.revealed').first()).toBeVisible({ timeout: 6000 });
+      await expect(page.locator('.recipients')).toHaveCount(0);
+      await expect(page.locator('.applied-modifier')).toHaveCount(0);
+      await expect(page.locator(snapshot.festaAnimation.application ? '.receiving' : '.random-draw.revealed').first()).toBeVisible({ timeout: 6000 });
       const selectedNames = snapshot.festaAnimation.draws.map(draw => draw.selected.name);
-      for (const name of selectedNames) await expect(page.locator('.draws')).toContainText(name);
+      for (const name of selectedNames) await expect(page.locator(snapshot.festaAnimation.application ? '.resolution' : '.draws')).toContainText(name);
+      if (snapshot.festaAnimation.application) {
+        await expect(page.locator('.applied-modifier')).toContainText(snapshot.festaAnimation.application.value);
+        assert.notEqual(await page.locator('.applied-modifier').evaluate(element => getComputedStyle(element).animationName), 'none');
+        await page.screenshot({ path: `test-results/online-results/application-${cardId}-${width}.png`, fullPage: true });
+      }
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${cardId}: random draw overflow`);
       engine.finishFestaAnimation(room);
     }
